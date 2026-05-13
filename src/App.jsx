@@ -835,7 +835,7 @@ export default function App() {
           else setActiveTab('kpi');
 
           const upper = data.username.toUpperCase();
-          if(upper.includes('RICARDO')) setKpiOwnerId(1);
+          if(upper.includes('RICARDO') || upper.includes('PRISCILA')) setKpiOwnerId(1);
           else if(upper.includes('EDSON')) setKpiOwnerId(2);
           else if(upper.includes('PCP')) setKpiOwnerId(3);
           else if((upper.includes('DANIEL') && !upper.includes('DANIELA')) || upper.includes('JOSE')) setKpiOwnerId(4);
