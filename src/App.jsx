@@ -3240,7 +3240,7 @@ export default function App() {
                 <button onClick={() => setActiveTab('5w2h')} className={`px-5 py-2.5 rounded-xl font-black uppercase tracking-wider text-xs transition-all flex items-center gap-2 ${activeTab === '5w2h' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
                     <ListChecks size={16} /> {t('Matriz 5W2H', '5W2H Matrix')}
                 </button>
-                {(user.username.toUpperCase() === 'LUCIENE' || user.role === 'admin' || user.role === 'dev') && (
+                {(user.username.toUpperCase() === 'LUCIENE' || user.area === 'Comercial' || user.role === 'admin' || user.role === 'dev') && (
                     <button onClick={() => setActiveTab('auditoria')} className={`px-5 py-2.5 rounded-xl font-black uppercase tracking-wider text-xs transition-all flex items-center gap-2 ${activeTab === 'auditoria' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
                         <FileSpreadsheet size={16} /> {t('Auditoria', 'Audit')}
                     </button>
