@@ -5,6 +5,7 @@ import {
   LogOut, Save, Filter, X, MessageSquareText, HelpCircle, ArrowRightCircle, Target,
   PieChart as PieChartIcon, BarChart3, Edit2, Trash2, GitBranch, Calendar, User, PlusCircle, History, Info, ChevronRight, ChevronLeft, Download, DollarSign, Image as ImageIcon, Briefcase, Globe
 } from 'lucide-react';
+
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, 
   LineChart, Line, PieChart, Pie, Cell, ComposedChart, LabelList
@@ -14,7 +15,7 @@ import {
 // CONFIGURAÇÃO SUPABASE & VARIÁVEIS GLOBAIS
 // ==========================================
 const SUPABASE_URL = "https://purxkfbijiigwnujqace.supabase.co"; 
-const SUPABASE_KEY = "sb_publishable_5w36tC01sFKqRQj7_fAQrA_IRxCZKCZ"; 
+const SUPABASE_KEY = "sb_publishable_5w36tC01sFKqRQj7_fAQrA_IRxCZKCZ";
 
 const monthOrder = { 'JAN':1, 'FEV':2, 'MAR':3, 'ABR':4, 'MAI':5, 'JUN':6, 'JUL':7, 'AGO':8, 'SET':9, 'OUT':10, 'NOV':11, 'DEZ':12 };
 const months = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
@@ -85,23 +86,23 @@ const normalizeExcelMonth = (m) => {
 };
 
 const getStatusColor = (s) => { 
-    if (s === 'Urgente') return 'bg-red-600 text-white border-red-600 shadow-red-100'; 
+    if (s === 'Urgente') return 'bg-red-600 text-white border-red-600 shadow-red-100';
     if (s === 'Em Andamento') return 'bg-yellow-50 text-black border-yellow-500 shadow-yellow-100'; 
-    if (s === 'Concluído') return 'bg-green-600 text-white border-green-600 shadow-green-100'; 
+    if (s === 'Concluído') return 'bg-green-600 text-white border-green-600 shadow-green-100';
     return 'bg-zinc-100 text-zinc-500 border-zinc-300'; 
 };
 
 const getHex = (s) => { 
-    if (s === 'Urgente') return '#ef4444'; 
+    if (s === 'Urgente') return '#ef4444';
     if (s === 'Em Andamento') return '#eab308'; 
     if (s === 'Concluído') return '#10b981'; 
     return '#a1a1aa'; 
 };
 
 const getSubHex = (s) => { 
-    if (s === 'Urgente') return 'bg-red-50 text-red-700 border-red-200'; 
+    if (s === 'Urgente') return 'bg-red-50 text-red-700 border-red-200';
     if (s === 'Em Andamento') return 'bg-yellow-50 text-yellow-700 border-yellow-200'; 
-    if (s === 'Concluído') return 'bg-green-50 text-green-700 border-green-200'; 
+    if (s === 'Concluído') return 'bg-green-50 text-green-700 border-green-200';
     return 'bg-zinc-50 text-zinc-600 border-zinc-200'; 
 };
 
@@ -114,7 +115,6 @@ const CustomTooltipFinanceiro = ({ active, payload, label }) => {
         const realizado = payload.find(p => p.dataKey === 'Realizado')?.value || 0;
         const perc = previsto > 0 ? ((realizado / previsto) * 100).toFixed(1) : 0;
         const isAbaixo = realizado < previsto;
-
         return (
             <div className="bg-zinc-950 text-white p-4 rounded-xl shadow-2xl border border-zinc-800 z-50">
                 <p className="font-bold text-sm mb-3 text-yellow-500 border-b border-zinc-800 pb-2">{label}</p>
@@ -401,7 +401,7 @@ export default function App() {
           "prazo medio": "Average Lead Time",
           "estoque": "Inventory"
       };
-      
+
       // 1. Tenta correspondência exata
       for (const [pt, en] of Object.entries(map)) {
           if (lowerName === pt) return en;
@@ -466,7 +466,7 @@ export default function App() {
   const [isAddActionModalOpen, setIsAddActionModalOpen] = useState(false);
   const [editingActionId, setEditingActionId] = useState(null);
   const [actionForm, setActionForm] = useState({ what: '', why: '', area: 'Comercial', who: '', when: '' });
-  
+
   // Estados Modais de Reporte (5W2H)
   const [selectedReportAction, setSelectedReportAction] = useState(null);
   const [updateType, setUpdateType] = useState('realizado');
@@ -537,7 +537,6 @@ export default function App() {
   const handleLogoUpload = async (event) => {
       const file = event.target.files[0];
       if (!file) return;
-
       const reader = new FileReader();
       reader.onload = async (e) => {
           const base64 = e.target.result;
@@ -570,7 +569,6 @@ export default function App() {
 
       setLoading(true);
       showToast(t("Carregando motor de leitura Excel...", "Loading Excel reading engine..."), "success");
-
       try {
           const XLSX = await new Promise((resolve, reject) => {
               if (window.XLSX) return resolve(window.XLSX);
@@ -580,7 +578,6 @@ export default function App() {
               script.onerror = reject;
               document.head.appendChild(script);
           });
-
           const reader = new FileReader();
           reader.onload = async (evt) => {
               try {
@@ -595,7 +592,6 @@ export default function App() {
                   }
 
                   showToast(t("Lendo colunas e formatando dados...", "Reading columns and formatting data..."), "success");
-
                   const normalizeKey = (key) => key.trim().toLowerCase();
                   
                   const mappedData = jsonData.map(row => {
@@ -621,11 +617,9 @@ export default function App() {
                           }
                       }
                       if (isNaN(netVal)) netVal = 0;
-
                       let rawQty = getVal(['qts peças', 'qty', 'qtde']);
                       let qtyVal = parseFloat(rawQty);
                       if (isNaN(qtyVal)) qtyVal = 0;
-
                       let dataCpRaw = getVal(['data cp']);
                       let dataCpFinal = null;
                       if (typeof dataCpRaw === 'number') {
@@ -642,7 +636,6 @@ export default function App() {
                       }
 
                       const clientStr = String(getVal(['client', 'cliente', 'client ']) || '').trim();
-                      
                       return {
                           n_order: String(getVal(['nº', 'n', 'no']) || ''),
                           month: String(getVal(['month', 'mês']) || ''),
@@ -678,7 +671,6 @@ export default function App() {
                   }
 
                   showToast(t(`Sincronizando ${mappedData.length} registros com o Supabase...`, `Synchronizing ${mappedData.length} records with Supabase...`), "success");
-
                   const { error: delError } = await supabaseClient.from('incoming_orders').delete().gte('id', 0);
                   if (delError) throw delError;
 
@@ -728,7 +720,6 @@ export default function App() {
               script.onerror = reject;
               document.head.appendChild(script);
           });
-
           const exportData = data.map(row => ({
               "Nº": row.n_order,
               "Month": row.month,
@@ -763,7 +754,6 @@ export default function App() {
           XLSX.utils.book_append_sheet(workbook, worksheet, "Incoming Orders");
           XLSX.writeFile(workbook, "Base_Incoming_Orders_Exportada.xlsx");
           showToast(t("Planilha XLSX gerada com sucesso!", "XLSX spreadsheet generated successfully!"), "success");
-
       } catch (err) {
           console.error(err);
           showToast(t("Erro ao exportar dados.", "Error exporting data."), "error");
@@ -793,9 +783,9 @@ export default function App() {
         supabaseClient.from('sub_actions').select('*').order('created_at', { ascending: true }),
         supabaseClient.from('incoming_orders').select('*') 
       ]);
-
       let comRes = { data: [] };
-      try { comRes = await supabaseClient.from('indicator_comments').select('*'); } catch (e) {}
+      try { comRes = await supabaseClient.from('indicator_comments').select('*');
+      } catch (e) {}
 
       setActions(actRes.data || []);
       setDbOwners(ownRes.data || []);
@@ -804,8 +794,7 @@ export default function App() {
       setDbValues(valRes.data || []);
       setSubActions(subRes.data || []);
       setDbComments(comRes.data || []);
-      setIncomingOrders(incRes.data || []); 
-      
+      setIncomingOrders(incRes.data || []);
       if (selectedReportAction) {
           const updatedAction = (actRes.data || []).find(a => a.id === selectedReportAction.id);
           if(updatedAction) setSelectedReportAction(updatedAction);
@@ -816,6 +805,9 @@ export default function App() {
     setLoading(false);
   };
 
+  // ==========================================
+  // NOVA FUNÇÃO DE LOGIN BLINDADA
+  // ==========================================
   const handleLogin = async (e) => {
     e.preventDefault();
     if (!supabaseClient) {
@@ -825,12 +817,27 @@ export default function App() {
     
     setLoading(true);
     try {
-        const { data } = await supabaseClient.from('users').select('*').eq('username', loginUser.trim()).eq('password', loginPass.trim()).single();
-        
+        // 1. Faz o login SEGURO usando o motor oficial do Supabase Auth
+        const { data: authData, error: authError } = await supabaseClient.auth.signInWithPassword({
+            email: loginUser.trim(), // Agora recebe o e-mail
+            password: loginPass.trim()
+        });
+
+        if (authError || !authData.user) {
+            throw new Error('Credenciais inválidas no Supabase Auth');
+        }
+
+        // 2. Comprovado que o login é válido, buscamos o perfil na sua tabela interna
+        const { data } = await supabaseClient
+            .from('users')
+            .select('*')
+            .eq('email', authData.user.email) // Usa o email para achar o perfil
+            .single();
+
         if (data) {
           setUser(data);
           setLoginError(false);
-          
+
           if (data.role === 'admin' || data.role === 'dev') setActiveTab('diretoria');
           else setActiveTab('kpi');
 
@@ -858,6 +865,7 @@ export default function App() {
           setLoginError(true);
         }
     } catch (e) {
+        console.error("Erro no login:", e);
         setLoginError(true);
     }
     setLoading(false);
@@ -993,7 +1001,7 @@ export default function App() {
       if (kpiOwnerId === 8 && newVals[56] === undefined) {
           const checkExists = dbValues.find(v => v.indicator_id === 56 && v.period === kpiEditPeriod);
           if (checkExists) newVals[56] = checkExists.value;
-      }
+       }
 
       setFormValues(newVals);
       setFormComments(newComms);
@@ -1004,7 +1012,7 @@ export default function App() {
     const numVal = parseFloat(val);
     if (isNaN(numVal) || numVal <= 0) return false;
     if (ownerId === 6) return true; 
-    if (ownerId === 7) return true; 
+    if (ownerId === 7) return true;
     const specificIds = [13, 20, 21, 22, 28, 30, 32, 40, 41, 42, 44, 47, 49, 50, 51, 52, 54, 55];
     return specificIds.includes(id);
   };
@@ -1024,7 +1032,7 @@ export default function App() {
               const v33 = next[33] || 0;
               next[25] = v33 > 0 ? (v24 / v33) : 0;
 
-              const v26 = next[26] || 0;
+               const v26 = next[26] || 0;
               const v28 = next[28] || 0;
               next[27] = Math.max(0, v26 - v28);
               next[29] = v26 > 0 ? (next[27] / v26) * 100 : 0;
@@ -1070,10 +1078,8 @@ export default function App() {
         const qEnviados = getVal(6, 1);
         const vEnviados = getVal(7, 1);
         const vVendidosMes = getVal(8, 1);
-
         let sumVendas = vVendas, sumAprovados = qAprovados, sumEnviados = qEnviados, sumVEnviados = vEnviados;
         const currentMonthNum = monthOrder[period];
-        
         allValues.forEach(v => {
             if (v.owner_id === 1 && monthOrder[v.period] < currentMonthNum) {
                 if (v.indicator_id === 1) sumVendas += parseFloat(v.value);
@@ -1082,12 +1088,11 @@ export default function App() {
                 if (v.indicator_id === 7) sumVEnviados += parseFloat(v.value);
             }
         });
-
         setRes(74, sumEnviados > 0 ? (sumAprovados / sumEnviados) * 100 : 0, 1);
-        setRes(75, sumVEnviados > 0 ? (sumVendas / sumVEnviados) * 100 : 0, 1); 
-        setRes(76, qEnviados > 0 ? (qAprovados / qEnviados) * 100 : 0, 1); 
-        setRes(77, vEnviados > 0 ? (vVendas / vEnviados) * 100 : 0, 1); 
-        setRes(78, vEnviados > 0 ? (vVendidosMes / vEnviados) * 100 : 0, 1); 
+        setRes(75, sumVEnviados > 0 ? (vVendas / sumVEnviados) * 100 : 0, 1);
+        setRes(76, qEnviados > 0 ? (qAprovados / qEnviados) * 100 : 0, 1);
+        setRes(77, vEnviados > 0 ? (vVendas / vEnviados) * 100 : 0, 1);
+        setRes(78, vEnviados > 0 ? (vVendidosMes / vEnviados) * 100 : 0, 1);
       }
 
       if (allValues.some(v => v.owner_id === 2 && v.period === period)) {
@@ -1110,7 +1115,6 @@ export default function App() {
         const projPrevistos = getVal(36, 4);
         const projAtraso = getVal(41, 4);
         const brsRetrabalho = getVal(44, 4);
-
         setRes(85, projPrevistos > 0 ? Math.max(0, ((projPrevistos - projAtraso) / projPrevistos) * 100) : 0, 4);
         setRes(86, projPrevistos > 0 ? (brsRetrabalho / projPrevistos) * 100 : 0, 4);
       }
@@ -1123,13 +1127,12 @@ export default function App() {
         const totalSolicitacoes = solicCompras + ind;
         const compForaPrazo = getVal(50, 5), compErradas = getVal(53, 5);
         const ocValidas = ordensCompra - ocSemSol;
-
         setRes(83, totalSolicitacoes > 0 ? Math.max(0, ((totalSolicitacoes - (compForaPrazo + compErradas)) / totalSolicitacoes) * 100) : 0, 5);
         setRes(84, ocValidas > 0 ? (numNaoConf / ocValidas) * 100 : 0, 5);
       }
 
       if (allValues.some(v => v.owner_id === 6 && v.period === period)) {
-        const projEmAberto = getVal(26, 3); 
+        const projEmAberto = getVal(26, 3);
         const reclamacoes = getVal(61, 6);
         setRes(82, projEmAberto > 0 ? (reclamacoes / projEmAberto) * 100 : 0, 6);
       }
@@ -1138,13 +1141,12 @@ export default function App() {
         const diasUteis2026 = { 'JAN': 22, 'FEV': 20, 'MAR': 22, 'ABR': 22, 'MAI': 21, 'JUN': 22, 'JUL': 23, 'AGO': 21, 'SET': 22, 'OUT': 22, 'NOV': 21, 'DEZ': 23 };
         const diasUteis = diasUteis2026[period] || 22;
         const colabAtivos = getVal(64, 7), faltas = getVal(72, 7), atestados = getVal(73, 7);
-
         let percFaltas = 0, percAtestados = 0;
         if (colabAtivos > 0) {
             percFaltas = (faltas / (diasUteis * colabAtivos)) * 100;
             percAtestados = (atestados / (diasUteis * colabAtivos)) * 100;
         }
-        setRes(87, percFaltas, 7);    
+        setRes(87, percFaltas, 7);
         setRes(88, percAtestados, 7); 
         setRes(89, percFaltas + percAtestados, 7);     
       }
@@ -1188,14 +1190,14 @@ export default function App() {
           </div>
           <form onSubmit={handleLogin} className="space-y-6">
             <div>
-              <label className="block text-xs font-black text-yellow-500 mb-2 uppercase tracking-widest">{t('Utilizador', 'Username')}</label>
-              <input type="text" value={loginUser} onChange={(e)=>setLoginUser(e.target.value)} required className="w-full px-5 py-4 border-2 border-zinc-700 rounded-2xl outline-none focus:border-yellow-500 bg-zinc-800 text-white font-bold transition-all placeholder:text-zinc-500" placeholder="Seu nome" />
+              <label className="block text-xs font-black text-yellow-500 mb-2 uppercase tracking-widest">{t('E-mail de Acesso', 'Email')}</label>
+              <input type="email" value={loginUser} onChange={(e)=>setLoginUser(e.target.value)} required className="w-full px-5 py-4 border-2 border-zinc-700 rounded-2xl outline-none focus:border-yellow-500 bg-zinc-800 text-white font-bold transition-all placeholder:text-zinc-500" placeholder="seu.nome@kalenborn.com.br" />
             </div>
             <div>
               <label className="block text-xs font-black text-yellow-500 mb-2 uppercase tracking-widest">{t('Senha de Acesso', 'Password')}</label>
               <input type="password" value={loginPass} onChange={(e)=>setLoginPass(e.target.value)} required className="w-full px-5 py-4 border-2 border-zinc-700 rounded-2xl outline-none focus:border-yellow-500 bg-zinc-800 text-white font-bold transition-all placeholder:text-zinc-500" placeholder="••••••••" />
             </div>
-            {loginError && <div className="text-red-500 text-sm font-bold text-center p-4 bg-red-500/10 rounded-xl border border-red-500/20">{t('Credenciais inválidas. Verifique seu usuário.', 'Invalid credentials. Please check your username and password.')}</div>}
+            {loginError && <div className="text-red-500 text-sm font-bold text-center p-4 bg-red-500/10 rounded-xl border border-red-500/20">{t('Credenciais inválidas. Verifique seu e-mail e senha.', 'Invalid credentials. Please check your email and password.')}</div>}
             <button type="submit" disabled={loading} className="w-full bg-yellow-500 text-black font-black uppercase tracking-widest py-4 rounded-2xl hover:bg-yellow-400 transition-all shadow-xl shadow-yellow-500/20 active:scale-95">
               {loading ? t('Acedendo...', 'Logging in...') : t('Entrar no Sistema', 'Sign In')}
             </button>
@@ -1220,7 +1222,6 @@ export default function App() {
         }
         setLoading(false);
     };
-
     const financeCategories = Array.from(new Set(incomingOrders.map(o => (o.kalenborn_group || o.category || o.product || '').trim()).filter(Boolean))).sort();
     
     // CORREÇÃO: Faturamento Realizado do PCP (ID 24)
@@ -1282,12 +1283,12 @@ export default function App() {
                                   <Bar dataKey="Lucro" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={50}>
                                       <LabelList dataKey="Lucro" position="top" fill="#71717a" fontSize={9} fontWeight="bold" formatter={(val) => formatCurrencyShort(val)} />
                                   </Bar>
-                              </BarChart>
+                               </BarChart>
                           </ResponsiveContainer>
                       </div>
                    </div>
                </div>
-           </div>
+            </div>
         </div>
     )
   };
@@ -1333,7 +1334,7 @@ export default function App() {
               
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-4 rounded-3xl shadow-sm border border-zinc-200">
                    <div className="flex items-center gap-3 ml-4">
-                      <Briefcase className="text-yellow-500" size={24} />
+                       <Briefcase className="text-yellow-500" size={24} />
                       <div>
                           <h2 className="text-xl font-black text-zinc-900 tracking-tight leading-none">{t('Inteligência Comercial', 'Business Intelligence')}</h2>
                           <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mt-1">{t('Análise Tática de Vendas', 'Tactical Sales Analysis')}</p>
@@ -1355,7 +1356,7 @@ export default function App() {
                           </select>
                       </div>
                   </div>
-              </div>
+               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="bg-zinc-950 p-6 rounded-3xl shadow-xl border border-zinc-800">
@@ -1377,7 +1378,7 @@ export default function App() {
                       </div>
                       <div className="flex-1 min-h-0 relative mt-2">
                           <ResponsiveContainer width="100%" height="100%">
-                              <BarChart data={dataRegion} layout="vertical" margin={{top: 0, right: 60, left: 10, bottom: 0}}>
+                               <BarChart data={dataRegion} layout="vertical" margin={{top: 0, right: 60, left: 10, bottom: 0}}>
                                   <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f4f4f5" />
                                   <XAxis type="number" hide />
                                   <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{fontSize: 11, fontWeight: 'bold', fill: '#52525b'}} width={110} tickFormatter={(val) => truncateText(val, 15)} />
@@ -1387,7 +1388,7 @@ export default function App() {
                                       <LabelList dataKey="value" position="right" fill="#71717a" fontSize={11} fontWeight="bold" formatter={(val) => formatCurrencyShort(val)} />
                                   </Bar>
                               </BarChart>
-                          </ResponsiveContainer>
+                           </ResponsiveContainer>
                       </div>
                   </div>
 
@@ -1406,7 +1407,7 @@ export default function App() {
                                   <Bar dataKey="value" name={t('Vendido', 'Booked')} fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={50}>
                                       <LabelList dataKey="value" position="top" fill="#71717a" fontSize={9} fontWeight="bold" formatter={(val) => formatCurrencyShort(val)} />
                                   </Bar>
-                              </BarChart>
+                               </BarChart>
                           </ResponsiveContainer>
                       </div>
                   </div>
@@ -1437,7 +1438,7 @@ export default function App() {
                               <h3 className="text-xs font-bold text-zinc-800 uppercase tracking-widest">{t('Classificação PG', 'Product Group (PG) Breakdown')}</h3>
                           </div>
                           <div className="flex-1 min-h-0 mt-2">
-                              <ResponsiveContainer width="100%" height="100%">
+                               <ResponsiveContainer width="100%" height="100%">
                                   <BarChart data={dataPG} layout="vertical" margin={{top: 0, right: 40, left: 10, bottom: 0}}>
                                       <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f4f4f5" />
                                       <XAxis type="number" hide />
@@ -1454,7 +1455,7 @@ export default function App() {
                       <div className="bg-white p-6 rounded-3xl shadow-sm border border-zinc-200 flex-1 flex flex-col min-h-0">
                           <div className="mb-2">
                               <h3 className="text-xs font-bold text-zinc-800 uppercase tracking-widest">{t('Modalidade de Vendas', 'Contract Type Breakdown')}</h3>
-                              <p className="text-[9px] font-bold text-zinc-500 mt-0.5 uppercase">{t('Contrato vs Spot', 'Contract vs. Spot')}</p>
+                               <p className="text-[9px] font-bold text-zinc-500 mt-0.5 uppercase">{t('Contrato vs Spot', 'Contract vs. Spot')}</p>
                           </div>
                           <div className="flex-1 min-h-0 mt-2">
                               <ResponsiveContainer width="100%" height="100%">
@@ -1476,10 +1477,10 @@ export default function App() {
 
                   <div className="bg-zinc-950 p-8 rounded-3xl shadow-xl border border-zinc-800 flex flex-col h-[600px] lg:col-span-2">
                       <div className="mb-6">
-                          <h3 className="text-sm font-bold text-white uppercase tracking-widest">{t('Top 15 Clientes de Maior Expressão', 'Top 15 Key Accounts')}</h3>
+                           <h3 className="text-sm font-bold text-white uppercase tracking-widest">{t('Top 15 Clientes de Maior Expressão', 'Top 15 Key Accounts')}</h3>
                           <p className="text-[10px] font-bold text-yellow-500 mt-1 uppercase">{t('Volume Financeiro (Barras) e Quantidade de Peças (QTD no final da barra)', 'Revenue (Bars) and Unit Volume (Labels)')}</p>
                       </div>
-                      <div className="flex-1 min-h-0 mt-2">
+                       <div className="flex-1 min-h-0 mt-2">
                           <ResponsiveContainer width="100%" height="100%">
                               <BarChart data={dataClientTop15} layout="vertical" margin={{top: 0, right: 80, left: 0, bottom: 0}}>
                                   <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#27272a" />
@@ -1561,7 +1562,7 @@ export default function App() {
             if(cat) {
                 if(!salesByCat[cat]) salesByCat[cat] = 0;
                 salesByCat[cat] += (parseFloat(o.net_value) || 0);
-            }
+             }
         });
         return Object.keys(salesByCat).map(cat => {
             const margin = parseFloat(financeMargins[cat]) || 0;
@@ -1792,7 +1793,7 @@ export default function App() {
                         </ComposedChart>
                     </ResponsiveContainer>
                 </div>
-            </div>
+             </div>
 
             <div className="bg-white p-8 rounded-3xl shadow-sm border border-zinc-200 flex flex-col h-[500px]">
                 <div className="mb-6 flex justify-between items-start">
@@ -1851,7 +1852,7 @@ export default function App() {
                         </BarChart>
                     </ResponsiveContainer>
                 </div>
-            </div>
+             </div>
         </div>
 
         {/* GRÁFICOS DIRETORIA - LINHA FINANCEIRO E SAÚDE */}
@@ -1885,7 +1886,7 @@ export default function App() {
                                     <Cell fill={isSectorAlert ? '#ef4444' : '#eab308'} />
                                     <Cell fill="#27272a" />
                                 </Pie>
-                            </PieChart>
+                             </PieChart>
                         </ResponsiveContainer>
                         <div className="absolute inset-0 flex items-center justify-center flex-col">
                             <span className={`text-4xl font-black ${isSectorAlert ? 'text-red-500' : 'text-yellow-500'}`}>
@@ -1969,7 +1970,7 @@ export default function App() {
                                     <LabelList dataKey="value" position="right" fill="#71717a" fontSize={10} fontWeight="bold" formatter={(val) => formatCurrencyShort(val)} />
                                 </Bar>
                             </BarChart>
-                        </ResponsiveContainer>
+                         </ResponsiveContainer>
                     </div>
                 </div>
 
@@ -1987,7 +1988,7 @@ export default function App() {
                                 <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{fontSize: 11, fontWeight: 'bold', fill: '#71717a'}} width={65} />
                                 <Tooltip content={<CustomTooltipGeral />} cursor={{fill: '#f4f4f5'}} />
                                 <Bar dataKey="value" name={t('Vendido R$', 'Revenue (BRL)')} radius={[0, 4, 4, 0]} barSize={20}>
-                                    {contratoSpotData.map((entry, index) => <Cell key={`cell-${index}`} fill={index === 0 ? '#f97316' : '#18181b'} />)}
+                                     {contratoSpotData.map((entry, index) => <Cell key={`cell-${index}`} fill={index === 0 ? '#f97316' : '#18181b'} />)}
                                     <LabelList dataKey="value" position="insideLeft" fill="#ffffff" fontSize={10} fontWeight="900" offset={8} formatter={(val) => totalContratoSpot > 0 ? `${((val / totalContratoSpot) * 100).toFixed(1)}%` : ''} />
                                     <LabelList dataKey="value" position="right" fill="#71717a" fontSize={11} fontWeight="bold" formatter={(val) => formatCurrencyShort(val)} />
                                 </Bar>
@@ -1999,7 +2000,7 @@ export default function App() {
             </div>
 
             {/* GRÁFICO: MARGEM DE LUCRO */}
-            <div className="bg-white p-6 rounded-3xl shadow-sm border border-zinc-200 flex flex-col h-[400px]">
+            <div className="bg-white p-6 rounded-3xl shadow-sm border border-zinc-200 flex flex col h-[400px]">
                 <div className="mb-4">
                     <h3 className="text-sm font-bold text-zinc-800 uppercase tracking-widest">{t('Margem de Lucro Projetado', 'Projected Profit (Production Revenue)')}</h3>
                     <p className="text-[10px] font-bold text-zinc-500 mt-1 uppercase">{t('Top Categorias (R$)', 'Top Categories (BRL)')}</p>
@@ -2007,12 +2008,12 @@ export default function App() {
                 <div className="flex-1 min-h-0 mt-4">
                     <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={profitDataExecutivo.slice(0, 5)} layout="vertical" margin={{top: 0, right: 40, left: 0, bottom: 0}}>
-                            <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e4e4e7" />
+                             <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e4e4e7" />
                             <XAxis type="number" hide />
                             <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{fontSize: 9, fontWeight: 'bold', fill: '#71717a'}} width={90} tickFormatter={val => truncateText(val, 12)} />
                             <Tooltip content={<CustomTooltipGeral />} cursor={{fill: '#f4f4f5'}} />
                             <Bar dataKey="Lucro" name={t('Lucro', 'Profit')} fill="#10b981" radius={[0, 4, 4, 0]} barSize={25}>
-                                <LabelList dataKey="Lucro" position="right" fill="#71717a" fontSize={10} fontWeight="bold" formatter={(val) => formatCurrencyShort(val)} />
+                                 <LabelList dataKey="Lucro" position="right" fill="#71717a" fontSize={10} fontWeight="bold" formatter={(val) => formatCurrencyShort(val)} />
                             </Bar>
                         </BarChart>
                     </ResponsiveContainer>
@@ -2068,7 +2069,6 @@ export default function App() {
     if (kpiOwnerId === 4 && item.id === 36) return null; // Produção: Previstos
 
     let displayHist = computedData.filter(v => v.indicator_id === item.id && v.owner_id === kpiOwnerId);
-    
     // Remove possíveis duplicados do banco (ex: dois registos de MAI)
     const uniqueMap = new Map();
     displayHist.forEach(h => uniqueMap.set(h.period, h));
@@ -2079,7 +2079,6 @@ export default function App() {
     }
 
     displayHist.sort((a, b) => monthOrder[a.period] - monthOrder[b.period]);
-    
     if (kpiViewMode === 'ANNUAL') {
         let cumulativeData = [];
         let currentSum = 0;
@@ -2103,22 +2102,18 @@ export default function App() {
     
     let curr = null, prev = null, latestVal = '-', trendHtml = null;
     let latestRawVal = null;
-
     if (displayHist.length > 0) {
         curr = parseFloat(displayHist[displayHist.length - 1].value);
         latestRawVal = curr;
         if (displayHist.length > 1) prev = parseFloat(displayHist[displayHist.length - 2].value);
         
         latestVal = formatNumber(curr, item.unit);
-        
         if (prev !== null && prev !== 0) {
             const diff = curr - prev;
             let perc = (diff / prev) * 100;
             if (perc > 999) perc = 999;
-            
             const isPositiveTrend = diff > 0;
             let colorClass = 'text-zinc-400';
-            
             if (diff !== 0) {
                 if (isPositiveTrend) colorClass = item.inverse_goal ? 'text-red-500' : 'text-emerald-500';
                 else colorClass = item.inverse_goal ? 'text-emerald-500' : 'text-red-500';
@@ -2252,15 +2247,13 @@ export default function App() {
 
     const commentsList = baseGraphData.filter(d => d.comment && d.comment.trim() !== '').reverse();
     const hasComments = commentsList.length > 0;
-
     let currentMetaBadgeVal = metaVal;
     if (kpiViewMode === 'ANNUAL' && metaVal !== undefined && (item.unit === 'R$' || item.unit === 'QTE')) {
-        currentMetaBadgeVal = metaVal * displayHist.length; 
+        currentMetaBadgeVal = metaVal * displayHist.length;
     }
 
     let headerColorClass = isResultado ? 'text-zinc-800' : 'text-zinc-500';
     let valueColorClass = 'text-zinc-900';
-    
     if (metaVal !== undefined && latestRawVal !== null) {
         const isBad = item.inverse_goal ? latestRawVal > currentMetaBadgeVal : latestRawVal < currentMetaBadgeVal;
         if (isBad) {
@@ -2362,7 +2355,6 @@ export default function App() {
 
     const esforcoList = finalIndicators.filter(i => i.category === 'ESFORCO');
     const resultadoList = finalIndicators.filter(i => i.category === 'RESULTADO');
-
     const isAutoCalculatedEsforco = [2, 25, 27, 29, 43];
 
     const handleSaveKPIs = async (e) => {
@@ -2371,7 +2363,7 @@ export default function App() {
         const payload = [];
         const commentsPayload = [];
         let hasError = false;
-        
+
         esforcoList.forEach(ind => {
             const val = formValues[ind.id];
             if (val !== undefined && val !== '') {
@@ -2437,7 +2429,7 @@ export default function App() {
                             onChange={(e) => setKpiOwnerId(parseInt(e.target.value))}
                         >
                             {dbOwners.filter(o => {
-                                if(user.username.toUpperCase() === 'DANIEL') return o.id === 3 || o.id === 4;
+                                 if(user.username.toUpperCase() === 'DANIEL') return o.id === 3 || o.id === 4;
                                 return true;
                             }).map(o => <option key={o.id} value={o.id} className="text-base font-bold">{t('Visão:', 'View:')} {translateArea(o.name)}</option>)}
                         </select>
@@ -2525,7 +2517,7 @@ export default function App() {
 
                     <div className="p-8">
                         <h4 className="text-[10px] font-black text-yellow-600 uppercase tracking-widest mb-6 flex items-center gap-2">
-                            <LineChartIcon size={16} /> {t('Digitação de Esforço', 'Operational Data Entry')}
+                             <LineChartIcon size={16} /> {t('Digitação de Esforço', 'Operational Data Entry')}
                         </h4>
                         <div className="space-y-4">
                             {esforcoList.length === 0 && <p className="text-sm text-zinc-400 italic">{t('Nenhuma métrica atribuída.', 'No metrics assigned.')}</p>}
@@ -2533,7 +2525,6 @@ export default function App() {
                                 const isAuto = isAutoCalculatedEsforco.includes(ind.id);
                                 let displayName = tInd(ind.name);
                                 if (ind.name === "Não conformidade (%)") displayName = t("Nº de Não Conformidades (Qtd)", "Number of Non-Conformities (Qty)");
-                                
                                 const currentVal = formValues[ind.id] !== undefined ? formValues[ind.id] : '';
                                 const currentComment = formComments[ind.id] || '';
                                 const hasComment = currentComment.trim() !== '';
@@ -2678,7 +2669,6 @@ export default function App() {
                             const isRes = ind.category === 'RESULTADO';
                             const goalObj = dbGoals.find(g => g.indicator_id === ind.id);
                             const metaVal = goalObj ? formatNumber(goalObj.goal_value, ind.unit) : '-';
-
                             return (
                                 <tr key={ind.id} className={`hover:bg-yellow-50/30 transition-colors ${isRes ? 'bg-zinc-50/50' : ''}`}>
                                     <td className="p-3 font-black text-zinc-400 text-xs text-center border-r border-zinc-50">{ind.id}</td>
@@ -2799,7 +2789,7 @@ export default function App() {
         [t('Em Andamento', 'In Progress')]: '#eab308',
         [t('Concluído', 'Completed')]: '#10b981'
     };
-    
+
     const pieData = Object.keys(sCounts).map(k => {
         const translatedKey = translateStatus(k);
         return { name: translatedKey, value: sCounts[k] };
@@ -2900,7 +2890,7 @@ export default function App() {
             </div>
 
             <div className="bg-white rounded-3xl shadow-sm border border-zinc-200 overflow-hidden">
-                <div className="p-6 border-b border-zinc-200 bg-zinc-50 flex flex-wrap justify-between items-center gap-4">
+                 <div className="p-6 border-b border-zinc-200 bg-zinc-50 flex flex-wrap justify-between items-center gap-4">
                     <h3 className="font-extrabold text-zinc-900 flex items-center gap-3">
                         <ListChecks className="text-yellow-600" size={24} /> {t('Matriz de Acompanhamento', 'Action Tracking Matrix')}
                     </h3>
@@ -2917,7 +2907,7 @@ export default function App() {
                             className="border border-zinc-300 bg-white px-4 py-2 rounded-xl text-sm font-bold text-zinc-700 outline-none focus:border-zinc-500"
                             value={actionFilterStatus} onChange={(e) => setActionFilterStatus(e.target.value)}
                         >
-                            <option value="Todos">{t('Todos os Status', 'All Statuses')}</option>
+                             <option value="Todos">{t('Todos os Status', 'All Statuses')}</option>
                             <option value="Urgente">{t('Urgente', 'Urgent')}</option>
                             <option value="A Fazer">{t('A Fazer', 'To Do')}</option>
                             <option value="Em Andamento">{t('Em Andamento', 'In Progress')}</option>
@@ -2929,7 +2919,7 @@ export default function App() {
                     <table className="w-full text-left text-sm">
                         <thead className="bg-white text-zinc-500 uppercase font-bold text-[11px] border-b border-zinc-200">
                             <tr>
-                                <th className="p-6">{t('Ref', 'Ref')}</th>
+                                 <th className="p-6">{t('Ref', 'Ref')}</th>
                                 <th>{t('Área / Dono', 'Department / Owner')}</th>
                                 <th>{t('Ação Estratégica', 'Action Item (What)')}</th>
                                 <th>{t('Causa Raiz', 'Root Cause (Why)')}</th>
@@ -2939,357 +2929,4 @@ export default function App() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-zinc-100 font-medium text-zinc-800">
-                            {filteredActions.length === 0 && <tr><td colSpan="7" className="p-10 text-center text-zinc-400 italic">{t('Nenhuma ação encontrada.', 'No actions found.')}</td></tr>}
-                            {filteredActions.map(a => {
-                                const isOverdue = checkOverdue(a.when, a.status);
-                                const mySubs = subActions.filter(s => s.action_id === a.id);
-                                return (
-                                    <tr key={a.id} className={`hover:bg-yellow-50 transition-colors group ${isOverdue ? 'bg-red-50/50' : ''}`}>
-                                        <td className="p-6 font-bold text-zinc-400 text-xs">#{a.id}</td>
-                                        <td className="py-6">
-                                            <div className="font-bold text-zinc-900">{translateArea(a.area)}</div>
-                                            <div className="text-[9px] uppercase font-black text-zinc-500">{a.who}</div>
-                                        </td>
-                                        <td className="py-6 max-w-sm pr-4">
-                                            <div className="font-bold text-zinc-800 leading-tight">{a.what}</div>
-                                            {mySubs.length > 0 && (
-                                                <div className="mt-2 text-[10px] font-bold text-zinc-700 bg-zinc-100 px-2 py-1 rounded inline-flex items-center gap-1 border border-zinc-200">
-                                                    <GitBranch size={12} /> {mySubs.length} {t('Sub-ação(ões)', 'Subtask(s)')} ({mySubs.filter(x=>x.status==='Concluído').length} {t('fin.', 'comp.')})
-                                                </div>
-                                            )}
-                                        </td>
-                                        <td className="py-6 min-w-[280px] max-w-md pr-6">
-                                            <div className="text-xs italic text-zinc-500 leading-relaxed flex items-start gap-1.5">
-                                                <Info size={16} className="mt-0.5 shrink-0 text-zinc-400" />
-                                                <span>{a.why}</span>
-                                            </div>
-                                        </td>
-                                        <td className="py-6 whitespace-nowrap">
-                                            <div className="flex flex-col gap-1">
-                                                <span className="text-xs font-bold text-zinc-700">{a.when?.toLowerCase().trim() === 'imediato' ? t('Imediato', 'Immediate') : a.when}</span>
-                                                {isOverdue && <span className="text-[8px] font-black text-red-600 uppercase bg-red-100 px-1.5 py-0.5 rounded-full w-fit">{t('Atrasado', 'Overdue')}</span>}
-                                            </div>
-                                        </td>
-                                        <td className="py-6">
-                                            <span className={`px-3 py-1 rounded-full text-[10px] font-black border ${getStatusColor(a.status)} uppercase`}>
-                                                {translateStatus(a.status)}
-                                            </span>
-                                        </td>
-                                        <td className="py-6 text-center">
-                                            <button 
-                                                onClick={() => setSelectedReportAction(a)}
-                                                className="inline-flex p-3 bg-white border border-zinc-200 text-zinc-800 rounded-2xl hover:bg-black hover:text-yellow-500 transition-all shadow-sm"
-                                            >
-                                                <ChevronRight size={20} />
-                                            </button>
-                                        </td>
-                                    </tr>
-                                )
-                            })}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            
-            {isAddActionModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center">
-                    <div className="absolute inset-0 bg-zinc-900/80 backdrop-blur-sm" onClick={() => setIsAddActionModalOpen(false)}></div>
-                    <div className="relative w-full max-w-xl bg-white rounded-[40px] shadow-2xl p-10 m-4 flex flex-col fade-in max-h-[90vh] overflow-y-auto">
-                        <h2 className="text-3xl font-black mb-8 flex items-center gap-3 text-zinc-900 tracking-tight">
-                            {editingActionId ? <Edit2 className="text-yellow-600" size={40} /> : <PlusCircle className="text-emerald-500" size={40} />}
-                            {editingActionId ? t('Editar Ação 5W2H', 'Edit 5W2H Action') : t('Nova Ação 5W2H', 'New 5W2H Action')}
-                        </h2>
-                        <form onSubmit={handleSaveAction} className="space-y-6">
-                            <div>
-                                <label className="block text-[11px] font-black text-zinc-500 uppercase tracking-widest mb-2">{t('O Quê? (Ação Estratégica)', 'What? (Action Item)')}</label>
-                                <input type="text" required value={actionForm.what} onChange={e=>setActionForm({...actionForm, what: e.target.value})} className="w-full border-2 border-zinc-200 p-4 rounded-2xl outline-none focus:border-yellow-500 bg-zinc-50 transition-all font-medium text-zinc-900" />
-                            </div>
-                            <div>
-                                <label className="block text-[11px] font-black text-zinc-500 uppercase tracking-widest mb-2">{t('Por Quê? (Causa Raiz)', 'Why? (Reason / Root Cause)')}</label>
-                                <input type="text" required value={actionForm.why} onChange={e=>setActionForm({...actionForm, why: e.target.value})} className="w-full border-2 border-zinc-200 p-4 rounded-2xl outline-none focus:border-yellow-500 bg-zinc-50 transition-all font-medium text-zinc-900" />
-                            </div>
-                            <div className="grid grid-cols-2 gap-6">
-                                <div>
-                                    <label className="block text-[11px] font-black text-zinc-500 uppercase tracking-widest mb-2">{t('Área', 'Department')}</label>
-                                    <select required value={actionForm.area} onChange={e=>setActionForm({...actionForm, area: e.target.value})} className="w-full border-2 border-zinc-200 p-4 rounded-2xl outline-none bg-zinc-50 cursor-pointer font-bold text-zinc-900">
-                                        {availableAreas.filter(a => a !== 'Todas').map(a => <option key={a} value={a}>{translateArea(a)}</option>)}
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-[11px] font-black text-zinc-500 uppercase tracking-widest mb-2">{t('Quem? (Responsável)', 'Who? (Owner)')}</label>
-                                    <input type="text" required value={actionForm.who} onChange={e=>setActionForm({...actionForm, who: e.target.value})} className="w-full border-2 border-zinc-200 p-4 rounded-2xl outline-none focus:border-yellow-500 bg-zinc-50 transition-all font-medium text-zinc-900" />
-                                </div>
-                            </div>
-                            <div>
-                                <label className="block text-[11px] font-black text-zinc-500 uppercase tracking-widest mb-2">{t('Quando? (Prazo Limite)', 'When? (Due Date)')}</label>
-                                <input type="text" required placeholder={t("Ex: 30/05/2026 ou Imediato", "e.g., 05/30/2026 or Immediate")} value={actionForm.when} onChange={e=>setActionForm({...actionForm, when: e.target.value})} className="w-full border-2 border-zinc-200 p-4 rounded-2xl outline-none focus:border-yellow-500 bg-zinc-50 transition-all font-medium text-zinc-900" />
-                            </div>
-                            <div className="flex gap-4">
-                                <button type="button" onClick={() => setIsAddActionModalOpen(false)} className="flex-1 bg-zinc-100 text-zinc-600 font-bold py-5 rounded-2xl hover:bg-zinc-200 transition-all">{t('Cancelar', 'Cancel')}</button>
-                                <button type="submit" disabled={loading} className="flex-[2] bg-black text-yellow-500 font-bold py-5 rounded-2xl hover:bg-zinc-900 transition-all shadow-xl active:scale-95">{t('Registrar no Banco', 'Save to Database')}</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
-
-            {selectedReportAction && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8">
-                    <div className="absolute inset-0 bg-zinc-900/90 backdrop-blur-sm" onClick={() => setSelectedReportAction(null)}></div>
-                    <div className="relative w-full max-w-6xl bg-white h-full max-h-[90vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-300">
-                        
-                        <div className="p-6 border-b border-zinc-200 bg-zinc-50 flex justify-between items-start shrink-0">
-                            <div className="flex-1 pr-6">
-                                <div className="flex items-center gap-3 mb-3">
-                                    <span className="text-[10px] font-black px-3 py-1 bg-black rounded-full text-yellow-500 uppercase tracking-widest">Ref #{selectedReportAction.id}</span>
-                                    <span className="text-[10px] font-black px-3 py-1 bg-zinc-200 rounded-full text-zinc-700 uppercase tracking-widest">{translateArea(selectedReportAction.area)}</span>
-                                    
-                                    {(user.role === 'admin' || user.role === 'dev' || user.username.toUpperCase() === 'DANIEL') && (
-                                        <div className="flex gap-2 ml-4 border-l border-zinc-300 pl-4">
-                                            <button onClick={() => {
-                                                setEditingActionId(selectedReportAction.id);
-                                                setActionForm({ what: selectedReportAction.what, why: selectedReportAction.why, area: selectedReportAction.area, who: selectedReportAction.who, when: selectedReportAction.when });
-                                                setSelectedReportAction(null);
-                                                setIsAddActionModalOpen(true);
-                                            }} className="text-blue-600 hover:text-blue-800 transition-colors flex items-center gap-1 text-xs font-bold"><Edit2 size={14} /> {t('Editar', 'Edit')}</button>
-                                            <button onClick={() => handleDeleteAction(selectedReportAction.id)} className="text-red-600 hover:text-red-800 transition-colors flex items-center gap-1 text-xs font-bold"><Trash2 size={14} /> {t('Excluir', 'Delete')}</button>
-                                        </div>
-                                    )}
-                                </div>
-                                <h2 className="font-extrabold text-2xl md:text-3xl text-zinc-900 leading-tight">{selectedReportAction.what}</h2>
-                            </div>
-                            <button onClick={() => setSelectedReportAction(null)} className="p-2 text-zinc-400 hover:text-zinc-700 hover:bg-zinc-200 rounded-full transition-colors shrink-0"><X size={24} /></button>
-                        </div>
-                        
-                        <div className="flex flex-col md:flex-row flex-1 min-h-0 overflow-hidden">
-                            <div className="flex-[3] border-r border-zinc-200 flex flex-col min-h-0 bg-white">
-                                <div className="p-6 border-b border-zinc-100 flex flex-col sm:flex-row gap-6 items-start sm:items-center justify-between">
-                                    <div className="bg-yellow-50 p-4 rounded-2xl border border-yellow-200 text-sm flex gap-3 shadow-sm flex-1">
-                                        <HelpCircle className="text-yellow-600 shrink-0 mt-0.5" size={20} />
-                                        <div>
-                                            <span className="block font-bold text-yellow-800 uppercase text-[10px] mb-1">{t('Causa Raiz Identificada', 'Identified Root Cause')}</span>
-                                            <span className="text-yellow-900 italic font-medium leading-relaxed">{selectedReportAction.why}</span>
-                                        </div>
-                                    </div>
-                                    <div className="flex flex-col gap-2 shrink-0 w-full sm:w-auto">
-                                        <span className="text-[11px] font-black text-zinc-500 uppercase tracking-widest text-right">{t('Estado Atual', 'Current Status')}</span>
-                                        <select 
-                                            className="font-bold text-sm rounded-xl px-4 py-3 border-2 border-transparent outline-none cursor-pointer text-white shadow-md"
-                                            style={{backgroundColor: getHex(selectedReportAction.status), color: selectedReportAction.status==='Em Andamento'?'black':'white'}}
-                                            value={selectedReportAction.status}
-                                            onChange={(e) => handleStatusChangeAction(selectedReportAction.id, e.target.value, selectedReportAction.area)}
-                                        >
-                                            <option value="Urgente" style={{backgroundColor:'white', color:'black'}}>🔴 {t('Urgente', 'Urgent')}</option>
-                                            <option value="A Fazer" style={{backgroundColor:'white', color:'black'}}>⚪ {t('A Fazer', 'To Do')}</option>
-                                            <option value="Em Andamento" style={{backgroundColor:'white', color:'black'}}>🟡 {t('Em Andamento', 'In Progress')}</option>
-                                            <option value="Concluído" style={{backgroundColor:'white', color:'black'}}>🟢 {t('Concluído', 'Completed')}</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                
-                                <div className="flex-1 p-6 overflow-y-auto bg-zinc-50/30">
-                                    <h3 className="text-sm font-bold text-zinc-800 uppercase tracking-wider mb-6 flex items-center gap-2">
-                                        <History className="text-zinc-500" size={18} /> {t('Diário de Bordo (Histórico)', 'Progress Log (History)')}
-                                    </h3>
-                                    <div className="space-y-6">
-                                        {(!selectedReportAction.updates || selectedReportAction.updates.length === 0) && (
-                                            <div className="text-center py-16 opacity-40"><History size={48} className="mx-auto mb-3" /><p className="text-sm font-bold uppercase">{t('Sem registros ainda', 'No progress logged yet')}</p></div>
-                                        )}
-                                        {[...(selectedReportAction.updates || [])].sort((a,b) => new Date(b.created_at) - new Date(a.created_at)).map(u => (
-                                            <div key={u.id} className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-sm relative">
-                                                <div className="flex justify-between items-center mb-4 border-b border-zinc-100 pb-3">
-                                                    <span className={`text-[10px] font-black px-2 py-1 rounded uppercase tracking-widest ${u.type === 'realizado' ? 'bg-emerald-50 text-emerald-700' : 'bg-blue-50 text-blue-700'}`}>
-                                                        {u.type === 'realizado' ? t('Ação Feita', 'Action Done') : t('Próximo Passo', 'Next Step')}
-                                                    </span>
-                                                    <span className="text-xs font-bold text-zinc-400">{u.date}</span>
-                                                </div>
-                                                <p className="text-sm text-zinc-800 leading-relaxed font-medium whitespace-pre-wrap">{u.text}</p>
-                                                <div className="mt-4 pt-3 border-t border-zinc-50 flex items-center gap-2">
-                                                    <div className="w-6 h-6 bg-zinc-200 rounded-full flex items-center justify-center text-[10px] font-bold text-zinc-600">{u.author ? u.author[0] : 'U'}</div>
-                                                    <span className="text-[10px] font-black text-zinc-500 uppercase">{u.author || t('Usuário', 'User')}</span>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div className="p-6 border-t border-zinc-200 bg-white shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.02)]">
-                                    <form onSubmit={handleAddUpdate} className="space-y-4">
-                                        <div className="flex gap-3">
-                                            <label className={`flex-1 flex items-center justify-center gap-2 py-3 border-2 rounded-xl cursor-pointer text-xs font-black uppercase transition-all shadow-sm ${updateType === 'realizado' ? 'bg-emerald-50 text-emerald-700 border-emerald-300' : 'bg-white text-zinc-400 border-zinc-200 hover:bg-zinc-50'}`}>
-                                                <input type="radio" className="hidden" checked={updateType === 'realizado'} onChange={()=>setUpdateType('realizado')} /> <CheckCircle2 size={16}/> {t('Ação Feita', 'Log Progress')}
-                                            </label>
-                                            <label className={`flex-1 flex items-center justify-center gap-2 py-3 border-2 rounded-xl cursor-pointer text-xs font-black uppercase transition-all shadow-sm ${updateType === 'proximo_passo' ? 'bg-blue-50 text-blue-700 border-blue-300' : 'bg-white text-zinc-400 border-zinc-200 hover:bg-zinc-50'}`}>
-                                                <input type="radio" className="hidden" checked={updateType === 'proximo_passo'} onChange={()=>setUpdateType('proximo_passo')} /> <ArrowRightCircle size={16}/> {t('Próximo Passo', 'Next Step')}
-                                            </label>
-                                        </div>
-                                        <textarea 
-                                            className="w-full border-2 border-zinc-200 p-4 rounded-xl text-sm outline-none focus:border-yellow-500 bg-zinc-50 font-medium resize-none h-[100px] shadow-inner text-zinc-900" 
-                                            placeholder={t("Descreva o que aconteceu ou o plano a seguir...", "Describe progress made or next steps...")}
-                                            value={updateText}
-                                            onChange={e=>setUpdateText(e.target.value)}
-                                        ></textarea>
-                                        <div className="flex justify-end">
-                                            <button type="submit" disabled={loading || !updateText.trim()} className="bg-black text-yellow-500 px-8 py-3 rounded-xl font-bold hover:bg-zinc-800 shadow-lg active:scale-95 flex items-center justify-center gap-2 transition-all disabled:opacity-50">
-                                                <Save size={18} /> {t('Salvar no Diário', 'Save Progress')}
-                                            </button>
-                                        </div>
-                                    </form>
-                                </div>
-                            </div>
-
-                            <div className="flex-[2] flex flex-col min-h-0 bg-zinc-50">
-                                <div className="p-6 border-b border-zinc-200 bg-white">
-                                    <h3 className="text-sm font-bold text-zinc-800 uppercase tracking-wider flex items-center gap-2">
-                                        <GitBranch className="text-zinc-500" size={18} /> {t('Desdobramento de Tarefas', 'Sub-tasks Breakdown')}
-                                    </h3>
-                                    <p className="text-xs text-zinc-500 mt-1 font-medium">{t('Divida a ação principal em subtarefas com responsáveis.', 'Break down the main action into assigned sub-tasks.')}</p>
-                                </div>
-                                <div className="flex-1 p-6 overflow-y-auto space-y-3">
-                                    {subActions.filter(s => s.action_id === selectedReportAction.id).length === 0 && (
-                                        <div className="text-center py-10 opacity-40"><ListChecks size={32} className="mx-auto mb-2" /><p className="text-xs font-bold uppercase">{t('Nenhuma subtarefa', 'No subtasks')}</p></div>
-                                    )}
-                                    {subActions.filter(s => s.action_id === selectedReportAction.id).map(s => (
-                                        <div key={s.id} className="bg-white p-4 rounded-2xl border border-zinc-200 shadow-sm relative group transition-all hover:border-zinc-400">
-                                            <p className="text-sm font-bold text-zinc-800 mb-3 pr-8 leading-tight">{s.what}</p>
-                                            <div className="flex flex-wrap items-center justify-between gap-3">
-                                                <div className="flex items-center gap-3 bg-zinc-50 px-3 py-1.5 rounded-lg border border-zinc-100">
-                                                    <span className="text-[10px] font-black text-zinc-500 uppercase flex items-center gap-1"><User size={12} className="text-yellow-600" /> {s.who}</span>
-                                                    <span className="text-[10px] font-black text-zinc-500 uppercase flex items-center gap-1 border-l border-zinc-200 pl-3"><Calendar size={12} className="text-emerald-600" /> {s.when?.toLowerCase().trim() === 'imediato' ? t('Imediato', 'Immediate') : s.when}</span>
-                                                </div>
-                                                <select 
-                                                    onChange={(e) => handleSubStatusChange(s.id, e.target.value)} 
-                                                    value={s.status}
-                                                    className={`text-[10px] font-bold rounded-lg px-3 py-1.5 outline-none cursor-pointer border shadow-sm ${getSubHex(s.status)}`}
-                                                >
-                                                    <option value="Urgente">🔴 {t('Urgente', 'Urgent')}</option>
-                                                    <option value="A Fazer">⚪ {t('A Fazer', 'To Do')}</option>
-                                                    <option value="Em Andamento">🟡 {t('Em Andamento', 'In Progress')}</option>
-                                                    <option value="Concluído">🟢 {t('Concluído', 'Completed')}</option>
-                                                </select>
-                                            </div>
-                                            <button onClick={() => handleDeleteSubAction(s.id)} className="absolute top-3 right-3 p-1.5 text-zinc-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100"><Trash2 size={16} /></button>
-                                        </div>
-                                    ))}
-                                </div>
-                                <div className="p-6 border-t border-zinc-200 bg-white">
-                                    <h4 className="text-[10px] font-black text-zinc-800 uppercase tracking-widest mb-3 flex items-center gap-2"><PlusCircle size={14} className="text-yellow-500"/> {t('Nova Subtarefa', 'Add Sub-task')}</h4>
-                                    <div className="flex flex-col gap-3">
-                                        <input type="text" placeholder={t("O que deve ser feito?", "Sub-task description")} value={subActionForm.what} onChange={e=>setSubActionForm({...subActionForm, what: e.target.value})} className="w-full text-sm font-bold text-zinc-800 p-3 rounded-xl border-2 border-zinc-200 outline-none focus:border-yellow-500 bg-zinc-50" />
-                                        <div className="flex gap-3">
-                                            <input type="text" placeholder={t("Responsável", "Owner")} value={subActionForm.who} onChange={e=>setSubActionForm({...subActionForm, who: e.target.value})} className="flex-1 text-sm font-bold text-zinc-800 p-3 rounded-xl border-2 border-zinc-200 outline-none focus:border-yellow-500 bg-zinc-50" />
-                                            <input type="text" placeholder={t("Prazo", "Deadline")} value={subActionForm.when} onChange={e=>setSubActionForm({...subActionForm, when: e.target.value})} className="w-1/3 text-sm font-bold text-zinc-800 p-3 rounded-xl border-2 border-zinc-200 outline-none focus:border-yellow-500 bg-zinc-50" />
-                                        </div>
-                                        <button type="button" onClick={handleAddSubAction} className="w-full mt-1 bg-zinc-800 text-yellow-500 px-4 py-3 rounded-xl font-black uppercase tracking-wider hover:bg-black transition-colors shadow-md flex justify-center items-center gap-2">{t('Adicionar à Lista', 'Add to List')}</button>
-                                    </div>
-                                </div>
-                            </div>
-
-                        </div>
-                    </div>
-                </div>
-            )}
-
-        </div>
-    );
-  };
-
-  // ==========================================
-  // MAIN LAYOUT
-  // ==========================================
-  return (
-    <div className="min-h-screen bg-zinc-100 font-sans text-zinc-900 selection:bg-yellow-200 selection:text-black">
-      <header className="bg-black border-b border-zinc-800 sticky top-0 z-40 shadow-xl">
-        <div className="max-w-[1600px] mx-auto px-6 h-20 flex items-center justify-between">
-            <div className="flex items-center gap-6">
-                <div className="h-12 bg-zinc-900 rounded-xl flex items-center justify-center border border-zinc-800 overflow-hidden px-3 min-w-[3rem]">
-                    {appLogo ? (
-                        <img src={appLogo} alt="Logo" className="h-8 w-auto object-contain" onError={(e)=>{e.target.style.display='none'}} />
-                    ) : (
-                        <span className="text-yellow-500 font-black text-2xl" style={{ fontFamily: 'Georgia, serif' }}>K</span>
-                    )}
-                </div>
-                <div>
-                    <h1 className="text-xl font-black text-white tracking-tight leading-none">{t('Painel KdB', 'KdB Dashboard')}</h1>
-                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mt-1.5">{user.role === 'admin' || user.role === 'dev' ? t('Acesso Administrativo', 'Administrative Access') : `${t('Operacional:', 'Operational:')} ${translateArea(user.area)}`}</p>
-                </div>
-            </div>
-
-            <nav className="hidden lg:flex gap-1 bg-zinc-900 p-1.5 rounded-2xl border border-zinc-800 shadow-inner">
-                {(user.role === 'admin' || user.role === 'dev') && (
-                    <button onClick={() => setActiveTab('diretoria')} className={`px-5 py-2.5 rounded-xl font-black uppercase tracking-wider text-xs transition-all flex items-center gap-2 ${activeTab === 'diretoria' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
-                        <BarChart3 size={16} /> {t('Diretoria', 'Board')}
-                    </button>
-                )}
-                <button onClick={() => setActiveTab('kpi')} className={`px-5 py-2.5 rounded-xl font-black uppercase tracking-wider text-xs transition-all flex items-center gap-2 ${activeTab === 'kpi' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
-                    <LineChartIcon size={16} /> {t('KPIs', 'KPIs')}
-                </button>
-
-                {(user.role === 'admin' || user.role === 'dev' || user.area === 'Comercial') && (
-                    <button onClick={() => setActiveTab('comercial')} className={`px-5 py-2.5 rounded-xl font-black uppercase tracking-wider text-xs transition-all flex items-center gap-2 ${activeTab === 'comercial' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
-                        <DollarSign size={16} /> {t('Comercial', 'Commercial')}
-                    </button>
-                )}
-
-                {(user.role === 'admin' || user.role === 'dev' || user.area === 'Financeiro' || user.username.toUpperCase().includes('FABIO')) && (
-                    <button onClick={() => setActiveTab('financeiro')} className={`px-5 py-2.5 rounded-xl font-black uppercase tracking-wider text-xs transition-all flex items-center gap-2 ${activeTab === 'financeiro' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
-                        <Globe size={16} /> {t('Financeiro', 'Finance')}
-                    </button>
-                )}
-
-                <button onClick={() => setActiveTab('5w2h')} className={`px-5 py-2.5 rounded-xl font-black uppercase tracking-wider text-xs transition-all flex items-center gap-2 ${activeTab === '5w2h' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
-                    <ListChecks size={16} /> {t('Matriz 5W2H', '5W2H Matrix')}
-                </button>
-                {(user.username.toUpperCase() === 'LUCIENE' || user.area === 'Comercial' || user.role === 'admin' || user.role === 'dev') && (
-                    <button onClick={() => setActiveTab('auditoria')} className={`px-5 py-2.5 rounded-xl font-black uppercase tracking-wider text-xs transition-all flex items-center gap-2 ${activeTab === 'auditoria' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
-                        <FileSpreadsheet size={16} /> {t('Auditoria', 'Audit')}
-                    </button>
-                )}
-            </nav>
-
-            <div className="flex items-center gap-4">
-                <input type="file" id="logo-upload-input" accept="image/*" onChange={handleLogoUpload} className="hidden" />
-                
-                {(user.role === 'admin' || user.role === 'dev') && (
-                    <button onClick={triggerLogoUpload} className="p-3 text-zinc-500 hover:bg-zinc-800 hover:text-yellow-500 rounded-xl transition-colors" title={t('Alterar Logo da Empresa', 'Change Company Logo')}>
-                        <ImageIcon size={20} />
-                    </button>
-                )}
-
-                <div className="flex items-center gap-1 bg-zinc-900 p-1 rounded-xl border border-zinc-800 mr-2">
-                    <button onClick={() => setLang('PT')} className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${lang === 'PT' ? 'bg-yellow-500 text-black shadow-sm' : 'text-zinc-500 hover:text-white hover:bg-zinc-800'}`}>PT</button>
-                    <button onClick={() => setLang('EN')} className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${lang === 'EN' ? 'bg-yellow-500 text-black shadow-sm' : 'text-zinc-500 hover:text-white hover:bg-zinc-800'}`}>EN</button>
-                </div>
-
-                <div className="flex items-center gap-3 bg-zinc-900 px-4 py-2 rounded-full border border-zinc-800 shadow-sm">
-                    <div className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse shadow-sm shadow-green-500/50"></div>
-                    <span className="text-xs font-black text-white uppercase tracking-wider">{user.username}</span>
-                </div>
-                <button onClick={() => window.location.reload()} className="p-3 text-zinc-500 hover:bg-red-500/10 hover:text-red-500 rounded-xl transition-colors" title={t('Sair com Segurança', 'Logout Safely')}>
-                    <LogOut size={20} />
-                </button>
-            </div>
-        </div>
-      </header>
-
-      <main className="max-w-[1600px] mx-auto px-6 py-8">
-        {activeTab === 'diretoria' && renderDiretoria()}
-        {activeTab === 'kpi' && renderKPI()}
-        {activeTab === 'comercial' && renderComercial()}
-        {activeTab === 'financeiro' && renderFinanceiro()}
-        {activeTab === 'auditoria' && renderAuditoria()}
-        {activeTab === '5w2h' && render5W2H()}
-      </main>
-
-      {/* TOAST SYSTEM */}
-      {toast && (
-        <div className="fixed bottom-8 right-8 z-[9999] animate-in slide-in-from-bottom-5 fade-in duration-300">
-            <div className={`px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 text-white font-bold text-sm border-2 ${toast.type === 'error' ? 'bg-red-600 border-red-500 shadow-red-500/30' : 'bg-zinc-900 border-yellow-500 shadow-yellow-500/20'}`}>
-                {toast.type === 'error' ? <AlertTriangle size={22} /> : <CheckCircle2 className="text-yellow-500" size={22} />}
-                <span className="mt-0.5 tracking-wide">{toast.msg}</span>
-            </div>
-        </div>
-      )}
-    </div>
-  );
-}
+                            {filteredActions.length === 0 && <tr><td colSpan="7" className="p-10 text-center text-zinc-400 italic">{t('Nenhuma ação encontrada.', 'No actions found
