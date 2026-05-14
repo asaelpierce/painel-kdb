@@ -926,7 +926,7 @@ export default function App() {
       setLoading(true);
       try {
           const dateStr = new Date().toLocaleDateString('pt-BR');
-          await supabaseClient.from('action_updates').insert([{
+          await supabaseClient.from('updates').insert([{
               action_id: selectedReportAction.id,
               type: updateType,
               text: updateText,
