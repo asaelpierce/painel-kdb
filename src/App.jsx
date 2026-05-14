@@ -825,30 +825,21 @@ export default function App() {
         setLoginError(true);
         return;
     }
-
+    
     setLoading(true);
     try {
-        // 1. Usa o Auth Oficial do Supabase
-        const { data: authData, error: authError } = await supabaseClient.auth.signInWithPassword({
-            email: loginUser.trim(),
-            password: loginPass.trim()
-        });
-
-        if (authError || !authData.user) {
-            throw new Error('Credenciais inválidas no Auth');
-        }
-
-        // 2. Busca o perfil na tabela interna usando o email validado
+        // Busca original pelo username e senha na tabela
         const { data } = await supabaseClient
             .from('users')
             .select('*')
-            .eq('email', authData.user.email)
+            .eq('username', loginUser.trim())
+            .eq('password', loginPass.trim())
             .single();
-
+        
         if (data) {
           setUser(data);
           setLoginError(false);
-
+          
           if (data.role === 'admin' || data.role === 'dev') setActiveTab('diretoria');
           else setActiveTab('kpi');
 
@@ -876,7 +867,6 @@ export default function App() {
           setLoginError(true);
         }
     } catch (e) {
-        console.error("Erro no login:", e);
         setLoginError(true);
     }
     setLoading(false);
@@ -1210,14 +1200,14 @@ export default function App() {
           </div>
           <form onSubmit={handleLogin} className="space-y-6">
             <div>
-              <label className="block text-xs font-black text-yellow-500 mb-2 uppercase tracking-widest">{t('E-mail de Acesso', 'Email')}</label>
-              <input type="email" value={loginUser} onChange={(e)=>setLoginUser(e.target.value)} required className="w-full px-5 py-4 border-2 border-zinc-700 rounded-2xl outline-none focus:border-yellow-500 bg-zinc-800 text-white font-bold transition-all placeholder:text-zinc-500" placeholder="seu.nome@kalenborn.com.br" />
+              <label className="block text-xs font-black text-yellow-500 mb-2 uppercase tracking-widest">{t('Utilizador', 'Username')}</label>
+              <input type="text" value={loginUser} onChange={(e)=>setLoginUser(e.target.value)} required className="w-full px-5 py-4 border-2 border-zinc-700 rounded-2xl outline-none focus:border-yellow-500 bg-zinc-800 text-white font-bold transition-all placeholder:text-zinc-500" placeholder="Seu nome" />
             </div>
             <div>
               <label className="block text-xs font-black text-yellow-500 mb-2 uppercase tracking-widest">{t('Senha de Acesso', 'Password')}</label>
               <input type="password" value={loginPass} onChange={(e)=>setLoginPass(e.target.value)} required className="w-full px-5 py-4 border-2 border-zinc-700 rounded-2xl outline-none focus:border-yellow-500 bg-zinc-800 text-white font-bold transition-all placeholder:text-zinc-500" placeholder="••••••••" />
             </div>
-            {loginError && <div className="text-red-500 text-sm font-bold text-center p-4 bg-red-500/10 rounded-xl border border-red-500/20">{t('Credenciais inválidas. Verifique seu e-mail e senha.', 'Invalid credentials. Please check your email and password.')}</div>}
+            {loginError && <div className="text-red-500 text-sm font-bold text-center p-4 bg-red-500/10 rounded-xl border border-red-500/20">{t('Credenciais inválidas. Verifique seu usuário.', 'Invalid credentials. Please check your username and password.')}</div>}
             <button type="submit" disabled={loading} className="w-full bg-yellow-500 text-black font-black uppercase tracking-widest py-4 rounded-2xl hover:bg-yellow-400 transition-all shadow-xl shadow-yellow-500/20 active:scale-95">
               {loading ? t('Acedendo...', 'Logging in...') : t('Entrar no Sistema', 'Sign In')}
             </button>
