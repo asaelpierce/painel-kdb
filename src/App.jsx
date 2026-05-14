@@ -816,21 +816,39 @@ export default function App() {
     setLoading(false);
   };
 
+  // ==========================================
+  // NOVA FUNÇÃO DE LOGIN BLINDADA
+  // ==========================================
   const handleLogin = async (e) => {
     e.preventDefault();
     if (!supabaseClient) {
         setLoginError(true);
         return;
     }
-    
+
     setLoading(true);
     try {
-        const { data } = await supabaseClient.from('users').select('*').eq('username', loginUser.trim()).eq('password', loginPass.trim()).single();
-        
+        // 1. Usa o Auth Oficial do Supabase
+        const { data: authData, error: authError } = await supabaseClient.auth.signInWithPassword({
+            email: loginUser.trim(),
+            password: loginPass.trim()
+        });
+
+        if (authError || !authData.user) {
+            throw new Error('Credenciais inválidas no Auth');
+        }
+
+        // 2. Busca o perfil na tabela interna usando o email validado
+        const { data } = await supabaseClient
+            .from('users')
+            .select('*')
+            .eq('email', authData.user.email)
+            .single();
+
         if (data) {
           setUser(data);
           setLoginError(false);
-          
+
           if (data.role === 'admin' || data.role === 'dev') setActiveTab('diretoria');
           else setActiveTab('kpi');
 
@@ -858,6 +876,7 @@ export default function App() {
           setLoginError(true);
         }
     } catch (e) {
+        console.error("Erro no login:", e);
         setLoginError(true);
     }
     setLoading(false);
@@ -912,13 +931,16 @@ export default function App() {
       setLoading(false);
   };
 
+  // ==========================================
+  // FUNÇÃO DO DIÁRIO DE BORDO CORRIGIDA
+  // ==========================================
   const handleAddUpdate = async (e) => {
       e.preventDefault();
       if(!updateText.trim() || !selectedReportAction) return;
       setLoading(true);
       try {
           const dateStr = new Date().toLocaleDateString('pt-BR');
-          await supabaseClient.from('action_updates').insert([{
+          await supabaseClient.from('updates').insert([{
               action_id: selectedReportAction.id,
               type: updateType,
               text: updateText,
@@ -1188,14 +1210,14 @@ export default function App() {
           </div>
           <form onSubmit={handleLogin} className="space-y-6">
             <div>
-              <label className="block text-xs font-black text-yellow-500 mb-2 uppercase tracking-widest">{t('Utilizador', 'Username')}</label>
-              <input type="text" value={loginUser} onChange={(e)=>setLoginUser(e.target.value)} required className="w-full px-5 py-4 border-2 border-zinc-700 rounded-2xl outline-none focus:border-yellow-500 bg-zinc-800 text-white font-bold transition-all placeholder:text-zinc-500" placeholder="Seu nome" />
+              <label className="block text-xs font-black text-yellow-500 mb-2 uppercase tracking-widest">{t('E-mail de Acesso', 'Email')}</label>
+              <input type="email" value={loginUser} onChange={(e)=>setLoginUser(e.target.value)} required className="w-full px-5 py-4 border-2 border-zinc-700 rounded-2xl outline-none focus:border-yellow-500 bg-zinc-800 text-white font-bold transition-all placeholder:text-zinc-500" placeholder="seu.nome@kalenborn.com.br" />
             </div>
             <div>
               <label className="block text-xs font-black text-yellow-500 mb-2 uppercase tracking-widest">{t('Senha de Acesso', 'Password')}</label>
               <input type="password" value={loginPass} onChange={(e)=>setLoginPass(e.target.value)} required className="w-full px-5 py-4 border-2 border-zinc-700 rounded-2xl outline-none focus:border-yellow-500 bg-zinc-800 text-white font-bold transition-all placeholder:text-zinc-500" placeholder="••••••••" />
             </div>
-            {loginError && <div className="text-red-500 text-sm font-bold text-center p-4 bg-red-500/10 rounded-xl border border-red-500/20">{t('Credenciais inválidas. Verifique seu usuário.', 'Invalid credentials. Please check your username and password.')}</div>}
+            {loginError && <div className="text-red-500 text-sm font-bold text-center p-4 bg-red-500/10 rounded-xl border border-red-500/20">{t('Credenciais inválidas. Verifique seu e-mail e senha.', 'Invalid credentials. Please check your email and password.')}</div>}
             <button type="submit" disabled={loading} className="w-full bg-yellow-500 text-black font-black uppercase tracking-widest py-4 rounded-2xl hover:bg-yellow-400 transition-all shadow-xl shadow-yellow-500/20 active:scale-95">
               {loading ? t('Acedendo...', 'Logging in...') : t('Entrar no Sistema', 'Sign In')}
             </button>
@@ -1999,7 +2021,7 @@ export default function App() {
             </div>
 
             {/* GRÁFICO: MARGEM DE LUCRO */}
-            <div className="bg-white p-6 rounded-3xl shadow-sm border border-zinc-200 flex flex-col h-[400px]">
+            <div className="bg-white p-6 rounded-3xl shadow-sm border border-zinc-200 flex flex col h-[400px]">
                 <div className="mb-4">
                     <h3 className="text-sm font-bold text-zinc-800 uppercase tracking-widest">{t('Margem de Lucro Projetado', 'Projected Profit (Production Revenue)')}</h3>
                     <p className="text-[10px] font-bold text-zinc-500 mt-1 uppercase">{t('Top Categorias (R$)', 'Top Categories (BRL)')}</p>
@@ -2437,7 +2459,7 @@ export default function App() {
                             onChange={(e) => setKpiOwnerId(parseInt(e.target.value))}
                         >
                             {dbOwners.filter(o => {
-                                if(user.username.toUpperCase() === 'DANIEL') return o.id === 3 || o.id === 4;
+                                 if(user.username.toUpperCase() === 'DANIEL') return o.id === 3 || o.id === 4;
                                 return true;
                             }).map(o => <option key={o.id} value={o.id} className="text-base font-bold">{t('Visão:', 'View:')} {translateArea(o.name)}</option>)}
                         </select>
@@ -2900,7 +2922,7 @@ export default function App() {
             </div>
 
             <div className="bg-white rounded-3xl shadow-sm border border-zinc-200 overflow-hidden">
-                <div className="p-6 border-b border-zinc-200 bg-zinc-50 flex flex-wrap justify-between items-center gap-4">
+                 <div className="p-6 border-b border-zinc-200 bg-zinc-50 flex flex-wrap justify-between items-center gap-4">
                     <h3 className="font-extrabold text-zinc-900 flex items-center gap-3">
                         <ListChecks className="text-yellow-600" size={24} /> {t('Matriz de Acompanhamento', 'Action Tracking Matrix')}
                     </h3>
@@ -2988,7 +3010,7 @@ export default function App() {
                             })}
                         </tbody>
                     </table>
-                </div>
+                 </div>
             </div>
             
             {isAddActionModalOpen && (
