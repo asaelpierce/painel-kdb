@@ -816,12 +816,66 @@ export default function App() {
     setLoading(false);
   };
 
-  const handleLogin = async (e) => {
+const handleLogin = async (e) => {
     e.preventDefault();
     if (!supabaseClient) {
         setLoginError(true);
         return;
     }
+    
+    setLoading(true);
+    try {
+        const { data: authData, error: authError } = await supabaseClient.auth.signInWithPassword({
+            email: loginUser.trim(),
+            password: loginPass.trim()
+        });
+
+        if (authError || !authData.user) {
+            throw new Error('Credenciais inválidas');
+        }
+
+        const { data } = await supabaseClient
+            .from('users')
+            .select('*')
+            .eq('email', authData.user.email)
+            .single();
+
+        if (data) {
+          setUser(data);
+          setLoginError(false);
+
+          if (data.role === 'admin' || data.role === 'dev') setActiveTab('diretoria');
+          else setActiveTab('kpi');
+
+          const upper = data.username.toUpperCase();
+          if(upper.includes('RICARDO') || upper.includes('PRISCILA')) setKpiOwnerId(1);
+          else if(upper.includes('EDSON')) setKpiOwnerId(2);
+          else if(upper.includes('PCP')) setKpiOwnerId(3);
+          else if((upper.includes('DANIEL') && !upper.includes('DANIELA')) || upper.includes('JOSE')) setKpiOwnerId(4);
+          else if(upper.includes('DANILO') || upper.includes('SUPPLY')) setKpiOwnerId(5);
+          else if(upper.includes('LUCIENE')) setKpiOwnerId(6);
+          else if(upper.includes('MARIELE')) setKpiOwnerId(7);
+          else if(upper.includes('DANIELA')) setKpiOwnerId(8);
+          else setKpiOwnerId(1);
+
+          if (data.role !== 'admin' && data.role !== 'dev' && upper !== 'DANIEL') {
+              setActionForm(prev => ({ ...prev, area: data.area }));
+              setActionFilterArea(data.area);
+          } else if (upper === 'DANIEL') {
+              setActionForm(prev => ({ ...prev, area: 'Produção' }));
+              setActionFilterArea('Produção');
+          }
+
+          loadData();
+        } else {
+          setLoginError(true);
+        }
+    } catch (e) {
+        console.error(e);
+        setLoginError(true);
+    }
+    setLoading(false);
+  };
     
     setLoading(true);
     try {
