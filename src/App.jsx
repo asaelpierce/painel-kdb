@@ -1005,14 +1005,17 @@ export default function App() {
       setLoading(false);
   };
 
-  useEffect(() => {
+useEffect(() => {
       const newVals = {};
       const newComms = {};
-      dbValues.forEach(v => {
+      
+      // LÊ DIRETAMENTE DOS CÁLCULOS AUTOMÁTICOS (INCLUINDO EXCEL)
+      computedData.forEach(v => {
           if (v.owner_id === kpiOwnerId && v.period === kpiEditPeriod) {
               newVals[v.indicator_id] = v.value;
           }
       });
+      
       dbComments.forEach(c => {
           if (c.period === kpiEditPeriod) {
               newComms[c.indicator_id] = c.comment;
@@ -1020,14 +1023,14 @@ export default function App() {
       });
       
       if (kpiOwnerId === 8 && newVals[56] === undefined) {
-          const checkExists = dbValues.find(v => v.indicator_id === 56 && v.period === kpiEditPeriod);
+          const checkExists = computedData.find(v => v.indicator_id === 56 && v.period === kpiEditPeriod);
           if (checkExists) newVals[56] = checkExists.value;
       }
 
       setFormValues(newVals);
       setFormComments(newComms);
       setExpandedCommentId(null);
-  }, [kpiOwnerId, kpiEditPeriod, dbValues, dbComments]);
+  }, [kpiOwnerId, kpiEditPeriod, computedData, dbComments]); // <- Atenção a esta linha, computedData foi adicionado
 
   const needsComment = (id, ownerId, val) => {
     const numVal = parseFloat(val);
@@ -1071,11 +1074,21 @@ export default function App() {
       setFormComments(prev => ({...prev, [id]: text}));
   };
 
-  // ==========================================
+ // ==========================================
   // MOTOR DE CÁLCULO GERAL
   // ==========================================
   const computedData = useMemo(() => {
     let allValues = [...dbValues];
+
+    // Mapeia os IDs automaticamente para não dependermos de números fixos
+    const autoMap = {
+        contratoId: dbIndicators.find(i => i.name.toLowerCase().includes('pedidos contrato'))?.id,
+        spotId: dbIndicators.find(i => i.name.toLowerCase().includes('pedidos spot'))?.id,
+        pg1Id: dbIndicators.find(i => i.name.toLowerCase().includes('pg1'))?.id,
+        pg2Id: dbIndicators.find(i => i.name.toLowerCase().includes('pg2'))?.id,
+        pg3Id: dbIndicators.find(i => i.name.toLowerCase().includes('pg3'))?.id,
+        servicoId: dbIndicators.find(i => i.name.toLowerCase().includes('serviço') || i.name.toLowerCase().includes('servico'))?.id,
+    };
 
     months.forEach((period) => {
       const getVal = (id, oId) => {
@@ -1088,11 +1101,41 @@ export default function App() {
       };
 
       const setRes = (id, val, oId) => {
+        if(!id) return;
         const idx = allValues.findIndex(v => v.indicator_id === id && v.owner_id === oId && v.period === period);
         if (idx >= 0) allValues[idx].value = val;
         else allValues.push({ indicator_id: id, owner_id: oId, period: period, value: val });
       };
 
+      // --- AUTOMAÇÃO DA PLANILHA EXCEL (INCOMING ORDERS) ---
+      const ordersInMonth = incomingOrders.filter(o => normalizeExcelMonth(o.month) === period);
+      let vContrato = 0, vSpot = 0, qPg1 = 0, qPg2 = 0, qPg3 = 0, qServ = 0;
+      
+      ordersInMonth.forEach(o => {
+          const tipo = (o.tipo || '').toLowerCase();
+          const pg = (o.pg || '').toLowerCase();
+          const netVal = parseFloat(o.net_value) || 0;
+
+          if (tipo.includes('contrato')) vContrato += netVal;
+          if (tipo.includes('spot')) vSpot += netVal;
+
+          if (pg.includes('pg1') || pg.includes('pg 1')) qPg1++;
+          if (pg.includes('pg2') || pg.includes('pg 2')) qPg2++;
+          if (pg.includes('pg3') || pg.includes('pg 3')) qPg3++;
+          if (pg.includes('serviço') || pg.includes('servico') || pg.includes('service')) qServ++;
+      });
+
+      // Injecção automática dos valores no Setor Comercial (Owner ID 1)
+      if (autoMap.contratoId) setRes(autoMap.contratoId, vContrato, 1);
+      if (autoMap.spotId) setRes(autoMap.spotId, vSpot, 1);
+      if (autoMap.pg1Id) setRes(autoMap.pg1Id, qPg1, 1);
+      if (autoMap.pg2Id) setRes(autoMap.pg2Id, qPg2, 1);
+      if (autoMap.pg3Id) setRes(autoMap.pg3Id, qPg3, 1);
+      if (autoMap.servicoId) setRes(autoMap.servicoId, qServ, 1);
+      // -----------------------------------------------------
+
+      if (allValues.some(v => v.owner_id === 1 && v.period === period)) {
+          // ... (mantém o resto do código daqui pra baixo igual, com if owner_id === 1 etc.)
       if (allValues.some(v => v.owner_id === 1 && v.period === period)) {
         const vVendas = getVal(1, 1);
         const qAprovados = getVal(4, 1);
@@ -2392,7 +2435,16 @@ export default function App() {
     const esforcoList = finalIndicators.filter(i => i.category === 'ESFORCO');
     const resultadoList = finalIndicators.filter(i => i.category === 'RESULTADO');
 
-    const isAutoCalculatedEsforco = [2, 25, 27, 29, 43];
+    const autoOrdersIds = [
+        dbIndicators.find(i => i.name.toLowerCase().includes('pedidos contrato'))?.id,
+        dbIndicators.find(i => i.name.toLowerCase().includes('pedidos spot'))?.id,
+        dbIndicators.find(i => i.name.toLowerCase().includes('pg1'))?.id,
+        dbIndicators.find(i => i.name.toLowerCase().includes('pg2'))?.id,
+        dbIndicators.find(i => i.name.toLowerCase().includes('pg3'))?.id,
+        dbIndicators.find(i => i.name.toLowerCase().includes('serviço') || i.name.toLowerCase().includes('servico'))?.id,
+    ].filter(Boolean);
+
+    const isAutoCalculatedEsforco = [2, 25, 27, 29, 43, ...autoOrdersIds];
 
     const handleSaveKPIs = async (e) => {
         e.preventDefault();
