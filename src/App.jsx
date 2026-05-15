@@ -887,16 +887,19 @@ export default function App() {
       setLoading(true);
       try {
           if (editingActionId) {
-              await supabaseClient.from('actions').update(actionForm).eq('id', editingActionId);
+              const { error } = await supabaseClient.from('actions').update(actionForm).eq('id', editingActionId);
+              if (error) throw error; // <- AGORA ELE PEGA O ERRO!
               showToast(t("Ação atualizada!", "Action updated!"));
           } else {
-              await supabaseClient.from('actions').insert([actionForm]);
+              const { error } = await supabaseClient.from('actions').insert([actionForm]);
+              if (error) throw error; // <- AGORA ELE PEGA O ERRO!
               showToast(t("Ação registrada com sucesso!", "Action registered successfully!"));
           }
           setIsAddActionModalOpen(false);
           loadData();
       } catch(e) {
-          showToast(t("Erro ao salvar", "Error saving"), "error");
+          console.error(e);
+          showToast(t("Erro ao salvar no banco", "Error saving to DB"), "error");
       }
       setLoading(false);
   };
@@ -905,11 +908,13 @@ export default function App() {
       if(!window.confirm(t("Tem certeza que deseja excluir esta ação?", "Are you sure you want to delete this action?"))) return;
       setLoading(true);
       try {
-          await supabaseClient.from('actions').delete().eq('id', id);
+          const { error } = await supabaseClient.from('actions').delete().eq('id', id);
+          if (error) throw error;
           setSelectedReportAction(null);
           showToast(t("Ação excluída!", "Action deleted!"));
           loadData();
       } catch(e) {
+          console.error(e);
           showToast(t("Erro ao excluir", "Error deleting"), "error");
       }
       setLoading(false);
@@ -922,35 +927,36 @@ export default function App() {
       }
       setLoading(true);
       try {
-          await supabaseClient.from('actions').update({ status: newStatus }).eq('id', id);
+          const { error } = await supabaseClient.from('actions').update({ status: newStatus }).eq('id', id);
+          if (error) throw error;
           showToast(t("Status atualizado!", "Status updated!"));
           loadData();
       } catch(e) {
+          console.error(e);
           showToast(t("Erro", "Error"), "error");
       }
       setLoading(false);
   };
 
-  // ==========================================
-  // FUNÇÃO DO DIÁRIO DE BORDO CORRIGIDA
-  // ==========================================
   const handleAddUpdate = async (e) => {
       e.preventDefault();
       if(!updateText.trim() || !selectedReportAction) return;
       setLoading(true);
       try {
           const dateStr = new Date().toLocaleDateString('pt-BR');
-          await supabaseClient.from('updates').insert([{
+          const { error } = await supabaseClient.from('updates').insert([{
               action_id: selectedReportAction.id,
               type: updateType,
               text: updateText,
               date: dateStr,
               author: user.username
           }]);
+          if (error) throw error;
           setUpdateText('');
           showToast(t("Atualização registrada!", "Update registered!"));
           loadData();
       } catch(err) {
+          console.error(err);
           showToast(t("Erro ao registrar.", "Error registering."), "error");
       }
       setLoading(false);
@@ -960,21 +966,22 @@ export default function App() {
       if(!subActionForm.what || !subActionForm.who || !subActionForm.when) return;
       setLoading(true);
       try {
-          await supabaseClient.from('sub_actions').insert([{
+          const { error } = await supabaseClient.from('sub_actions').insert([{
               action_id: selectedReportAction.id,
               what: subActionForm.what,
               who: subActionForm.who,
               when: subActionForm.when
           }]);
+          if (error) throw error;
           setSubActionForm({ what: '', who: '', when: '' });
           showToast(t("Subtarefa adicionada!", "Subtask added!"));
           loadData();
       } catch(e) {
+          console.error(e);
           showToast(t("Erro ao adicionar", "Error adding"), "error");
       }
       setLoading(false);
   };
-
   const handleSubStatusChange = async (subId, newStatus) => {
       setLoading(true);
       try {
