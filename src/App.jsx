@@ -472,6 +472,9 @@ export default function App() {
   const [updateType, setUpdateType] = useState('realizado');
   const [updateText, setUpdateText] = useState('');
   const [subActionForm, setSubActionForm] = useState({ what: '', who: '', when: '' });
+  
+  // Custom Confirm Dialog State
+  const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, message: '', onConfirm: null });
 
   const [loginUser, setLoginUser] = useState('');
   const [loginPass, setLoginPass] = useState('');
@@ -904,8 +907,15 @@ export default function App() {
       setLoading(false);
   };
 
+  const requestDeleteAction = (id) => {
+      setConfirmDialog({
+          isOpen: true,
+          message: t("Tem a certeza que deseja excluir esta ação permanentemente?", "Are you sure you want to permanently delete this action?"),
+          onConfirm: () => handleDeleteAction(id)
+      });
+  };
+
   const handleDeleteAction = async (id) => {
-      if(!window.confirm(t("Tem certeza que deseja excluir esta ação?", "Are you sure you want to delete this action?"))) return;
       setLoading(true);
       try {
           const { error } = await supabaseClient.from('actions').delete().eq('id', id);
@@ -982,19 +992,16 @@ export default function App() {
       }
       setLoading(false);
   };
-  const handleSubStatusChange = async (subId, newStatus) => {
-      setLoading(true);
-      try {
-          await supabaseClient.from('sub_actions').update({ status: newStatus }).eq('id', subId);
-          loadData();
-      } catch(e) {
-          showToast(t("Erro", "Error"), "error");
-      }
-      setLoading(false);
+  
+  const requestDeleteSubAction = (subId) => {
+      setConfirmDialog({
+          isOpen: true,
+          message: t("Excluir esta subtarefa permanentemente?", "Delete this subtask permanently?"),
+          onConfirm: () => handleDeleteSubAction(subId)
+      });
   };
 
   const handleDeleteSubAction = async (subId) => {
-      if(!window.confirm(t("Excluir subtarefa?", "Delete subtask?"))) return;
       setLoading(true);
       try {
           await supabaseClient.from('sub_actions').delete().eq('id', subId);
@@ -1005,77 +1012,8 @@ export default function App() {
       setLoading(false);
   };
 
-useEffect(() => {
-      const newVals = {};
-      const newComms = {};
-      
-      // LÊ DIRETAMENTE DOS CÁLCULOS AUTOMÁTICOS (INCLUINDO EXCEL)
-      computedData.forEach(v => {
-          if (v.owner_id === kpiOwnerId && v.period === kpiEditPeriod) {
-              newVals[v.indicator_id] = v.value;
-          }
-      });
-      
-      dbComments.forEach(c => {
-          if (c.period === kpiEditPeriod) {
-              newComms[c.indicator_id] = c.comment;
-          }
-      });
-      
-      if (kpiOwnerId === 8 && newVals[56] === undefined) {
-          const checkExists = computedData.find(v => v.indicator_id === 56 && v.period === kpiEditPeriod);
-          if (checkExists) newVals[56] = checkExists.value;
-      }
-
-      setFormValues(newVals);
-      setFormComments(newComms);
-      setExpandedCommentId(null);
-  }, [kpiOwnerId, kpiEditPeriod, computedData, dbComments]); // <- Atenção a esta linha, computedData foi adicionado
-
-  const needsComment = (id, ownerId, val) => {
-    const numVal = parseFloat(val);
-    if (isNaN(numVal) || numVal <= 0) return false;
-    if (ownerId === 6) return true; 
-    if (ownerId === 7) return true; 
-    const specificIds = [13, 20, 21, 22, 28, 30, 32, 40, 41, 42, 44, 47, 49, 50, 51, 52, 54, 55];
-    return specificIds.includes(id);
-  };
-
-  const handleValueChange = (id, val) => {
-      const numVal = parseFloat(val);
-      setFormValues(prev => {
-          const next = { ...prev, [id]: isNaN(numVal) ? '' : numVal };
-          
-          if (kpiOwnerId === 1) {
-              const v1 = next[1] || 0;
-              const v4 = next[4] || 0;
-              next[2] = v4 > 0 ? (v1 / v4) : 0;
-          }
-          if (kpiOwnerId === 3) {
-              const v24 = next[24] || 0;
-              const v33 = next[33] || 0;
-              next[25] = v33 > 0 ? (v24 / v33) : 0;
-
-              const v26 = next[26] || 0;
-              const v28 = next[28] || 0;
-              next[27] = Math.max(0, v26 - v28);
-              next[29] = v26 > 0 ? (next[27] / v26) * 100 : 0;
-          }
-          if (kpiOwnerId === 4) {
-              const pcpId29 = dbValues.find(v => v.indicator_id === 29 && v.period === kpiEditPeriod)?.value || 0;
-              next[43] = Math.max(0, 100 - parseFloat(pcpId29));
-          }
-
-          return next;
-      });
-  };
-
-  const handleCommentChange = (id, text) => {
-      setFormComments(prev => ({...prev, [id]: text}));
-  };
-
- // ==========================================
-  // MOTOR DE CÁLCULO GERAL
+  // ==========================================
+  // MOTOR DE CÁLCULO GERAL (Movido para ANTES do useEffect)
   // ==========================================
   const computedData = useMemo(() => {
     let allValues = [...dbValues];
@@ -1087,7 +1025,7 @@ useEffect(() => {
         pg1Id: dbIndicators.find(i => i.name.toLowerCase().includes('pg1'))?.id,
         pg2Id: dbIndicators.find(i => i.name.toLowerCase().includes('pg2'))?.id,
         pg3Id: dbIndicators.find(i => i.name.toLowerCase().includes('pg3'))?.id,
-        servicoId: dbIndicators.find(i => i.name.toLowerCase().includes('serviço') || i.name.toLowerCase().includes('servico'))?.id,
+        servicoId: dbIndicators.find(i => i.name.toLowerCase().includes('pedidos serviço') || i.name.toLowerCase().includes('pedidos servico'))?.id,
     };
 
     months.forEach((period) => {
@@ -1134,8 +1072,6 @@ useEffect(() => {
       if (autoMap.servicoId) setRes(autoMap.servicoId, qServ, 1);
       // -----------------------------------------------------
 
-      if (allValues.some(v => v.owner_id === 1 && v.period === period)) {
-          // ... (mantém o resto do código daqui pra baixo igual, com if owner_id === 1 etc.)
       if (allValues.some(v => v.owner_id === 1 && v.period === period)) {
         const vVendas = getVal(1, 1);
         const qAprovados = getVal(4, 1);
@@ -1223,7 +1159,76 @@ useEffect(() => {
     });
 
     return allValues;
-  }, [dbValues]);
+  }, [dbValues, incomingOrders, dbIndicators]); // Dependências adicionadas para recalcular se a base Excel mudar
+
+  useEffect(() => {
+      const newVals = {};
+      const newComms = {};
+      
+      // LÊ DIRETAMENTE DOS CÁLCULOS AUTOMÁTICOS (INCLUINDO EXCEL)
+      computedData.forEach(v => {
+          if (v.owner_id === kpiOwnerId && v.period === kpiEditPeriod) {
+              newVals[v.indicator_id] = v.value;
+          }
+      });
+      
+      dbComments.forEach(c => {
+          if (c.period === kpiEditPeriod) {
+              newComms[c.indicator_id] = c.comment;
+          }
+      });
+      
+      if (kpiOwnerId === 8 && newVals[56] === undefined) {
+          const checkExists = computedData.find(v => v.indicator_id === 56 && v.period === kpiEditPeriod);
+          if (checkExists) newVals[56] = checkExists.value;
+      }
+
+      setFormValues(newVals);
+      setFormComments(newComms);
+      setExpandedCommentId(null);
+  }, [kpiOwnerId, kpiEditPeriod, computedData, dbComments]); // <- Atenção a esta linha, computedData foi adicionado
+
+  const needsComment = (id, ownerId, val) => {
+    const numVal = parseFloat(val);
+    if (isNaN(numVal) || numVal <= 0) return false;
+    if (ownerId === 6) return true; 
+    if (ownerId === 7) return true; 
+    const specificIds = [13, 20, 21, 22, 28, 30, 32, 40, 41, 42, 44, 47, 49, 50, 51, 52, 54, 55];
+    return specificIds.includes(id);
+  };
+
+  const handleValueChange = (id, val) => {
+      const numVal = parseFloat(val);
+      setFormValues(prev => {
+          const next = { ...prev, [id]: isNaN(numVal) ? '' : numVal };
+          
+          if (kpiOwnerId === 1) {
+              const v1 = next[1] || 0;
+              const v4 = next[4] || 0;
+              next[2] = v4 > 0 ? (v1 / v4) : 0;
+          }
+          if (kpiOwnerId === 3) {
+              const v24 = next[24] || 0;
+              const v33 = next[33] || 0;
+              next[25] = v33 > 0 ? (v24 / v33) : 0;
+
+              const v26 = next[26] || 0;
+              const v28 = next[28] || 0;
+              next[27] = Math.max(0, v26 - v28);
+              next[29] = v26 > 0 ? (next[27] / v26) * 100 : 0;
+          }
+          if (kpiOwnerId === 4) {
+              const pcpId29 = dbValues.find(v => v.indicator_id === 29 && v.period === kpiEditPeriod)?.value || 0;
+              next[43] = Math.max(0, 100 - parseFloat(pcpId29));
+          }
+
+          return next;
+      });
+  };
+
+  const handleCommentChange = (id, text) => {
+      setFormComments(prev => ({...prev, [id]: text}));
+  };
 
   // Extract profit Data for Diretoria and Finance tab safely
   const profitDataFinanceiro = useMemo(() => {
@@ -2441,10 +2446,11 @@ useEffect(() => {
         dbIndicators.find(i => i.name.toLowerCase().includes('pg1'))?.id,
         dbIndicators.find(i => i.name.toLowerCase().includes('pg2'))?.id,
         dbIndicators.find(i => i.name.toLowerCase().includes('pg3'))?.id,
-        dbIndicators.find(i => i.name.toLowerCase().includes('serviço') || i.name.toLowerCase().includes('servico'))?.id,
+        dbIndicators.find(i => i.name.toLowerCase().includes('pedidos serviço') || i.name.toLowerCase().includes('pedidos servico'))?.id,
     ].filter(Boolean);
 
     const isAutoCalculatedEsforco = [2, 25, 27, 29, 43, ...autoOrdersIds];
+    const visibleEsforcoList = esforcoList.filter(ind => !autoOrdersIds.includes(ind.id));
 
     const handleSaveKPIs = async (e) => {
         e.preventDefault();
@@ -2567,8 +2573,8 @@ useEffect(() => {
             <div>
                 <h3 className="text-xs font-black text-zinc-400 uppercase tracking-widest mb-4 ml-2">{t('Métricas Operacionais (Esforço)', 'Operational Metrics (Leading)')}</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                    {esforcoList.length === 0 && <p className="text-sm text-zinc-400 italic col-span-full ml-2">{t('Nenhuma métrica operacional encontrada.', 'No operational metrics found.')}</p>}
-                    {esforcoList.map(ind => renderSparklineCard(ind, false))}
+                    {visibleEsforcoList.length === 0 && <p className="text-sm text-zinc-400 italic col-span-full ml-2">{t('Nenhuma métrica operacional encontrada.', 'No operational metrics found.')}</p>}
+                    {visibleEsforcoList.map(ind => renderSparklineCard(ind, false))}
                 </div>
             </div>
 
@@ -2609,8 +2615,8 @@ useEffect(() => {
                             <LineChartIcon size={16} /> {t('Digitação de Esforço', 'Operational Data Entry')}
                         </h4>
                         <div className="space-y-4">
-                            {esforcoList.length === 0 && <p className="text-sm text-zinc-400 italic">{t('Nenhuma métrica atribuída.', 'No metrics assigned.')}</p>}
-                            {esforcoList.map(ind => {
+                            {visibleEsforcoList.length === 0 && <p className="text-sm text-zinc-400 italic">{t('Nenhuma métrica atribuída.', 'No metrics assigned.')}</p>}
+                            {visibleEsforcoList.map(ind => {
                                 const isAuto = isAutoCalculatedEsforco.includes(ind.id);
                                 let displayName = tInd(ind.name);
                                 if (ind.name === "Não conformidade (%)") displayName = t("Nº de Não Conformidades (Qtd)", "Number of Non-Conformities (Qty)");
@@ -2898,19 +2904,18 @@ useEffect(() => {
                     {t('Gestão de Ações (5W2H)', 'Strategic Action Plan (5W2H)')}
                 </h2>
                 <button 
-                    // Localize onde o botão abre o modal de nova ação:
-                        onClick={() => {
-                            setEditingActionId(null);
-                            setActionForm({ 
-                                what: '', 
-                                why: '', 
-                                area: availableAreas.length > 1 ? availableAreas[1] : 'Comercial', 
-                                who: '', 
-                                when: '',
-                                status: 'A Fazer' // <--- ADICIONE ESTA LINHA
-                            });
-                            setIsAddActionModalOpen(true);
-                        }}
+                    onClick={() => {
+                        setEditingActionId(null);
+                        setActionForm({ 
+                            what: '', 
+                            why: '', 
+                            area: availableAreas.length > 1 ? availableAreas[1] : 'Comercial', 
+                            who: '', 
+                            when: '',
+                            status: 'A Fazer'
+                        });
+                        setIsAddActionModalOpen(true);
+                    }}
                     className="flex items-center gap-2 px-6 py-3 bg-black text-yellow-500 font-bold rounded-2xl hover:bg-zinc-800 shadow-lg shadow-zinc-200 transition-all active:scale-95"
                 >
                     <PlusCircle size={20} /> {t('Registrar Nova Ação', 'Create New Action')}
@@ -3141,7 +3146,7 @@ useEffect(() => {
                                                 setSelectedReportAction(null);
                                                 setIsAddActionModalOpen(true);
                                             }} className="text-blue-600 hover:text-blue-800 transition-colors flex items-center gap-1 text-xs font-bold"><Edit2 size={14} /> {t('Editar', 'Edit')}</button>
-                                            <button onClick={() => handleDeleteAction(selectedReportAction.id)} className="text-red-600 hover:text-red-800 transition-colors flex items-center gap-1 text-xs font-bold"><Trash2 size={14} /> {t('Excluir', 'Delete')}</button>
+                                            <button onClick={() => requestDeleteAction(selectedReportAction.id)} className="text-red-600 hover:text-red-800 transition-colors flex items-center gap-1 text-xs font-bold"><Trash2 size={14} /> {t('Excluir', 'Delete')}</button>
                                         </div>
                                     )}
                                 </div>
@@ -3257,7 +3262,7 @@ useEffect(() => {
                                                     <option value="Concluído">🟢 {t('Concluído', 'Completed')}</option>
                                                 </select>
                                             </div>
-                                            <button onClick={() => handleDeleteSubAction(s.id)} className="absolute top-3 right-3 p-1.5 text-zinc-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100"><Trash2 size={16} /></button>
+                                            <button onClick={() => requestDeleteSubAction(s.id)} className="absolute top-3 right-3 p-1.5 text-zinc-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100"><Trash2 size={16} /></button>
                                         </div>
                                     ))}
                                 </div>
@@ -3369,6 +3374,25 @@ useEffect(() => {
         {activeTab === 'auditoria' && renderAuditoria()}
         {activeTab === '5w2h' && render5W2H()}
       </main>
+
+      {/* CONFIRM DIALOG SYSTEM */}
+      {confirmDialog.isOpen && (
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-zinc-900/90 backdrop-blur-sm" onClick={() => setConfirmDialog({ isOpen: false, message: '', onConfirm: null })}></div>
+            <div className="relative bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl animate-in zoom-in-95 duration-200">
+                <div className="flex items-center gap-4 mb-6">
+                    <div className="p-3 bg-red-100 text-red-600 rounded-full shrink-0">
+                        <AlertTriangle size={24} />
+                    </div>
+                    <h3 className="text-lg font-black text-zinc-900 leading-tight">{confirmDialog.message}</h3>
+                </div>
+                <div className="flex gap-3">
+                    <button onClick={() => setConfirmDialog({ isOpen: false, message: '', onConfirm: null })} className="flex-1 px-4 py-3 bg-zinc-100 text-zinc-700 font-bold rounded-xl hover:bg-zinc-200 transition-colors">{t('Cancelar', 'Cancel')}</button>
+                    <button onClick={() => { confirmDialog.onConfirm(); setConfirmDialog({ isOpen: false, message: '', onConfirm: null }); }} className="flex-1 px-4 py-3 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 transition-colors">{t('Sim, Excluir', 'Yes, Delete')}</button>
+                </div>
+            </div>
+        </div>
+      )}
 
       {/* TOAST SYSTEM */}
       {toast && (
