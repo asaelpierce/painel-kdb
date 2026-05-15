@@ -2846,11 +2846,19 @@ export default function App() {
                     {t('Gestão de Ações (5W2H)', 'Strategic Action Plan (5W2H)')}
                 </h2>
                 <button 
-                    onClick={() => {
-                        setEditingActionId(null);
-                        setActionForm({ what: '', why: '', area: availableAreas.length > 1 ? availableAreas[1] : availableAreas[0], who: '', when: '' });
-                        setIsAddActionModalOpen(true);
-                    }}
+                    // Localize onde o botão abre o modal de nova ação:
+                        onClick={() => {
+                            setEditingActionId(null);
+                            setActionForm({ 
+                                what: '', 
+                                why: '', 
+                                area: availableAreas.length > 1 ? availableAreas[1] : 'Comercial', 
+                                who: '', 
+                                when: '',
+                                status: 'A Fazer' // <--- ADICIONE ESTA LINHA
+                            });
+                            setIsAddActionModalOpen(true);
+                        }}
                     className="flex items-center gap-2 px-6 py-3 bg-black text-yellow-500 font-bold rounded-2xl hover:bg-zinc-800 shadow-lg shadow-zinc-200 transition-all active:scale-95"
                 >
                     <PlusCircle size={20} /> {t('Registrar Nova Ação', 'Create New Action')}
