@@ -3,7 +3,7 @@ import {
   LayoutDashboard, ListChecks, LineChart as LineChartIcon, FileSpreadsheet, 
   Crown, TrendingUp, TrendingDown, CheckCircle2, AlertTriangle,
   LogOut, Save, Filter, X, MessageSquareText, HelpCircle, ArrowRightCircle, Target,
-  PieChart as PieChartIcon, BarChart3, Edit2, Trash2, GitBranch, Calendar, User, PlusCircle, History, Info, ChevronRight, ChevronLeft, Download, DollarSign, Image as ImageIcon, Briefcase, Globe
+  PieChart as PieChartIcon, BarChart3, Edit2, Trash2, GitBranch, Calendar, User, PlusCircle, History, Info, ChevronRight, ChevronLeft, Download, DollarSign, Image as ImageIcon, Briefcase, Globe, Menu
 } from 'lucide-react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, 
@@ -21,8 +21,8 @@ const months = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "
 const CHART_COLORS = ['#eab308', '#10b981', '#3b82f6', '#f97316', '#8b5cf6', '#ef4444', '#14b8a6', '#f43f5e', '#06b6d4', '#84cc16'];
 
 // METAS GLOBAIS DA DIRETORIA
-const META_ANUAL_FATURAMENTO = 33500000; // 33.5 Milhões
-const META_ANUAL_VENDAS = 35800000;      // 35.8 Milhões
+const META_ANUAL_FATURAMENTO = 33500000;
+const META_ANUAL_VENDAS = 35800000;
 
 let globalSupabaseClient = null;
 
@@ -184,7 +184,6 @@ const CustomTooltipSparkline = ({ active, payload, label, unit, lang }) => {
                 
                 {payload.map((entry, index) => {
                     if (typeof entry.dataKey === 'string' && entry.dataKey.includes('comment')) return null;
-                    
                     return (
                         <p key={index} className="text-sm font-black flex justify-between gap-6 mb-1" style={{ color: entry.color }}>
                             <span>{entry.name}:</span>
@@ -207,7 +206,6 @@ const CustomTooltipSparkline = ({ active, payload, label, unit, lang }) => {
     return null;
 };
 
-
 export default function App() {
   // ==========================================
   // ESTADOS GLOBAIS
@@ -218,8 +216,8 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState(null);
   const [appLogo, setAppLogo] = useState('');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
-  // Idioma e Dicionário Corporativo Dinâmico
   const [lang, setLang] = useState('PT');
   const t = (pt, en) => lang === 'PT' ? pt : en;
 
@@ -228,9 +226,7 @@ export default function App() {
       if (lang === 'PT') return name;
       const lowerName = name.toLowerCase();
 
-      // Mapeamento por palavras-chave (ignora formatação "Nº", maiúsculas, etc.)
       const map = {
-          // --- COMERCIAL ---
           "eficiência comercial (média ac) n.po": "Commercial Efficiency (YTD Avg) Qty",
           "eficiência comercial (média ac) r$": "Commercial Efficiency (YTD Avg) Revenue",
           "eficiência comercial (média movel) n.po": "Commercial Efficiency (Moving Avg) Qty",
@@ -259,8 +255,6 @@ export default function App() {
           "pedidos pg1": "PG1 Orders (Qty)",
           "pedidos pg2": "PG2 Orders (Qty)",
           "pedidos pg3": "PG3 Orders (Qty)",
-
-          // --- ENGENHARIA (EDSON) ---
           "proposta em atraso": "Overdue Quotes (%)",
           "projetos retrabalhados": "Reworked Projects (%)",
           "orçamentos elaborados": "Prepared Quotes",
@@ -279,8 +273,6 @@ export default function App() {
           "retrabalho de desenhos": "Drawing Reworks",
           "retrabalho de estruturas": "Structure Reworks",
           "retrabalho de processos": "Process Reworks",
-
-          // --- PCP, PRODUÇÃO (DANIEL) E LOGÍSTICA ---
           "tx. de atendimento da programação (%)": "Schedule Adherence Rate (%)",
           "tx de atendimento da programação (%)": "Schedule Adherence Rate (%)",
           "tx. de atendimento da programação": "Schedule Adherence Rate",
@@ -325,8 +317,6 @@ export default function App() {
           "ordens de produção": "Production Orders (PO)",
           "op's": "POs",
           "ops": "POs",
-
-          // --- QUALIDADE (LUCIENE) ---
           "taxa de reclamação clientes (%)": "Customer Complaint Rate (%)",
           "taxa de reclamacao clientes (%)": "Customer Complaint Rate (%)",
           "taxa de reclamação clientes": "Customer Complaint Rate",
@@ -344,8 +334,6 @@ export default function App() {
           "relatorios 8 pq": "8 PQ Reports",
           "relatórios sem resposta": "Unanswered Reports",
           "relatorios sem resposta": "Unanswered Reports",
-
-          // --- SUPPLY (DANILO), ESTOQUE (DANIELA) & RH (MARIELE) ---
           "nível de serviço em suprimentos (%)": "Supply Service Level (%)",
           "nivel de servico em suprimentos (%)": "Supply Service Level (%)",
           "nível de serviço em suprimentos": "Supply Service Level",
@@ -390,8 +378,6 @@ export default function App() {
           "absenteísmo": "Absenteeism Rate",
           "absenteismo": "Absenteeism Rate",
           "turnover": "Turnover Rate",
-
-          // --- GERAL ---
           "faturamento líquido": "Net Revenue",
           "faturamento liquido": "Net Revenue",
           "faturamento previsto": "Forecasted Revenue",
@@ -402,11 +388,9 @@ export default function App() {
           "estoque": "Inventory"
       };
       
-      // 1. Tenta correspondência exata
       for (const [pt, en] of Object.entries(map)) {
           if (lowerName === pt) return en;
       }
-      // 2. Tenta correspondência parcial (palavra-chave contida na string, resolve os "Nº" e formatações exóticas)
       for (const [pt, en] of Object.entries(map)) {
           if (lowerName.includes(pt)) return en;
       }
@@ -428,7 +412,6 @@ export default function App() {
       return s;
   };
 
-  // Dados do Banco
   const [actions, setActions] = useState([]);
   const [subActions, setSubActions] = useState([]);
   const [dbOwners, setDbOwners] = useState([]);
@@ -438,7 +421,6 @@ export default function App() {
   const [dbComments, setDbComments] = useState([]);
   const [incomingOrders, setIncomingOrders] = useState([]);
 
-  // Estados dos Filtros (KPI)
   const [kpiOwnerId, setKpiOwnerId] = useState(1);
   const [kpiEditPeriod, setKpiEditPeriod] = useState(months[new Date().getMonth()]);
   const [kpiViewPeriod, setKpiViewPeriod] = useState('ALL');
@@ -446,46 +428,36 @@ export default function App() {
   const [comercialViewPeriod, setComercialViewPeriod] = useState('ALL'); 
   const [comercialViewMode, setComercialViewMode] = useState('YTD'); 
   
-  // Financeiro
   const [financeMargins, setFinanceMargins] = useState({});
   const [pcpMargin, setPcpMargin] = useState(0);
   const [isFinanceLoaded, setIsFinanceLoaded] = useState(false);
 
-  // Estados Formulário Dinâmico de Esforço
   const [formValues, setFormValues] = useState({});
   const [formComments, setFormComments] = useState({});
   const [expandedCommentId, setExpandedCommentId] = useState(null); 
   const [expandedCardId, setExpandedCardId] = useState(null);
 
-  // Estado para Modal de Comentário (Auditoria)
   const [selectedCommentModal, setSelectedCommentModal] = useState(null);
 
-  // Estados 5W2H
   const [actionFilterArea, setActionFilterArea] = useState('Todas');
   const [actionFilterStatus, setActionFilterStatus] = useState('Todos');
   const [isAddActionModalOpen, setIsAddActionModalOpen] = useState(false);
   const [editingActionId, setEditingActionId] = useState(null);
   const [actionForm, setActionForm] = useState({ what: '', why: '', area: 'Comercial', who: '', when: '' });
   
-  // Estados Modais de Reporte (5W2H)
   const [selectedReportAction, setSelectedReportAction] = useState(null);
   const [updateType, setUpdateType] = useState('realizado');
   const [updateText, setUpdateText] = useState('');
   const [subActionForm, setSubActionForm] = useState({ what: '', who: '', when: '' });
   
-  // Custom Confirm Dialog State
   const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, message: '', onConfirm: null });
 
   const [loginUser, setLoginUser] = useState('');
   const [loginPass, setLoginPass] = useState('');
   const [loginError, setLoginError] = useState(false);
 
-  // Carrossel de Setores (Diretoria)
   const [currentSectorIndex, setCurrentSectorIndex] = useState(0);
 
-  // ==========================================
-  // INJEÇÃO SEGURA DO SUPABASE & LOGO
-  // ==========================================
   useEffect(() => {
     if (globalSupabaseClient) return;
     if (window.supabase) {
@@ -513,7 +485,6 @@ export default function App() {
     fetchLogo();
   }, [supabaseClient]);
 
-  // Load Finance Margins cleanly
   useEffect(() => {
     if (!isFinanceLoaded && dbComments.length > 0) {
         const row = dbComments.find(c => c.indicator_id === 9999 && c.period === 'FINANCE_MARGINS');
@@ -564,9 +535,6 @@ export default function App() {
       document.getElementById('logo-upload-input').click();
   };
 
-  // ==========================================
-  // IMPORTAÇÃO EXCEL - INCOMING ORDERS
-  // ==========================================
   const processExcelFile = async (e) => {
       const file = e.target.files[0];
       if (!file) return;
@@ -775,9 +743,6 @@ export default function App() {
       }
   };
 
-  // ==========================================
-  // EFEITOS E CARREGAMENTO DE DADOS
-  // ==========================================
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 4000);
@@ -819,9 +784,6 @@ export default function App() {
     setLoading(false);
   };
 
-  // ==========================================
-  // NOVA FUNÇÃO DE LOGIN BLINDADA
-  // ==========================================
   const handleLogin = async (e) => {
     e.preventDefault();
     if (!supabaseClient) {
@@ -831,7 +793,6 @@ export default function App() {
 
     setLoading(true);
     try {
-        // 1. Usa o Auth Oficial do Supabase
         const { data: authData, error: authError } = await supabaseClient.auth.signInWithPassword({
             email: loginUser.trim(),
             password: loginPass.trim()
@@ -841,7 +802,6 @@ export default function App() {
             throw new Error('Credenciais inválidas no Auth');
         }
 
-        // 2. Busca o perfil na tabela interna usando o email validado
         const { data } = await supabaseClient
             .from('users')
             .select('*')
@@ -891,11 +851,11 @@ export default function App() {
       try {
           if (editingActionId) {
               const { error } = await supabaseClient.from('actions').update(actionForm).eq('id', editingActionId);
-              if (error) throw error; // <- AGORA ELE PEGA O ERRO!
+              if (error) throw error; 
               showToast(t("Ação atualizada!", "Action updated!"));
           } else {
               const { error } = await supabaseClient.from('actions').insert([actionForm]);
-              if (error) throw error; // <- AGORA ELE PEGA O ERRO!
+              if (error) throw error; 
               showToast(t("Ação registrada com sucesso!", "Action registered successfully!"));
           }
           setIsAddActionModalOpen(false);
@@ -993,6 +953,17 @@ export default function App() {
       setLoading(false);
   };
   
+  const handleSubStatusChange = async (subId, newStatus) => {
+      setLoading(true);
+      try {
+          await supabaseClient.from('sub_actions').update({ status: newStatus }).eq('id', subId);
+          loadData();
+      } catch(e) {
+          showToast(t("Erro", "Error"), "error");
+      }
+      setLoading(false);
+  };
+
   const requestDeleteSubAction = (subId) => {
       setConfirmDialog({
           isOpen: true,
@@ -1012,13 +983,9 @@ export default function App() {
       setLoading(false);
   };
 
-  // ==========================================
-  // MOTOR DE CÁLCULO GERAL (Movido para ANTES do useEffect)
-  // ==========================================
   const computedData = useMemo(() => {
     let allValues = [...dbValues];
 
-    // Mapeia os IDs automaticamente para não dependermos de números fixos
     const autoMap = {
         contratoId: dbIndicators.find(i => i.name.toLowerCase().includes('pedidos contrato'))?.id,
         spotId: dbIndicators.find(i => i.name.toLowerCase().includes('pedidos spot'))?.id,
@@ -1045,7 +1012,6 @@ export default function App() {
         else allValues.push({ indicator_id: id, owner_id: oId, period: period, value: val });
       };
 
-      // --- AUTOMAÇÃO DA PLANILHA EXCEL (INCOMING ORDERS) ---
       const ordersInMonth = incomingOrders.filter(o => normalizeExcelMonth(o.month) === period);
       let vContrato = 0, vSpot = 0, qPg1 = 0, qPg2 = 0, qPg3 = 0, qServ = 0;
       
@@ -1063,14 +1029,12 @@ export default function App() {
           if (pg.includes('serviço') || pg.includes('servico') || pg.includes('service')) qServ++;
       });
 
-      // Injecção automática dos valores no Setor Comercial (Owner ID 1)
       if (autoMap.contratoId) setRes(autoMap.contratoId, vContrato, 1);
       if (autoMap.spotId) setRes(autoMap.spotId, vSpot, 1);
       if (autoMap.pg1Id) setRes(autoMap.pg1Id, qPg1, 1);
       if (autoMap.pg2Id) setRes(autoMap.pg2Id, qPg2, 1);
       if (autoMap.pg3Id) setRes(autoMap.pg3Id, qPg3, 1);
       if (autoMap.servicoId) setRes(autoMap.servicoId, qServ, 1);
-      // -----------------------------------------------------
 
       if (allValues.some(v => v.owner_id === 1 && v.period === period)) {
         const vVendas = getVal(1, 1);
@@ -1159,13 +1123,12 @@ export default function App() {
     });
 
     return allValues;
-  }, [dbValues, incomingOrders, dbIndicators]); // Dependências adicionadas para recalcular se a base Excel mudar
+  }, [dbValues, incomingOrders, dbIndicators]); 
 
   useEffect(() => {
       const newVals = {};
       const newComms = {};
       
-      // LÊ DIRETAMENTE DOS CÁLCULOS AUTOMÁTICOS (INCLUINDO EXCEL)
       computedData.forEach(v => {
           if (v.owner_id === kpiOwnerId && v.period === kpiEditPeriod) {
               newVals[v.indicator_id] = v.value;
@@ -1186,7 +1149,7 @@ export default function App() {
       setFormValues(newVals);
       setFormComments(newComms);
       setExpandedCommentId(null);
-  }, [kpiOwnerId, kpiEditPeriod, computedData, dbComments]); // <- Atenção a esta linha, computedData foi adicionado
+  }, [kpiOwnerId, kpiEditPeriod, computedData, dbComments]); 
 
   const needsComment = (id, ownerId, val) => {
     const numVal = parseFloat(val);
@@ -1230,7 +1193,6 @@ export default function App() {
       setFormComments(prev => ({...prev, [id]: text}));
   };
 
-  // Extract profit Data for Diretoria and Finance tab safely
   const profitDataFinanceiro = useMemo(() => {
         const salesByCat = {};
         incomingOrders.forEach(o => {
@@ -1282,7 +1244,6 @@ export default function App() {
     );
   }
 
-  // --- TELA FINANCEIRO (FÁBIO) ---
   const renderFinanceiro = () => {
     const handleSaveFinance = async () => {
         setLoading(true);
@@ -1300,7 +1261,6 @@ export default function App() {
 
     const financeCategories = Array.from(new Set(incomingOrders.map(o => (o.kalenborn_group || o.category || o.product || '').trim()).filter(Boolean))).sort();
     
-    // CORREÇÃO: Faturamento Realizado do PCP (ID 24)
     const pcpYtd = computedData.filter(v => v.indicator_id === 24).reduce((a,c) => a + parseFloat(c.value||0), 0);
     const pcpProfit = (pcpYtd * (parseFloat(pcpMargin)||0)) / 100;
 
@@ -1369,7 +1329,6 @@ export default function App() {
     )
   };
 
-  // --- TELA INTELIGÊNCIA COMERCIAL ---
   const renderComercial = () => {
       const filteredOrders = incomingOrders.filter(o => {
           if (comercialViewPeriod === 'ALL') return true;
@@ -1445,7 +1404,7 @@ export default function App() {
                   </div>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
                   
                   <div className="bg-white p-8 rounded-3xl shadow-sm border border-zinc-200 flex flex-col h-[400px]">
                       <div className="mb-4">
@@ -1577,7 +1536,6 @@ export default function App() {
       );
   };
 
-  // --- TELA DE DIRETORIA ---
   const renderDiretoria = () => {
     const currentMonthKey = kpiViewPeriod === 'ALL' ? months[new Date().getMonth()] : kpiViewPeriod;
     const mesAtualNum = monthOrder[currentMonthKey] || 1;
@@ -1779,7 +1737,7 @@ export default function App() {
             </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
             {renderBudgetCard(t("Meta Anual Faturamento", "Annual Revenue Target"), META_ANUAL_FATURAMENTO, faturamentoRealizado, atingimentoMetaFat, metaIdealFaturamento, diferencaMetaIdealFat, percMetaIdealFat)}
             {renderBudgetCard(t("Meta Anual Vendas", "Annual Booking Target"), META_ANUAL_VENDAS, vendasRealizadas, atingimentoMetaVen, metaIdealVendas, diferencaMetaIdealVen, percMetaIdealVen)}
         </div>
@@ -1804,8 +1762,7 @@ export default function App() {
             </div>
         </div>
 
-        {/* GRAFICOS EXTRAS: PROPOSTAS E CONVERSÃO */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mt-8">
             <div className="bg-white p-8 rounded-3xl shadow-sm border border-zinc-200 flex flex-col h-[500px]">
                 <div className="mb-6 flex justify-between items-start">
                     <div>
@@ -1931,8 +1888,7 @@ export default function App() {
             </div>
         </div>
 
-        {/* GRÁFICOS DIRETORIA - LINHA FINANCEIRO E SAÚDE */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mt-8">
             <div className="bg-zinc-950 p-8 rounded-3xl shadow-xl border border-zinc-800 flex flex-col h-[500px]">
                 <div className="mb-6 flex justify-between items-start">
                     <div>
@@ -2024,13 +1980,8 @@ export default function App() {
             </div>
         </div>
 
-        {/* GRÁFICOS DIRETORIA - LINHA 3 */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
-            
-            {/* AGRUPAMENTO: CLASSIFICAÇÃO PG E MODALIDADE (Padrão Comercial) */}
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mt-8">
             <div className="flex flex-col gap-6 h-[400px]">
-                
-                {/* GRÁFICO: POR PG */}
                 <div className="bg-white p-6 rounded-3xl shadow-sm border border-zinc-200 flex-1 flex flex-col min-h-0">
                     <div className="mb-2 flex justify-between items-center">
                         <h3 className="text-xs font-bold text-zinc-800 uppercase tracking-widest">{t('Classificação PG', 'Product Group (PG) Breakdown')}</h3>
@@ -2050,7 +2001,6 @@ export default function App() {
                     </div>
                 </div>
 
-                {/* GRÁFICO: SPOT VS CONTRATO */}
                 <div className="bg-white p-6 rounded-3xl shadow-sm border border-zinc-200 flex-1 flex flex-col min-h-0">
                     <div className="mb-2">
                         <h3 className="text-xs font-bold text-zinc-800 uppercase tracking-widest">{t('Modalidade de Vendas', 'Contract Type Breakdown')}</h3>
@@ -2072,10 +2022,8 @@ export default function App() {
                         </ResponsiveContainer>
                     </div>
                 </div>
-
             </div>
 
-            {/* GRÁFICO: MARGEM DE LUCRO */}
             <div className="bg-white p-6 rounded-3xl shadow-sm border border-zinc-200 flex flex col h-[400px]">
                 <div className="mb-4">
                     <h3 className="text-sm font-bold text-zinc-800 uppercase tracking-widest">{t('Margem de Lucro Projetado', 'Projected Profit (Production Revenue)')}</h3>
@@ -2095,10 +2043,8 @@ export default function App() {
                     </ResponsiveContainer>
                 </div>
             </div>
-
         </div>
 
-        {/* 5W2H - Diretoria */}
         <div className="bg-white p-8 rounded-3xl shadow-sm border border-zinc-200 flex flex-col h-[450px]">
              <div className="mb-6 flex justify-between items-start">
                 <div>
@@ -2136,17 +2082,14 @@ export default function App() {
     );
   };
 
-  // --- TELA DE KPI ---
   const renderSparklineCard = (item, isResultado) => {
-    // Oculta os gráficos individuais pois já foram fundidos com os gráficos de Atrasos
-    if (kpiOwnerId === 1 && item.id === 6) return null; // Comercial: Enviados
-    if (kpiOwnerId === 2 && item.id === 12) return null; // Engenharia: Elaborados
-    if (kpiOwnerId === 3 && item.id === 33) return null; // PCP: Faturados
-    if (kpiOwnerId === 4 && item.id === 36) return null; // Produção: Previstos
+    if (kpiOwnerId === 1 && item.id === 6) return null; 
+    if (kpiOwnerId === 2 && item.id === 12) return null; 
+    if (kpiOwnerId === 3 && item.id === 33) return null; 
+    if (kpiOwnerId === 4 && item.id === 36) return null; 
 
     let displayHist = computedData.filter(v => v.indicator_id === item.id && v.owner_id === kpiOwnerId);
     
-    // Remove possíveis duplicados do banco (ex: dois registos de MAI)
     const uniqueMap = new Map();
     displayHist.forEach(h => uniqueMap.set(h.period, h));
     displayHist = Array.from(uniqueMap.values());
@@ -2214,13 +2157,11 @@ export default function App() {
         return { name: h.period, value: parseFloat(h.value), comment: commentObj ? commentObj.comment : null };
     });
 
-    // OVERRIDE CUSTOMIZADO PARA KPIs ESPECÍFICOS (Eng, Prod, Com)
     let CustomBars = null;
     let modifiedGraphData = baseGraphData;
     let displayName = tInd(item.name);
 
     if (kpiOwnerId === 4 && item.id === 41) { 
-        // Prod: Projetos em Atraso (41) vs Previstos (36)
         displayName = t("Projetos: Previstos vs Em Atraso", "Projects: Planned vs Overdue");
         const previstosHist = computedData.filter(v => v.indicator_id === 36 && v.owner_id === 4);
         modifiedGraphData = baseGraphData.map(g => {
@@ -2236,7 +2177,6 @@ export default function App() {
             </Bar>
         ];
     } else if (kpiOwnerId === 2 && item.id === 13) {
-        // Eng: Orc Atraso (13) vs Elaborados (12)
         displayName = t("Orçamentos: Elaborados vs Em Atraso", "Quotes: Prepared vs Overdue");
         const elabHist = computedData.filter(v => v.indicator_id === 12 && v.owner_id === 2);
         modifiedGraphData = baseGraphData.map(g => {
@@ -2252,7 +2192,6 @@ export default function App() {
             </Bar>
         ];
     } else if (kpiOwnerId === 1 && typeof item.name === 'string' && item.name.toLowerCase().includes('atraso pendentes')) {
-        // Com: Orc Atraso Pendentes vs Enviados (6)
         displayName = t("Orçamentos: Enviados vs Em Atraso", "Quotes: Submitted vs Overdue");
         const enviadosHist = computedData.filter(v => v.indicator_id === 6 && v.owner_id === 1);
         modifiedGraphData = baseGraphData.map(g => {
@@ -2268,7 +2207,6 @@ export default function App() {
             </Bar>
         ];
     } else if (kpiOwnerId === 3 && item.id === 35) {
-        // PCP: Pedidos Fora do Prazo (35) vs Faturados (33)
         displayName = t("Pedidos: Faturados vs Fora do Prazo", "Orders: Invoiced vs Late");
         const faturadosHist = computedData.filter(v => v.indicator_id === 33 && v.owner_id === 3);
         modifiedGraphData = baseGraphData.map(g => {
@@ -2284,12 +2222,11 @@ export default function App() {
             </Bar>
         ];
     } else if (kpiOwnerId === 1 && item.id === 2) {
-        // Com: Ticket Medio -> Mensal + Coluna Acumulada (Soma Direta)
         displayName = t("Ticket Médio (Mensal vs YTD)", "Average Order Value (MoM vs YTD)");
         let sumAcum = 0;
         modifiedGraphData = displayHist.slice(-12).map(h => {
              const m = h.period;
-             sumAcum += parseFloat(h.value || 0); // Soma literal mês a mês a pedido da Diretoria
+             sumAcum += parseFloat(h.value || 0); 
              const commentObj = dbComments.find(c => c.indicator_id === item.id && c.period === m);
              return { name: m, value: parseFloat(h.value), comment: commentObj?.comment, 'Mensal': parseFloat(h.value), 'Acumulado': sumAcum };
         });
@@ -2302,7 +2239,6 @@ export default function App() {
             </Bar>
         ];
     } else {
-        // Standard Bar
         CustomBars = (
             <Bar dataKey="value" name={t('Resultado', 'Actual')} radius={[4, 4, 0, 0]} maxBarSize={40}>
                 {modifiedGraphData.map((entry, index) => {
@@ -2313,7 +2249,7 @@ export default function App() {
                         if (isBad) {
                             barColor = '#ef4444'; 
                         } else {
-                            barColor = '#10b981'; // Verde para meta atingida ou superada
+                            barColor = '#10b981'; 
                         }
                     }
                     return <Cell key={`cell-${index}`} fill={barColor} />;
@@ -2421,7 +2357,6 @@ export default function App() {
   const renderKPI = () => {
     const ownerIndicatorIds = [...new Set(dbValues.filter(v => v.owner_id === kpiOwnerId).map(v => v.indicator_id))];
     const finalIndicators = dbIndicators.filter(i => {
-        // Bloqueio Exclusivo: Estoque pertence apenas à Daniela (ID 8)
         if (i.id === 56 || i.name.toLowerCase().includes('estoque')) {
             return kpiOwnerId === 8;
         }
@@ -2687,7 +2622,6 @@ export default function App() {
     );
   };
 
-  // --- TELA DE AUDITORIA ---
   const renderAuditoria = () => {
     const exportToCSV = () => {
         const rows = document.querySelectorAll('#tab-auditoria table tr');
@@ -2748,8 +2682,8 @@ export default function App() {
                 </div>
             </div>
             
-            <div className="flex-1 overflow-auto rounded-xl border border-zinc-200 shadow-inner bg-zinc-50 relative">
-                <table className="w-full text-left text-sm whitespace-nowrap audit-table">
+            <div className="flex-1 overflow-x-auto overflow-y-auto rounded-xl border border-zinc-200 shadow-inner bg-zinc-50 relative w-full">
+                <table className="w-full min-w-[1200px] text-left text-sm whitespace-nowrap audit-table">
                     <thead className="text-zinc-500 uppercase font-black text-[10px] tracking-widest bg-white sticky top-0 shadow-sm z-10">
                         <tr>
                             <th className="p-4 border-b border-zinc-200 text-center bg-white">{t('ID', 'ID')}</th>
@@ -2849,7 +2783,6 @@ export default function App() {
     )
   }
 
-  // --- TELA 5W2H ---
   const render5W2H = () => {
     let filteredActions = actions;
     if (user.role !== 'admin' && user.role !== 'dev') {
@@ -3019,8 +2952,8 @@ export default function App() {
                         </select>
                     </div>
                 </div>
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left text-sm">
+                <div className="overflow-x-auto w-full pb-4">
+                    <table className="w-full text-left text-sm min-w-[800px]">
                         <thead className="bg-white text-zinc-500 uppercase font-bold text-[11px] border-b border-zinc-200">
                             <tr>
                                 <th className="p-6">{t('Ref', 'Ref')}</th>
@@ -3309,7 +3242,7 @@ export default function App() {
                 </div>
             </div>
 
-            <nav className="hidden lg:flex gap-1 bg-zinc-900 p-1.5 rounded-2xl border border-zinc-800 shadow-inner">
+            <nav className="hidden xl:flex gap-1 bg-zinc-900 p-1.5 rounded-2xl border border-zinc-800 shadow-inner">
                 {(user.role === 'admin' || user.role === 'dev') && (
                     <button onClick={() => setActiveTab('diretoria')} className={`px-5 py-2.5 rounded-xl font-black uppercase tracking-wider text-xs transition-all flex items-center gap-2 ${activeTab === 'diretoria' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
                         <BarChart3 size={16} /> {t('Diretoria', 'Board')}
@@ -3341,16 +3274,16 @@ export default function App() {
                 )}
             </nav>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 md:gap-4">
                 <input type="file" id="logo-upload-input" accept="image/*" onChange={handleLogoUpload} className="hidden" />
                 
                 {(user.role === 'admin' || user.role === 'dev') && (
-                    <button onClick={triggerLogoUpload} className="p-3 text-zinc-500 hover:bg-zinc-800 hover:text-yellow-500 rounded-xl transition-colors" title={t('Alterar Logo da Empresa', 'Change Company Logo')}>
+                    <button onClick={triggerLogoUpload} className="hidden sm:block p-3 text-zinc-500 hover:bg-zinc-800 hover:text-yellow-500 rounded-xl transition-colors" title={t('Alterar Logo da Empresa', 'Change Company Logo')}>
                         <ImageIcon size={20} />
                     </button>
                 )}
 
-                <div className="flex items-center gap-1 bg-zinc-900 p-1 rounded-xl border border-zinc-800 mr-2">
+                <div className="hidden sm:flex items-center gap-1 bg-zinc-900 p-1 rounded-xl border border-zinc-800 mr-2">
                     <button onClick={() => setLang('PT')} className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${lang === 'PT' ? 'bg-yellow-500 text-black shadow-sm' : 'text-zinc-500 hover:text-white hover:bg-zinc-800'}`}>PT</button>
                     <button onClick={() => setLang('EN')} className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${lang === 'EN' ? 'bg-yellow-500 text-black shadow-sm' : 'text-zinc-500 hover:text-white hover:bg-zinc-800'}`}>EN</button>
                 </div>
@@ -3359,11 +3292,52 @@ export default function App() {
                     <div className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse shadow-sm shadow-green-500/50"></div>
                     <span className="text-xs font-black text-white uppercase tracking-wider">{user.username}</span>
                 </div>
-                <button onClick={() => window.location.reload()} className="p-3 text-zinc-500 hover:bg-red-500/10 hover:text-red-500 rounded-xl transition-colors" title={t('Sair com Segurança', 'Logout Safely')}>
+                <button onClick={() => window.location.reload()} className="hidden xl:block p-3 text-zinc-500 hover:bg-red-500/10 hover:text-red-500 rounded-xl transition-colors" title={t('Sair com Segurança', 'Logout Safely')}>
                     <LogOut size={20} />
+                </button>
+                <button 
+                    onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                    className="xl:hidden p-3 text-zinc-400 hover:text-yellow-500 rounded-xl transition-colors bg-zinc-900 border border-zinc-800"
+                >
+                    {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
                 </button>
             </div>
         </div>
+
+        {isMobileMenuOpen && (
+            <div className="xl:hidden absolute top-20 left-0 w-full border-t border-zinc-800 bg-zinc-950 p-4 flex flex-col gap-2 shadow-2xl animate-in slide-in-from-top-2 z-50">
+                {(user.role === 'admin' || user.role === 'dev') && (
+                    <button onClick={() => { setActiveTab('diretoria'); setIsMobileMenuOpen(false); }} className={`px-5 py-4 rounded-xl font-black uppercase tracking-wider text-sm transition-all flex items-center gap-3 ${activeTab === 'diretoria' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
+                        <BarChart3 size={20} /> {t('Diretoria', 'Board')}
+                    </button>
+                )}
+                <button onClick={() => { setActiveTab('kpi'); setIsMobileMenuOpen(false); }} className={`px-5 py-4 rounded-xl font-black uppercase tracking-wider text-sm transition-all flex items-center gap-3 ${activeTab === 'kpi' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
+                    <LineChartIcon size={20} /> {t('KPIs', 'KPIs')}
+                </button>
+                {(user.role === 'admin' || user.role === 'dev' || user.area === 'Comercial') && (
+                    <button onClick={() => { setActiveTab('comercial'); setIsMobileMenuOpen(false); }} className={`px-5 py-4 rounded-xl font-black uppercase tracking-wider text-sm transition-all flex items-center gap-3 ${activeTab === 'comercial' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
+                        <DollarSign size={20} /> {t('Comercial', 'Commercial')}
+                    </button>
+                )}
+                {(user.role === 'admin' || user.role === 'dev' || user.area === 'Financeiro' || user.username.toUpperCase().includes('FABIO')) && (
+                    <button onClick={() => { setActiveTab('financeiro'); setIsMobileMenuOpen(false); }} className={`px-5 py-4 rounded-xl font-black uppercase tracking-wider text-sm transition-all flex items-center gap-3 ${activeTab === 'financeiro' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
+                        <Globe size={20} /> {t('Financeiro', 'Finance')}
+                    </button>
+                )}
+                <button onClick={() => { setActiveTab('5w2h'); setIsMobileMenuOpen(false); }} className={`px-5 py-4 rounded-xl font-black uppercase tracking-wider text-sm transition-all flex items-center gap-3 ${activeTab === '5w2h' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
+                    <ListChecks size={20} /> {t('Matriz 5W2H', '5W2H Matrix')}
+                </button>
+                {(user.username.toUpperCase() === 'LUCIENE' || user.area === 'Comercial' || user.role === 'admin' || user.role === 'dev') && (
+                    <button onClick={() => { setActiveTab('auditoria'); setIsMobileMenuOpen(false); }} className={`px-5 py-4 rounded-xl font-black uppercase tracking-wider text-sm transition-all flex items-center gap-3 ${activeTab === 'auditoria' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
+                        <FileSpreadsheet size={20} /> {t('Auditoria', 'Audit')}
+                    </button>
+                )}
+                <div className="h-px w-full bg-zinc-800 my-2"></div>
+                <button onClick={() => window.location.reload()} className="px-5 py-4 rounded-xl font-black uppercase tracking-wider text-sm text-red-500 hover:bg-red-500/10 transition-all flex items-center gap-3">
+                    <LogOut size={20} /> {t('Sair com Segurança', 'Logout Safely')}
+                </button>
+            </div>
+        )}
       </header>
 
       <main className="max-w-[1600px] mx-auto px-6 py-8">
