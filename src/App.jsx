@@ -1037,26 +1037,33 @@ export default function App() {
       if (autoMap.servicoId) setRes(autoMap.servicoId, qServ, 1);
 
       if (allValues.some(v => v.owner_id === 1 && v.period === period)) {
+        const manualFilled = dbValues.some(v => v.owner_id === 1 && v.period === period);
         const vVendas = getVal(1, 1);
         const qAprovados = getVal(4, 1);
         const qEnviados = getVal(6, 1);
         const vEnviados = getVal(7, 1);
         const vVendidosMes = getVal(8, 1);
 
-        let sumVendas = vVendas, sumAprovados = qAprovados, sumEnviados = qEnviados, sumVEnviados = vEnviados;
-        const currentMonthNum = monthOrder[period];
-        
-        allValues.forEach(v => {
-            if (v.owner_id === 1 && monthOrder[v.period] < currentMonthNum) {
-                if (v.indicator_id === 1) sumVendas += parseFloat(v.value);
-                if (v.indicator_id === 4) sumAprovados += parseFloat(v.value);
-                if (v.indicator_id === 6) sumEnviados += parseFloat(v.value);
-                if (v.indicator_id === 7) sumVEnviados += parseFloat(v.value);
-            }
-        });
+        if (manualFilled) {
+            let sumVendas = vVendas, sumAprovados = qAprovados, sumEnviados = qEnviados, sumVEnviados = vEnviados;
+            const currentMonthNum = monthOrder[period];
+            
+            allValues.forEach(v => {
+                if (v.owner_id === 1 && monthOrder[v.period] < currentMonthNum) {
+                    if (v.indicator_id === 1) sumVendas += parseFloat(v.value);
+                    if (v.indicator_id === 4) sumAprovados += parseFloat(v.value);
+                    if (v.indicator_id === 6) sumEnviados += parseFloat(v.value);
+                    if (v.indicator_id === 7) sumVEnviados += parseFloat(v.value);
+                }
+            });
 
-        setRes(74, sumEnviados > 0 ? (sumAprovados / sumEnviados) * 100 : 0, 1);
-        setRes(75, sumVEnviados > 0 ? (sumVendas / sumVEnviados) * 100 : 0, 1); 
+            setRes(74, sumEnviados > 0 ? (sumAprovados / sumEnviados) * 100 : 0, 1);
+            setRes(75, sumVEnviados > 0 ? (sumVendas / sumVEnviados) * 100 : 0, 1); 
+        } else {
+            setRes(74, 0, 1);
+            setRes(75, 0, 1);
+        }
+        
         setRes(76, qEnviados > 0 ? (qAprovados / qEnviados) * 100 : 0, 1); 
         setRes(77, vEnviados > 0 ? (vVendas / vEnviados) * 100 : 0, 1); 
         setRes(78, vEnviados > 0 ? (vVendidosMes / vEnviados) * 100 : 0, 1); 
@@ -1548,12 +1555,18 @@ export default function App() {
         computedDataDiretoria = computedData.filter(v => monthOrder[v.period] <= monthOrder[kpiViewPeriod]);
     }
 
+    const filteredIncomingDiretoria = incomingOrders.filter(o => {
+        if (kpiViewPeriod === 'ALL') return true;
+        const orderMonth = normalizeExcelMonth(o.month);
+        return monthOrder[orderMonth] <= monthOrder[kpiViewPeriod];
+    });
+
     const faturamentoRealizado = computedDataDiretoria.filter(v => v.indicator_id === 24).reduce((acc, curr) => acc + parseFloat(curr.value || 0), 0);
     const atingimentoMetaFat = META_ANUAL_FATURAMENTO > 0 ? (faturamentoRealizado / META_ANUAL_FATURAMENTO) * 100 : 0;
     const diferencaMetaIdealFat = faturamentoRealizado - metaIdealFaturamento;
     const percMetaIdealFat = metaIdealFaturamento > 0 ? (faturamentoRealizado / metaIdealFaturamento) * 100 : 0;
 
-    const vendasRealizadas = computedDataDiretoria.filter(v => v.indicator_id === 1).reduce((acc, curr) => acc + parseFloat(curr.value || 0), 0);
+    const vendasRealizadas = filteredIncomingDiretoria.reduce((acc, curr) => acc + (parseFloat(curr.net_value) || 0), 0);
     const atingimentoMetaVen = META_ANUAL_VENDAS > 0 ? (vendasRealizadas / META_ANUAL_VENDAS) * 100 : 0;
     const diferencaMetaIdealVen = vendasRealizadas - metaIdealVendas;
     const percMetaIdealVen = metaIdealVendas > 0 ? (vendasRealizadas / metaIdealVendas) * 100 : 0;
@@ -1568,12 +1581,6 @@ export default function App() {
     const orcamentosEnviados = getSumByName('Nº de orçamentos enviados');
     const orcamentosAprovados = getSumByName('Nº de orçamentos aprovados');
     const visitas = getSumByName('Nº visitas técnica/comercial');
-
-    const filteredIncomingDiretoria = incomingOrders.filter(o => {
-        if (kpiViewPeriod === 'ALL') return true;
-        const orderMonth = normalizeExcelMonth(o.month);
-        return monthOrder[orderMonth] <= monthOrder[kpiViewPeriod];
-    });
 
     const aggregateIncoming = (key, valueKey = 'net_value') => {
         const acc = {};
@@ -1612,7 +1619,7 @@ export default function App() {
 
     const propostasVsVendasData = months.filter(m => kpiViewPeriod === 'ALL' || monthOrder[m] <= monthOrder[kpiViewPeriod]).map(m => {
         const propGeradas = computedDataDiretoria.find(v => v.indicator_id === 7 && v.period === m)?.value || 0; 
-        const propVendidas = computedDataDiretoria.find(v => v.indicator_id === 1 && v.period === m)?.value || 0; 
+        const propVendidas = incomingOrders.filter(o => normalizeExcelMonth(o.month) === m).reduce((acc, curr) => acc + (parseFloat(curr.net_value) || 0), 0);
         const conversao = propGeradas > 0 ? (propVendidas / propGeradas) * 100 : 0;
         return { name: m, 'Gerado R$': parseFloat(propGeradas), 'Vendido R$': parseFloat(propVendidas), 'Conversão %': parseFloat(conversao) };
     }).filter(d => d['Gerado R$'] > 0 || d['Vendido R$'] > 0);
@@ -2094,6 +2101,11 @@ export default function App() {
     displayHist.forEach(h => uniqueMap.set(h.period, h));
     displayHist = Array.from(uniqueMap.values());
     
+    const isMonthFilled = (period) => {
+        if (kpiOwnerId === 8) return dbValues.some(v => v.indicator_id === 56 && v.period === period);
+        return dbValues.some(v => v.owner_id === kpiOwnerId && v.period === period);
+    };
+
     if (kpiViewPeriod !== 'ALL') {
         displayHist = displayHist.filter(h => monthOrder[h.period] <= monthOrder[kpiViewPeriod]);
     }
@@ -2103,19 +2115,39 @@ export default function App() {
     if (kpiViewMode === 'ANNUAL') {
         let cumulativeData = [];
         let currentSum = 0;
-        displayHist.forEach((h, index) => {
-            let val = parseFloat(h.value);
-            if (item.unit === '%' || item.unit === 'DIAS') {
-                if (item.name.includes('MÉDIA AC') || item.name.includes('TOTAL')) currentSum = val;
-                else currentSum = ((currentSum * index) + val) / (index + 1);
-            } else if (item.id === 56 || item.name.toLowerCase().includes('estoque')) {
-                currentSum = val; 
+        let monthsCount = 0;
+        months.forEach((m) => {
+            if (kpiViewPeriod !== 'ALL' && monthOrder[m] > monthOrder[kpiViewPeriod]) return;
+            
+            let h = displayHist.find(d => d.period === m);
+            let val = h ? parseFloat(h.value) : 0;
+            
+            if (!isMonthFilled(m)) {
+                currentSum = 0;
             } else {
-                currentSum += val;
+                monthsCount++;
+                if (item.unit === '%' || item.unit === 'DIAS') {
+                    if (item.name.includes('MÉDIA AC') || item.name.includes('TOTAL')) currentSum = val;
+                    else currentSum = ((currentSum * (monthsCount - 1)) + val) / monthsCount;
+                } else if (item.id === 56 || item.name.toLowerCase().includes('estoque')) {
+                    currentSum = val; 
+                } else {
+                    currentSum += val;
+                }
             }
-            cumulativeData.push({ period: h.period, value: currentSum });
+            cumulativeData.push({ period: m, value: currentSum, originalValue: val });
         });
         displayHist = cumulativeData;
+    } else {
+        let monthlyData = [];
+        months.forEach(m => {
+            if (kpiViewPeriod !== 'ALL' && monthOrder[m] > monthOrder[kpiViewPeriod]) return;
+            let h = displayHist.find(d => d.period === m);
+            let val = h ? parseFloat(h.value) : 0;
+            if (!isMonthFilled(m)) val = 0;
+            monthlyData.push({ period: m, value: val, originalValue: val });
+        });
+        displayHist = monthlyData;
     }
 
     const goalObj = dbGoals.find(g => g.indicator_id === item.id);
@@ -2125,36 +2157,41 @@ export default function App() {
     let latestRawVal = null;
 
     if (displayHist.length > 0) {
-        curr = parseFloat(displayHist[displayHist.length - 1].value);
-        latestRawVal = curr;
-        if (displayHist.length > 1) prev = parseFloat(displayHist[displayHist.length - 2].value);
-        
-        latestVal = formatNumber(curr, item.unit);
-        
-        if (prev !== null && prev !== 0) {
-            const diff = curr - prev;
-            let perc = (diff / prev) * 100;
-            if (perc > 999) perc = 999;
+        const filledHistory = displayHist.filter(h => isMonthFilled(h.period));
+        if (filledHistory.length > 0) {
+            curr = parseFloat(filledHistory[filledHistory.length - 1].value);
+            latestRawVal = curr;
+            if (filledHistory.length > 1) prev = parseFloat(filledHistory[filledHistory.length - 2].value);
             
-            const isPositiveTrend = diff > 0;
-            let colorClass = 'text-zinc-400';
+            latestVal = formatNumber(curr, item.unit);
             
-            if (diff !== 0) {
-                if (isPositiveTrend) colorClass = item.inverse_goal ? 'text-red-500' : 'text-emerald-500';
-                else colorClass = item.inverse_goal ? 'text-emerald-500' : 'text-red-500';
-                trendHtml = (
-                    <span className={`flex items-center gap-0.5 text-[11px] font-black ${colorClass} bg-zinc-100 px-2 py-0.5 rounded-full`}>
-                        {isPositiveTrend ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
-                        {Math.abs(perc).toFixed(1)}%
-                    </span>
-                );
+            if (prev !== null && prev !== 0) {
+                const diff = curr - prev;
+                let perc = (diff / prev) * 100;
+                if (perc > 999) perc = 999;
+                
+                const isPositiveTrend = diff > 0;
+                let colorClass = 'text-zinc-400';
+                
+                if (diff !== 0) {
+                    if (isPositiveTrend) colorClass = item.inverse_goal ? 'text-red-500' : 'text-emerald-500';
+                    else colorClass = item.inverse_goal ? 'text-emerald-500' : 'text-red-500';
+                    trendHtml = (
+                        <span className={`flex items-center gap-0.5 text-[11px] font-black ${colorClass} bg-zinc-100 px-2 py-0.5 rounded-full`}>
+                            {isPositiveTrend ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+                            {Math.abs(perc).toFixed(1)}%
+                        </span>
+                    );
+                }
             }
+        } else {
+            latestVal = '0';
         }
     }
 
-    const baseGraphData = displayHist.slice(-12).map(h => {
+    const baseGraphData = displayHist.map(h => {
         const commentObj = dbComments.find(c => c.indicator_id === item.id && c.period === h.period);
-        return { name: h.period, value: parseFloat(h.value), comment: commentObj ? commentObj.comment : null };
+        return { name: h.period, value: parseFloat(h.value), originalValue: h.originalValue, comment: commentObj ? commentObj.comment : null };
     });
 
     let CustomBars = null;
@@ -2166,14 +2203,14 @@ export default function App() {
         const previstosHist = computedData.filter(v => v.indicator_id === 36 && v.owner_id === 4);
         modifiedGraphData = baseGraphData.map(g => {
             const pVal = previstosHist.find(v => v.period === g.name)?.value || 0;
-            return { ...g, 'Total Projetos': parseFloat(pVal), 'Em Atraso': g.value };
+            return { ...g, 'Total Projetos': isMonthFilled(g.name) ? parseFloat(pVal) : 0, 'Em Atraso': g.value };
         });
         CustomBars = [
-            <Bar key="bar1" dataKey="Total Projetos" name={t('Total Projetos', 'Total Projects')} fill="#eab308" radius={[4, 4, 0, 0]} maxBarSize={20}>
-                <LabelList dataKey="Total Projetos" position="top" fill="#71717a" fontSize={9} formatter={v => v > 0 ? v : ''} />
+            <Bar key="bar1" dataKey="Total Projetos" name={t('Total Projetos', 'Total Projects')} fill="#eab308" radius={[4, 4, 0, 0]} maxBarSize={30}>
+                <LabelList dataKey="Total Projetos" position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={v => v > 0 ? v : ''} />
             </Bar>,
-            <Bar key="bar2" dataKey="Em Atraso" name={t('Em Atraso', 'Overdue')} fill="#ef4444" radius={[4, 4, 0, 0]} maxBarSize={20}>
-                <LabelList dataKey="Em Atraso" position="top" fill="#71717a" fontSize={9} formatter={v => v > 0 ? v : ''} />
+            <Bar key="bar2" dataKey="Em Atraso" name={t('Em Atraso', 'Overdue')} fill="#ef4444" radius={[4, 4, 0, 0]} maxBarSize={30}>
+                <LabelList dataKey="Em Atraso" position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={v => v > 0 ? v : ''} />
             </Bar>
         ];
     } else if (kpiOwnerId === 2 && item.id === 13) {
@@ -2181,14 +2218,14 @@ export default function App() {
         const elabHist = computedData.filter(v => v.indicator_id === 12 && v.owner_id === 2);
         modifiedGraphData = baseGraphData.map(g => {
             const eVal = elabHist.find(v => v.period === g.name)?.value || 0;
-            return { ...g, 'Enviados': parseFloat(eVal), 'Atraso': g.value };
+            return { ...g, 'Enviados': isMonthFilled(g.name) ? parseFloat(eVal) : 0, 'Atraso': g.value };
         });
         CustomBars = [
-            <Bar key="bar1" dataKey="Enviados" name={t('Enviados', 'Prepared')} fill="#eab308" radius={[4, 4, 0, 0]} maxBarSize={20}>
-                <LabelList dataKey="Enviados" position="top" fill="#71717a" fontSize={9} formatter={v => v > 0 ? v : ''} />
+            <Bar key="bar1" dataKey="Enviados" name={t('Enviados', 'Prepared')} fill="#eab308" radius={[4, 4, 0, 0]} maxBarSize={30}>
+                <LabelList dataKey="Enviados" position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={v => v > 0 ? v : ''} />
             </Bar>,
-            <Bar key="bar2" dataKey="Atraso" name={t('Atraso', 'Overdue')} fill="#ef4444" radius={[4, 4, 0, 0]} maxBarSize={20}>
-                <LabelList dataKey="Atraso" position="top" fill="#71717a" fontSize={9} formatter={v => v > 0 ? v : ''} />
+            <Bar key="bar2" dataKey="Atraso" name={t('Atraso', 'Overdue')} fill="#ef4444" radius={[4, 4, 0, 0]} maxBarSize={30}>
+                <LabelList dataKey="Atraso" position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={v => v > 0 ? v : ''} />
             </Bar>
         ];
     } else if (kpiOwnerId === 1 && typeof item.name === 'string' && item.name.toLowerCase().includes('atraso pendentes')) {
@@ -2196,14 +2233,14 @@ export default function App() {
         const enviadosHist = computedData.filter(v => v.indicator_id === 6 && v.owner_id === 1);
         modifiedGraphData = baseGraphData.map(g => {
             const eVal = enviadosHist.find(v => v.period === g.name)?.value || 0;
-            return { ...g, 'Enviados': parseFloat(eVal), 'Atraso': g.value };
+            return { ...g, 'Enviados': isMonthFilled(g.name) ? parseFloat(eVal) : 0, 'Atraso': g.value };
         });
         CustomBars = [
-            <Bar key="bar1" dataKey="Enviados" name={t('Enviados', 'Submitted')} fill="#eab308" radius={[4, 4, 0, 0]} maxBarSize={20}>
-                <LabelList dataKey="Enviados" position="top" fill="#71717a" fontSize={9} formatter={v => v > 0 ? v : ''} />
+            <Bar key="bar1" dataKey="Enviados" name={t('Enviados', 'Submitted')} fill="#eab308" radius={[4, 4, 0, 0]} maxBarSize={30}>
+                <LabelList dataKey="Enviados" position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={v => v > 0 ? v : ''} />
             </Bar>,
-            <Bar key="bar2" dataKey="Atraso" name={t('Atraso', 'Overdue')} fill="#ef4444" radius={[4, 4, 0, 0]} maxBarSize={20}>
-                <LabelList dataKey="Atraso" position="top" fill="#71717a" fontSize={9} formatter={v => v > 0 ? v : ''} />
+            <Bar key="bar2" dataKey="Atraso" name={t('Atraso', 'Overdue')} fill="#ef4444" radius={[4, 4, 0, 0]} maxBarSize={30}>
+                <LabelList dataKey="Atraso" position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={v => v > 0 ? v : ''} />
             </Bar>
         ];
     } else if (kpiOwnerId === 3 && item.id === 35) {
@@ -2211,36 +2248,38 @@ export default function App() {
         const faturadosHist = computedData.filter(v => v.indicator_id === 33 && v.owner_id === 3);
         modifiedGraphData = baseGraphData.map(g => {
             const fVal = faturadosHist.find(v => v.period === g.name)?.value || 0;
-            return { ...g, 'Faturados': parseFloat(fVal), 'Atraso': g.value };
+            return { ...g, 'Faturados': isMonthFilled(g.name) ? parseFloat(fVal) : 0, 'Atraso': g.value };
         });
         CustomBars = [
-            <Bar key="bar1" dataKey="Faturados" name={t('Faturados', 'Invoiced')} fill="#eab308" radius={[4, 4, 0, 0]} maxBarSize={20}>
-                <LabelList dataKey="Faturados" position="top" fill="#71717a" fontSize={9} formatter={v => v > 0 ? v : ''} />
+            <Bar key="bar1" dataKey="Faturados" name={t('Faturados', 'Invoiced')} fill="#eab308" radius={[4, 4, 0, 0]} maxBarSize={30}>
+                <LabelList dataKey="Faturados" position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={v => v > 0 ? v : ''} />
             </Bar>,
-            <Bar key="bar2" dataKey="Atraso" name={t('Fora do Prazo', 'Late')} fill="#ef4444" radius={[4, 4, 0, 0]} maxBarSize={20}>
-                <LabelList dataKey="Atraso" position="top" fill="#71717a" fontSize={9} formatter={v => v > 0 ? v : ''} />
+            <Bar key="bar2" dataKey="Atraso" name={t('Fora do Prazo', 'Late')} fill="#ef4444" radius={[4, 4, 0, 0]} maxBarSize={30}>
+                <LabelList dataKey="Atraso" position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={v => v > 0 ? v : ''} />
             </Bar>
         ];
     } else if (kpiOwnerId === 1 && item.id === 2) {
         displayName = t("Ticket Médio (Mensal vs YTD)", "Average Order Value (MoM vs YTD)");
         let sumAcum = 0;
-        modifiedGraphData = displayHist.slice(-12).map(h => {
-             const m = h.period;
-             sumAcum += parseFloat(h.value || 0); 
-             const commentObj = dbComments.find(c => c.indicator_id === item.id && c.period === m);
-             return { name: m, value: parseFloat(h.value), comment: commentObj?.comment, 'Mensal': parseFloat(h.value), 'Acumulado': sumAcum };
+        modifiedGraphData = baseGraphData.map(g => {
+             if (isMonthFilled(g.name)) {
+                 sumAcum += g.originalValue; 
+             } else {
+                 sumAcum = 0;
+             }
+             return { ...g, 'Mensal': g.originalValue, 'Acumulado': sumAcum };
         });
         CustomBars = [
-            <Bar key="bar1" dataKey="Mensal" name={t('Mensal', 'Monthly')} fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={20}>
-                <LabelList dataKey="Mensal" position="top" fill="#71717a" fontSize={9} formatter={v => formatCurrencyShort(v)} />
+            <Bar key="bar1" dataKey="Mensal" name={t('Mensal', 'Monthly')} fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={30}>
+                <LabelList dataKey="Mensal" position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={v => formatCurrencyShort(v)} />
             </Bar>,
-            <Bar key="bar2" dataKey="Acumulado" name={t('Acumulado', 'YTD')} fill="#f97316" radius={[4, 4, 0, 0]} maxBarSize={20}>
-                <LabelList dataKey="Acumulado" position="top" fill="#71717a" fontSize={9} formatter={v => formatCurrencyShort(v)} />
+            <Bar key="bar2" dataKey="Acumulado" name={t('Acumulado', 'YTD')} fill="#f97316" radius={[4, 4, 0, 0]} maxBarSize={30}>
+                <LabelList dataKey="Acumulado" position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={v => formatCurrencyShort(v)} />
             </Bar>
         ];
     } else {
         CustomBars = (
-            <Bar dataKey="value" name={t('Resultado', 'Actual')} radius={[4, 4, 0, 0]} maxBarSize={40}>
+            <Bar dataKey="value" name={t('Resultado', 'Actual')} radius={[4, 4, 0, 0]} maxBarSize={45}>
                 {modifiedGraphData.map((entry, index) => {
                     let barColor = isResultado ? '#18181b' : '#eab308';
                     if (metaVal !== undefined) {
@@ -2254,7 +2293,8 @@ export default function App() {
                     }
                     return <Cell key={`cell-${index}`} fill={barColor} />;
                 })}
-                <LabelList dataKey="value" position="top" fill="#71717a" fontSize={9} formatter={v => {
+                <LabelList dataKey="value" position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={v => {
+                    if (!v || v === 0) return '';
                     if(item.unit === 'R$') return formatCurrencyShort(v);
                     if(item.unit === '%') return v.toFixed(1) + '%';
                     return v;
@@ -2286,7 +2326,7 @@ export default function App() {
     }
 
     return (
-        <div key={item.id} className={`bg-white p-6 rounded-[24px] shadow-sm border ${isResultado ? 'border-zinc-300' : 'border-zinc-200'} flex flex-col justify-between hover:shadow-xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden group h-[300px]`}>
+        <div key={item.id} className={`bg-white p-6 rounded-[24px] shadow-sm border ${isResultado ? 'border-zinc-300' : 'border-zinc-200'} flex flex-col justify-between hover:shadow-xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden group h-[350px]`}>
             <div className="relative z-10 flex-shrink-0">
                 <div className="flex justify-between items-start mb-3 gap-2">
                     <h4 className={`text-xs font-black ${headerColorClass} uppercase tracking-widest leading-relaxed w-full`} title={displayName}>{displayName}</h4>
@@ -2497,17 +2537,19 @@ export default function App() {
                 </div>
             </div>
 
+            {/* MUDANÇA AQUI: Alterado de lg:grid-cols-3 para lg:grid-cols-2 */}
             <div>
                 <h3 className="text-xs font-black text-zinc-400 uppercase tracking-widest mb-4 ml-2">{t('Indicadores de Resultado (Performance)', 'Key Performance Indicators (Results)')}</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 mb-8">
                     {resultadoList.length === 0 && <p className="text-sm text-zinc-400 italic col-span-full ml-2">{t('Nenhum resultado de performance encontrado.', 'No performance metrics found.')}</p>}
                     {resultadoList.map(ind => renderSparklineCard(ind, true))}
                 </div>
             </div>
 
+            {/* MUDANÇA AQUI: Alterado de lg:grid-cols-3 para lg:grid-cols-2 */}
             <div>
                 <h3 className="text-xs font-black text-zinc-400 uppercase tracking-widest mb-4 ml-2">{t('Métricas Operacionais (Esforço)', 'Operational Metrics (Leading)')}</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 mb-8">
                     {visibleEsforcoList.length === 0 && <p className="text-sm text-zinc-400 italic col-span-full ml-2">{t('Nenhuma métrica operacional encontrada.', 'No operational metrics found.')}</p>}
                     {visibleEsforcoList.map(ind => renderSparklineCard(ind, false))}
                 </div>
@@ -3221,9 +3263,6 @@ export default function App() {
     );
   };
 
-  // ==========================================
-  // MAIN LAYOUT
-  // ==========================================
   return (
     <div className="min-h-screen bg-zinc-100 font-sans text-zinc-900 selection:bg-yellow-200 selection:text-black">
       <header className="bg-black border-b border-zinc-800 sticky top-0 z-40 shadow-xl">
