@@ -134,15 +134,26 @@ const CustomTooltipFinanceiro = ({ active, payload, label }) => {
     return null;
 };
 
-const CustomTooltipPie = ({ active, payload }) => {
+const CustomTooltipFinanceiro2 = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
-        const data = payload[0];
         return (
             <div className="bg-zinc-950 text-white p-4 rounded-xl shadow-2xl border border-zinc-800 z-50">
-                <p className="text-sm font-black flex justify-between gap-4" style={{ color: data.payload.fill }}>
-                    <span>{data.name}:</span>
-                    <span>{formatCurrency(data.value)} ({(data.percent * 100).toFixed(1)}%)</span>
-                </p>
+                <p className="font-bold text-sm mb-3 text-yellow-500 border-b border-zinc-800 pb-2">{label}</p>
+                {payload.map((entry, index) => {
+                    let valStr = entry.value;
+                    if (entry.name.includes('%') || ['Giro Ativo', 'Alavancagem', 'Liq Imediata', 'Liq Seca', 'Liq Corrente'].includes(entry.name)) {
+                        valStr = parseFloat(entry.value).toFixed(1) + '%';
+                    } else {
+                        valStr = formatCurrency(entry.value);
+                    }
+
+                    return (
+                        <p key={index} className="text-sm font-black flex justify-between gap-6 mb-1" style={{ color: entry.color }}>
+                            <span>{entry.name}:</span>
+                            <span>{valStr}</span>
+                        </p>
+                    )
+                })}
             </div>
         );
     }
@@ -217,6 +228,7 @@ export default function App() {
   const [toast, setToast] = useState(null);
   const [appLogo, setAppLogo] = useState('');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isDuPontExpanded, setIsDuPontExpanded] = useState(false); 
   
   const [lang, setLang] = useState('PT');
   const t = (pt, en) => lang === 'PT' ? pt : en;
@@ -399,7 +411,7 @@ export default function App() {
   };
 
   const translateArea = (ar) => {
-      const map = { 'Comercial': 'Commercial', 'Engenharia': 'Engineering', 'Produção': 'Production', 'Qualidade': 'Quality', 'DP': 'HR', 'Estoque': 'Inventory', 'Supply': 'Procurement', 'PCP': 'PCP' };
+      const map = { 'Comercial': 'Commercial', 'Engenharia': 'Engineering', 'Produção': 'Production', 'Qualidade': 'Quality', 'DP': 'HR', 'Estoque': 'Inventory', 'Supply': 'Procurement', 'PCP': 'PCP', 'Financeiro': 'Finance' };
       return lang === 'EN' ? (map[ar] || ar) : ar;
   };
 
@@ -505,6 +517,9 @@ export default function App() {
               setCurrentSectorIndex(prev => (prev + 1) % 7);
           }, 5000);
           return () => clearInterval(timer);
+      }
+      if (activeTab === 'financeiro') {
+          setKpiOwnerId(9);
       }
   }, [activeTab, currentSectorIndex]);
 
@@ -824,6 +839,7 @@ export default function App() {
           else if(upper.includes('LUCIENE')) setKpiOwnerId(6);
           else if(upper.includes('MARIELE')) setKpiOwnerId(7);
           else if(upper.includes('DANIELA')) setKpiOwnerId(8);
+          else if(upper.includes('FABIO') || upper.includes('FINANCEIRO')) setKpiOwnerId(9);
           else setKpiOwnerId(1);
 
           if (data.role !== 'admin' && data.role !== 'dev' && upper !== 'DANIEL') {
@@ -1271,18 +1287,277 @@ export default function App() {
     const pcpYtd = computedData.filter(v => v.indicator_id === 24).reduce((a,c) => a + parseFloat(c.value||0), 0);
     const pcpProfit = (pcpYtd * (parseFloat(pcpMargin)||0)) / 100;
 
+    const financeIndicators = dbIndicators.filter(i => i.id >= 101 && i.id <= 117).sort((a,b) => a.id - b.id);
+
+    const handleSaveFinanceKPIs = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        const payload = [];
+        financeIndicators.forEach(ind => {
+            const val = formValues[ind.id];
+            if (val !== undefined && val !== '') {
+                payload.push({ indicator_id: ind.id, owner_id: 9, period: kpiEditPeriod, value: parseFloat(val) });
+            }
+        });
+
+        if(payload.length === 0) {
+            showToast(t('Preencha ao menos um valor.', 'Fill in at least one value.'), 'error');
+            setLoading(false);
+            return;
+        }
+
+        try {
+            const indIds = payload.map(p => p.indicator_id);
+            await supabaseClient.from('indicator_values').delete().eq('owner_id', 9).eq('period', kpiEditPeriod).in('indicator_id', indIds);
+            await supabaseClient.from('indicator_values').insert(payload);
+            showToast(t(`Valores de ${kpiEditPeriod} salvos!`, `Data for ${kpiEditPeriod} saved!`));
+            loadData();
+        } catch (err) {
+            showToast(t('Erro ao salvar no banco.', 'Error saving to DB.'), 'error');
+        }
+        setLoading(false);
+    };
+
+    const financeiroCorpData = months.filter(m => kpiViewPeriod === 'ALL' || monthOrder[m] <= monthOrder[kpiViewPeriod]).map(m => {
+        const getV = (id) => parseFloat(computedData.find(v => v.indicator_id === id && v.period === m)?.value || 0);
+        const v1 = getV(101), v2 = getV(102), v3 = getV(103), v4 = getV(104), v5 = getV(105);
+        const v10 = getV(110), v11 = getV(111), v12 = getV(112), v13 = getV(113), v14 = getV(114), v15 = getV(115);
+        const v16 = getV(116), v17 = getV(117);
+
+        return {
+            name: m,
+            'Receita Liquida': v1,
+            'Receita Budget': v2,
+            'Margem Bruta %': v1 > 0 ? ((v1 - v3) / v1) * 100 : 0,
+            'SG&A': v4,
+            'SG&A Budget': v5,
+            'ROE %': v12 > 0 ? (v10 / v12) * 100 : 0,
+            'Margem Liquida %': v1 > 0 ? (v10 / v1) * 100 : 0,
+            'Giro Ativo': v11 > 0 ? (v1 / v11) * 100 : 0,
+            'Alavancagem': v12 > 0 ? (v11 / v12) * 100 : 0,
+            'Liq Imediata': v13 * 100,
+            'Liq Seca': v14 * 100,
+            'Liq Corrente': v15 * 100,
+            'Var Nao Realizada': v16,
+            'Var Realizada': v17,
+            'Var Total': v16 + v17
+        };
+    });
+
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
            <div className="flex justify-between items-center bg-white p-6 rounded-3xl shadow-sm border border-zinc-200">
-              <h2 className="text-2xl font-black text-zinc-900 tracking-tight flex items-center gap-3">
+              <div className="flex items-center gap-3">
                   <div className="p-3 bg-yellow-100 text-yellow-600 rounded-xl"><DollarSign size={24} /></div>
-                  {t('Painel Financeiro', 'Financial Dashboard')}
-              </h2>
+                  <h2 className="text-2xl font-black text-zinc-900 tracking-tight">{t('Painel Financeiro', 'Financial Dashboard')}</h2>
+              </div>
+              <div className="flex items-center gap-3 bg-zinc-50 p-2 rounded-2xl border border-zinc-200">
+                  <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest px-2">{t('Análise até o mês', 'YTD as of')}</label>
+                  <select className="border-none bg-white text-zinc-900 px-4 py-2 rounded-xl text-sm font-bold outline-none cursor-pointer shadow-sm" value={kpiViewPeriod} onChange={(e) => setKpiViewPeriod(e.target.value)}>
+                      <option value="ALL">{t('Acumulado do Ano (YTD)', 'Year-to-Date (YTD)')}</option>
+                      {months.map(m => <option key={m} value={m}>{m}</option>)}
+                  </select>
+              </div>
            </div>
 
-           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+           {/* NOVA ÁREA DE DIGITAÇÃO FINANCEIRA */}
+           <div className="bg-white rounded-3xl shadow-sm border border-zinc-200 overflow-hidden mb-6">
+               <div className="p-6 border-b border-zinc-100 bg-zinc-50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                   <div>
+                       <h3 className="text-xl font-extrabold text-zinc-900 flex items-center gap-3">
+                           <FileSpreadsheet className="text-yellow-600" size={24} /> {t('Lançamento de Resultados Financeiros', 'Financial Data Entry')}
+                       </h3>
+                       <p className="text-sm text-zinc-500 mt-1 font-medium">{t('Preencha os valores para o mês selecionado.', 'Fill in the values for the selected month.')}</p>
+                   </div>
+                   <div className="flex items-center gap-3 bg-zinc-900 p-2 rounded-2xl shadow-sm border border-zinc-800 shrink-0">
+                       <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest px-3">{t('Mês de Edição', 'Edit Month')}</label>
+                       <select className="border-none bg-zinc-800 text-yellow-500 px-5 py-2 rounded-xl text-sm font-bold outline-none cursor-pointer shadow-sm" value={kpiEditPeriod} onChange={(e) => setKpiEditPeriod(e.target.value)}>
+                           {months.map(m => <option key={m} value={m}>{m}</option>)}
+                       </select>
+                   </div>
+               </div>
+               <form onSubmit={handleSaveFinanceKPIs} className="p-6">
+                   <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                       {financeIndicators.map(ind => (
+                           <div key={ind.id} className="bg-zinc-50 p-3 rounded-xl border border-zinc-200 flex flex-col justify-between gap-2">
+                               <label className="text-[10px] font-bold text-zinc-700 leading-tight h-8 line-clamp-2" title={tInd(ind.name)}>{tInd(ind.name).replace(/^\d+\.\s*/, '')}</label>
+                               <div className="flex items-center gap-2">
+                                   <input 
+                                       type="number" step="any"
+                                       value={formValues[ind.id] !== undefined ? formValues[ind.id] : ''}
+                                       onChange={(e) => handleValueChange(ind.id, e.target.value)}
+                                       className="w-full text-right bg-white border border-zinc-300 focus:border-yellow-500 rounded-lg p-2 font-black text-sm outline-none transition-colors"
+                                       placeholder="0"
+                                   />
+                                   <span className="text-[9px] font-black text-zinc-400 w-5">{ind.unit}</span>
+                               </div>
+                           </div>
+                       ))}
+                   </div>
+                   <div className="mt-6 flex justify-end pt-4 border-t border-zinc-100">
+                       <button type="submit" disabled={loading} className="bg-black text-yellow-500 px-8 py-3 rounded-xl font-bold hover:bg-zinc-800 shadow-lg active:scale-95 flex items-center gap-2 transition-all disabled:opacity-50">
+                           <Save size={18} /> {t('Gravar Valores', 'Save Data')}
+                       </button>
+                   </div>
+               </form>
+           </div>
+
+           {/* PAINEL DE GRÁFICOS CORPORATIVOS FINANCEIRO */}
+           <div className="pt-8 mt-8 border-t border-zinc-200">
+                <div className="mb-6">
+                    <h2 className="text-2xl font-black text-zinc-900 tracking-tight flex items-center gap-3">
+                        <div className="p-3 bg-zinc-900 text-yellow-500 rounded-xl"><LineChartIcon size={24} /></div>
+                        {t('Performance Financeira Corporativa', 'Corporate Financial Performance')}
+                    </h2>
+                    <p className="text-zinc-500 text-sm mt-2 font-medium">{t('Análise de Receita, DuPont e Variação Cambial', 'Revenue, DuPont Analysis and FX Variation')}</p>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                    <div className="bg-white p-6 rounded-3xl shadow-sm border border-zinc-200">
+                        <h3 className="text-sm font-bold text-zinc-800 uppercase tracking-widest mb-4">Receita Líquida x Margem Bruta</h3>
+                        <ResponsiveContainer width="100%" height={300}>
+                            <ComposedChart data={financeiroCorpData} margin={{top:20, right:20, left:-10, bottom:0}}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e4e4e7" />
+                                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 'bold', fill: '#71717a'}} dy={10} />
+                                <YAxis yAxisId="left" axisLine={false} tickLine={false} tickFormatter={(val) => formatCurrencyShort(val)} tick={{fontSize: 10, fill: '#71717a', fontWeight: 'bold'}} dx={-10} />
+                                <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} tickFormatter={(val) => val.toFixed(0)+'%'} tick={{fontSize: 10, fill: '#71717a', fontWeight: 'bold'}} dx={10} />
+                                <Tooltip content={<CustomTooltipFinanceiro2 />} cursor={{fill: '#f4f4f5'}} />
+                                <Legend wrapperStyle={{fontSize: '11px', fontWeight: 'bold', paddingTop: '20px'}} />
+                                <Bar yAxisId="left" dataKey="Receita Budget" fill="#94a3b8" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                                <Bar yAxisId="left" dataKey="Receita Liquida" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={40}>
+                                    <LabelList dataKey="Receita Liquida" position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={(val) => val > 0 ? formatCurrencyShort(val) : ''} />
+                                </Bar>
+                                <Line yAxisId="right" type="monotone" dataKey="Margem Bruta %" stroke="#eab308" strokeWidth={3} dot={{r: 4, strokeWidth: 2}} />
+                            </ComposedChart>
+                        </ResponsiveContainer>
+                    </div>
+                    
+                    <div className="bg-white p-6 rounded-3xl shadow-sm border border-zinc-200">
+                        <h3 className="text-sm font-bold text-zinc-800 uppercase tracking-widest mb-4">SG&A x Budget</h3>
+                        <ResponsiveContainer width="100%" height={300}>
+                            <BarChart data={financeiroCorpData} margin={{top:20, right:0, left:-10, bottom:0}}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e4e4e7" />
+                                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 'bold', fill: '#71717a'}} dy={10} />
+                                <YAxis axisLine={false} tickLine={false} tickFormatter={(val) => formatCurrencyShort(val)} tick={{fontSize: 10, fill: '#71717a', fontWeight: 'bold'}} dx={-10} />
+                                <Tooltip content={<CustomTooltipFinanceiro2 />} cursor={{fill: '#f4f4f5'}} />
+                                <Legend wrapperStyle={{fontSize: '11px', fontWeight: 'bold', paddingTop: '20px'}} />
+                                <Bar dataKey="SG&A Budget" fill="#fca5a5" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                                <Bar dataKey="SG&A" fill="#ef4444" radius={[4, 4, 0, 0]} maxBarSize={40}>
+                                    <LabelList dataKey="SG&A" position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={(val) => val > 0 ? formatCurrencyShort(val) : ''} />
+                                </Bar>
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+
+                {/* GRÁFICO ROE - DESTAQUE E EXPANSÍVEL */}
+                <div className="bg-white p-6 rounded-3xl shadow-sm border border-zinc-200 mb-6">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 border-b border-zinc-100 pb-4">
+                        <div>
+                            <h3 className="text-lg font-black text-zinc-900 uppercase tracking-widest flex items-center gap-2"><Crown className="text-purple-500" size={20}/> Análise DuPont: ROE (%)</h3>
+                            <p className="text-xs text-zinc-500 font-bold mt-1">Retorno sobre o Patrimônio Líquido</p>
+                        </div>
+                        <button 
+                            onClick={() => setIsDuPontExpanded(!isDuPontExpanded)} 
+                            className={`flex items-center gap-2 text-xs font-black uppercase tracking-wider px-5 py-2.5 rounded-xl transition-all shadow-sm ${isDuPontExpanded ? 'bg-zinc-800 text-white' : 'bg-purple-100 text-purple-700 hover:bg-purple-200'}`}
+                        >
+                            <GitBranch size={16} />
+                            {isDuPontExpanded ? t('Ocultar Justificativas', 'Hide Justifications') : t('Ver Justificativas (Árvore de Valor)', 'View Justifications')}
+                        </button>
+                    </div>
+
+                    <ResponsiveContainer width="100%" height={350}>
+                        <LineChart data={financeiroCorpData} margin={{top:20, right:20, left:-20, bottom:0}}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e4e4e7" />
+                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 'bold', fill: '#71717a'}} dy={10} />
+                            <YAxis axisLine={false} tickLine={false} tickFormatter={v => v.toFixed(1) + '%'} tick={{fontSize: 10, fill: '#71717a', fontWeight: 'bold'}} dx={-5} />
+                            <Tooltip content={<CustomTooltipFinanceiro2 />} cursor={{fill: '#f4f4f5'}} />
+                            <Line type="monotone" dataKey="ROE %" stroke="#8b5cf6" strokeWidth={5} dot={{r: 6, strokeWidth: 2, fill: 'white'}} activeDot={{r: 8}}>
+                                <LabelList dataKey="ROE %" position="top" fill="#18181b" fontSize={12} fontWeight="900" formatter={v => v > 0 ? v.toFixed(1) + '%' : ''} />
+                            </Line>
+                        </LineChart>
+                    </ResponsiveContainer>
+
+                    {/* EXPANSÃO DUPONT */}
+                    {isDuPontExpanded && (
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8 pt-8 border-t-2 border-dashed border-zinc-100 animate-in slide-in-from-top-4 fade-in duration-300">
+                            {[
+                                { key: 'Margem Liquida %', color: '#ec4899', format: v => v.toFixed(1) + '%' },
+                                { key: 'Giro Ativo', color: '#14b8a6', format: v => v.toFixed(1) + '%' },
+                                { key: 'Alavancagem', color: '#f59e0b', format: v => v.toFixed(1) + '%' }
+                            ].map(graph => (
+                                <div key={graph.key} className="bg-zinc-50 p-5 rounded-2xl border border-zinc-200 relative">
+                                    <h4 className="text-[11px] font-black text-zinc-600 uppercase tracking-widest mb-4 flex items-center gap-1.5"><ArrowRightCircle size={14}/> {graph.key}</h4>
+                                    <ResponsiveContainer width="100%" height={180}>
+                                        <LineChart data={financeiroCorpData} margin={{top:20, right:10, left:-20, bottom:0}}>
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e4e4e7" />
+                                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 9, fontWeight: 'bold', fill: '#71717a'}} dy={10} />
+                                            <YAxis axisLine={false} tickLine={false} tickFormatter={graph.format} tick={{fontSize: 9, fill: '#71717a', fontWeight: 'bold'}} dx={-5} />
+                                            <Tooltip content={<CustomTooltipFinanceiro2 />} cursor={{fill: '#f4f4f5'}} />
+                                            <Line type="monotone" dataKey={graph.key} stroke={graph.color} strokeWidth={3} dot={{r: 3, strokeWidth: 2, fill: 'white'}}>
+                                                <LabelList dataKey={graph.key} position="top" fill="#18181b" fontSize={10} fontWeight="900" formatter={v => v > 0 ? graph.format(v) : ''} />
+                                            </Line>
+                                        </LineChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                <div className="mb-4 mt-8 flex items-center justify-between">
+                    <h3 className="text-sm font-bold text-zinc-800 uppercase tracking-widest">Índices de Liquidez</h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                    {[
+                        { key: 'Liq Imediata', color: '#10b981' },
+                        { key: 'Liq Seca', color: '#3b82f6' },
+                        { key: 'Liq Corrente', color: '#eab308' }
+                    ].map(graph => (
+                        <div key={graph.key} className="bg-white p-6 rounded-3xl shadow-sm border border-zinc-200">
+                            <h4 className="text-xs font-black text-zinc-500 uppercase tracking-widest mb-4">{graph.key}</h4>
+                            <ResponsiveContainer width="100%" height={200}>
+                                <LineChart data={financeiroCorpData} margin={{top:20, right:10, left:-20, bottom:0}}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e4e4e7" />
+                                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 9, fontWeight: 'bold', fill: '#71717a'}} dy={10} />
+                                    <YAxis axisLine={false} tickLine={false} tickFormatter={v => v.toFixed(1) + '%'} tick={{fontSize: 9, fill: '#71717a', fontWeight: 'bold'}} dx={-5} />
+                                    <Tooltip content={<CustomTooltipFinanceiro2 />} cursor={{fill: '#f4f4f5'}} />
+                                    <Line type="monotone" dataKey={graph.key} stroke={graph.color} strokeWidth={4} dot={{r: 4, strokeWidth: 2, fill: 'white'}} activeDot={{r: 6}}>
+                                        <LabelList dataKey={graph.key} position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={v => v > 0 ? v.toFixed(1) + '%' : ''} />
+                                    </Line>
+                                </LineChart>
+                            </ResponsiveContainer>
+                        </div>
+                    ))}
+                </div>
+
+                <div className="bg-white p-6 rounded-3xl shadow-sm border border-zinc-200 mt-6 mb-8">
+                    <h3 className="text-sm font-bold text-zinc-800 uppercase tracking-widest mb-4">Variação Cambial</h3>
+                    <ResponsiveContainer width="100%" height={350}>
+                        <BarChart data={financeiroCorpData} margin={{top:20, right:0, left:-10, bottom:0}}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e4e4e7" />
+                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 'bold', fill: '#71717a'}} dy={10} />
+                            <YAxis axisLine={false} tickLine={false} tickFormatter={(val) => formatCurrencyShort(val)} tick={{fontSize: 10, fill: '#71717a', fontWeight: 'bold'}} dx={-10} />
+                            <Tooltip content={<CustomTooltipFinanceiro2 />} cursor={{fill: '#f4f4f5'}} />
+                            <Legend wrapperStyle={{fontSize: '11px', fontWeight: 'bold', paddingTop: '20px'}} />
+                            <Bar dataKey="Var Nao Realizada" name="Não Realizada" fill="#8b5cf6" radius={[4, 4, 0, 0]} maxBarSize={45}>
+                                <LabelList dataKey="Var Nao Realizada" position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={(val) => val !== 0 ? formatCurrencyShort(val) : ''} />
+                            </Bar>
+                            <Bar dataKey="Var Realizada" name="Realizada" fill="#ec4899" radius={[4, 4, 0, 0]} maxBarSize={45}>
+                                <LabelList dataKey="Var Realizada" position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={(val) => val !== 0 ? formatCurrencyShort(val) : ''} />
+                            </Bar>
+                            <Bar dataKey="Var Total" name="Total (Realizada + Não Realizada)" fill="#14b8a6" radius={[4, 4, 0, 0]} maxBarSize={45}>
+                                <LabelList dataKey="Var Total" position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={(val) => val !== 0 ? formatCurrencyShort(val) : ''} />
+                            </Bar>
+                        </BarChart>
+                    </ResponsiveContainer>
+                </div>
+
+           </div>
+
+           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-8">
                <div className="bg-white p-6 rounded-3xl shadow-sm border border-zinc-200">
-                   <h3 className="text-sm font-bold text-zinc-800 uppercase tracking-widest mb-4">{t('Definição de Margens (%)', 'Margin Settings (%)')}</h3>
+                   <h3 className="text-sm font-bold text-zinc-800 uppercase tracking-widest mb-4">{t('Definição de Margens Categoria/PCP (%)', 'Margin Settings (%)')}</h3>
                    <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
                        <div className="bg-zinc-100 p-3 rounded-xl flex justify-between items-center border border-zinc-300 shadow-sm">
                            <div className="flex flex-col">
@@ -1324,7 +1599,7 @@ export default function App() {
                                   <YAxis axisLine={false} tickLine={false} tickFormatter={(val) => formatCurrencyShort(val)} tick={{fontSize: 10, fill: '#71717a', fontWeight: 'bold'}} dx={-10} />
                                   <Tooltip content={<CustomTooltipGeral />} cursor={{fill: '#f4f4f5'}} />
                                   <Bar dataKey="Lucro" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={50}>
-                                      <LabelList dataKey="Lucro" position="top" fill="#71717a" fontSize={9} fontWeight="bold" formatter={(val) => formatCurrencyShort(val)} />
+                                      <LabelList dataKey="Lucro" position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={(val) => formatCurrencyShort(val)} />
                                   </Bar>
                               </BarChart>
                           </ResponsiveContainer>
@@ -1332,6 +1607,7 @@ export default function App() {
                    </div>
                </div>
            </div>
+
         </div>
     )
   };
@@ -1447,7 +1723,7 @@ export default function App() {
                                   <YAxis axisLine={false} tickLine={false} tickFormatter={(val) => formatCurrencyShort(val)} tick={{fontSize: 10, fill: '#71717a', fontWeight: 'bold'}} dx={-10} />
                                   <Tooltip content={<CustomTooltipGeral />} cursor={{fill: '#f4f4f5'}} />
                                   <Bar dataKey="value" name={t('Vendido', 'Booked')} fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={50}>
-                                      <LabelList dataKey="value" position="top" fill="#71717a" fontSize={9} fontWeight="bold" formatter={(val) => formatCurrencyShort(val)} />
+                                      <LabelList dataKey="value" position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={(val) => formatCurrencyShort(val)} />
                                   </Bar>
                               </BarChart>
                           </ResponsiveContainer>
@@ -1467,7 +1743,7 @@ export default function App() {
                                   <YAxis axisLine={false} tickLine={false} tickFormatter={(val) => formatCurrencyShort(val)} tick={{fontSize: 10, fill: '#71717a', fontWeight: 'bold'}} dx={-10} />
                                   <Tooltip content={<CustomTooltipGeral />} cursor={{fill: '#f4f4f5'}} />
                                   <Bar dataKey="value" name={t('Vendido', 'Booked')} fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={50}>
-                                      <LabelList dataKey="value" position="top" fill="#71717a" fontSize={9} fontWeight="bold" formatter={(val) => formatCurrencyShort(val)} />
+                                      <LabelList dataKey="value" position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={(val) => formatCurrencyShort(val)} />
                                   </Bar>
                               </BarChart>
                           </ResponsiveContainer>
@@ -1497,7 +1773,7 @@ export default function App() {
                       <div className="bg-white p-6 rounded-3xl shadow-sm border border-zinc-200 flex-1 flex flex-col min-h-0">
                           <div className="mb-2">
                               <h3 className="text-xs font-bold text-zinc-800 uppercase tracking-widest">{t('Modalidade de Vendas', 'Contract Type Breakdown')}</h3>
-                              <p className="text-[9px] font-bold text-zinc-500 mt-0.5 uppercase">{t('Contrato vs Spot', 'Contract vs. Spot')}</p>
+                              <p className="text-[9px] font-bold text-zinc-500 mt-0.5 uppercase">{t('Contrato vs Spot (R$)', 'Contract vs. Spot (BRL)')}</p>
                           </div>
                           <div className="flex-1 min-h-0 mt-2">
                               <ResponsiveContainer width="100%" height="100%">
@@ -2397,6 +2673,8 @@ export default function App() {
   const renderKPI = () => {
     const ownerIndicatorIds = [...new Set(dbValues.filter(v => v.owner_id === kpiOwnerId).map(v => v.indicator_id))];
     const finalIndicators = dbIndicators.filter(i => {
+        if (kpiOwnerId === 9 && i.id >= 101 && i.id <= 117) return true;
+
         if (i.id === 56 || i.name.toLowerCase().includes('estoque')) {
             return kpiOwnerId === 8;
         }
@@ -2537,7 +2815,6 @@ export default function App() {
                 </div>
             </div>
 
-            {/* MUDANÇA AQUI: Alterado de lg:grid-cols-3 para lg:grid-cols-2 */}
             <div>
                 <h3 className="text-xs font-black text-zinc-400 uppercase tracking-widest mb-4 ml-2">{t('Indicadores de Resultado (Performance)', 'Key Performance Indicators (Results)')}</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 mb-8">
@@ -2546,7 +2823,6 @@ export default function App() {
                 </div>
             </div>
 
-            {/* MUDANÇA AQUI: Alterado de lg:grid-cols-3 para lg:grid-cols-2 */}
             <div>
                 <h3 className="text-xs font-black text-zinc-400 uppercase tracking-widest mb-4 ml-2">{t('Métricas Operacionais (Esforço)', 'Operational Metrics (Leading)')}</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 mb-8">
@@ -2687,6 +2963,7 @@ export default function App() {
     };
 
     const getOwnerName = (indId) => {
+        if ([101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117].includes(indId)) return 'Financeiro';
         if ([1,2,3,4,5,6,7,8,9,10,11, 74,75,76,77,78, 90,91,92,93,94,95].includes(indId)) return 'Comercial';
         if ([12,13,14,15,16,17,18,19,20,21,22, 79,80].includes(indId)) return 'Engenharia';
         if ([23,24,25,26,27,28,29,30,31,32,33,34,35, 81].includes(indId)) return 'PCP';
