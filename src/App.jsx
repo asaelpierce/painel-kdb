@@ -374,17 +374,17 @@ export default function App() {
           "nível de serviço em suprimentos": "Supply Service Level",
           "nivel de servico em suprimentos": "Supply Service Level",
           "solicitações de compra": "Purchase Requests",
-          "solicitações compras": "Purchase Requests",
-          "solicitacoes compras": "Purchase Requests",
-          "ordens de compra": "Purchase Orders",
-          "compras urgentes": "Urgent Purchases",
-          "industrializações": "Toll Manufacturing",
-          "industrializacoes": "Toll Manufacturing",
-          "compras sem especificação": "Purchases w/o Specs",
-          "compras sem especificacao": "Purchases w/o Specs",
-          "oc sem solicitação": "POs w/o Request",
-          "oc sem solicitacao": "POs w/o Request",
-          "compras fora do prazo": "Late Purchases",
+          "solicitações compras": "Solicitações de compras recebidas",
+          "solicitacoes compras": "Solicitações de compras recebidas",
+          "ordens de compra": "Ordens de compra emitidas",
+          "compras urgentes": "Solicitações de compra urgentes",
+          "industrializações": "Solicitações de industrializações",
+          "industrializacoes": "Solicitações de industrializações",
+          "compras sem especificação": "Solicitações de compras recebidas sem especificação",
+          "compras sem especificacao": "Solicitações de compras recebidas sem especificação",
+          "oc sem solicitação": "Ordens de compra emitidas sem solicitação",
+          "oc sem solicitacao": "Ordens de compra emitidas sem solicitação",
+          "compras fora do prazo": "Solicitações de compra atendidas fora do prazo",
           "compras erradas": "Incorrect Purchases",
           "saving (%)": "Cost Savings (%)",
           "saving": "Cost Savings",
@@ -1432,9 +1432,7 @@ export default function App() {
                             <YAxis yAxisId="right" width={50} orientation="right" axisLine={false} tickLine={false} tickFormatter={(val) => val.toFixed(0)+'%'} tick={{fontSize: 10, fill: '#71717a', fontWeight: 'bold'}} dx={10} domain={[0, 100]} />
                             <Tooltip content={<CustomTooltipFinanceiro2 />} cursor={{fill: '#f4f4f5'}} />
                             <Legend wrapperStyle={{fontSize: '11px', fontWeight: 'bold', paddingTop: '20px'}} />
-                            <Bar yAxisId="left" dataKey="Receita Budget" fill="#94a3b8" radius={[4, 4, 0, 0]} maxBarSize={45}>
-                                <LabelList dataKey="Receita Budget" position="top" fill="#71717a" fontSize={11} fontWeight="900" formatter={(val) => val !== 0 ? formatCurrencyShort3(val) : ''} />
-                            </Bar>
+                            <Line yAxisId="left" type="monotone" dataKey="Receita Budget" stroke="#94a3b8" strokeWidth={2} strokeDasharray="5 5" dot={{r: 3}} />
                             <Bar yAxisId="left" dataKey="Receita Liquida" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={45}>
                                 <LabelList dataKey="Receita Liquida" position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={(val) => val !== 0 ? formatCurrencyShort3(val) : ''} />
                             </Bar>
@@ -1458,19 +1456,17 @@ export default function App() {
                 <div className="bg-white p-6 rounded-3xl shadow-sm border border-zinc-200 mb-6">
                     <h3 className="text-sm font-bold text-zinc-800 uppercase tracking-widest mb-4">SG&A</h3>
                     <ResponsiveContainer width="100%" height={300}>
-                        <BarChart data={financeiroCorpData} margin={{top:30, right:0, left:-10, bottom:0}}>
+                        <ComposedChart data={financeiroCorpData} margin={{top:30, right:0, left:-10, bottom:0}}>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e4e4e7" />
                             <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 'bold', fill: '#71717a'}} dy={10} />
                             <YAxis axisLine={false} tickLine={false} tickFormatter={(val) => formatCurrencyShort(val)} tick={{fontSize: 10, fill: '#71717a', fontWeight: 'bold'}} dx={-10} />
                             <Tooltip content={<CustomTooltipFinanceiro2 />} cursor={{fill: '#f4f4f5'}} />
                             <Legend wrapperStyle={{fontSize: '11px', fontWeight: 'bold', paddingTop: '20px'}} />
-                            <Bar dataKey="SG&A Budget" fill="#fca5a5" radius={[4, 4, 0, 0]} maxBarSize={60}>
-                                <LabelList dataKey="SG&A Budget" position="top" fill="#71717a" fontSize={11} fontWeight="900" formatter={(val) => val !== 0 ? formatCurrencyShort(val) : ''} />
-                            </Bar>
+                            <Line type="monotone" dataKey="SG&A Budget" stroke="#fca5a5" strokeWidth={2} strokeDasharray="5 5" dot={{r: 3}} />
                             <Bar dataKey="SG&A" fill="#ef4444" radius={[4, 4, 0, 0]} maxBarSize={60}>
                                 <LabelList dataKey="SG&A" position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={(val) => val !== 0 ? formatCurrencyShort(val) : ''} />
                             </Bar>
-                        </BarChart>
+                        </ComposedChart>
                     </ResponsiveContainer>
                 </div>
 
@@ -1639,59 +1635,53 @@ export default function App() {
                 </div>
 
                 <div className="bg-white p-6 rounded-3xl shadow-sm border border-zinc-200 mt-6 mb-8">
-                    <h3 className="text-sm font-bold text-zinc-800 uppercase tracking-widest mb-4">EBT x EBT Budget</h3>
+                    <h3 className="text-sm font-bold text-zinc-800 uppercase tracking-widest mb-4">EBT</h3>
                     <ResponsiveContainer width="100%" height={400}>
-                        <BarChart data={financeiroCorpData} margin={{top:30, right:0, left:-10, bottom:0}} barGap={8}>
+                        <ComposedChart data={financeiroCorpData} margin={{top:30, right:0, left:-10, bottom:0}} barGap={8}>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e4e4e7" />
                             <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 'bold', fill: '#71717a'}} dy={10} />
                             <YAxis axisLine={false} tickLine={false} tickFormatter={(val) => formatCurrencyShort(val)} tick={{fontSize: 10, fill: '#71717a', fontWeight: 'bold'}} dx={-10} />
                             <Tooltip content={<CustomTooltipFinanceiro2 />} cursor={{fill: '#f4f4f5'}} />
                             <Legend wrapperStyle={{fontSize: '11px', fontWeight: 'bold', paddingTop: '20px'}} />
-                            <Bar dataKey="EBIT Budget" name="EBT Budget" fill="#d4d4d8" radius={[4, 4, 0, 0]} maxBarSize={45}>
-                                <LabelList dataKey="EBIT Budget" position="top" fill="#71717a" fontSize={11} fontWeight="900" formatter={(val) => val !== 0 ? formatCurrencyShort(val) : ''} />
-                            </Bar>
+                            <Line type="monotone" dataKey="EBIT Budget" name="EBT Budget" stroke="#a1a1aa" strokeWidth={2} strokeDasharray="5 5" dot={{r: 3}} />
                             <Bar dataKey="EBIT" name="EBT" fill="#6366f1" radius={[4, 4, 0, 0]} maxBarSize={45}>
                                 <LabelList dataKey="EBIT" position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={(val) => val !== 0 ? formatCurrencyShort(val) : ''} />
                             </Bar>
-                        </BarChart>
+                        </ComposedChart>
                     </ResponsiveContainer>
                 </div>
 
                 <div className="bg-white p-6 rounded-3xl shadow-sm border border-zinc-200 mt-6 mb-8">
-                    <h3 className="text-sm font-bold text-zinc-800 uppercase tracking-widest mb-4">EBIT x Budget</h3>
+                    <h3 className="text-sm font-bold text-zinc-800 uppercase tracking-widest mb-4">EBIT</h3>
                     <ResponsiveContainer width="100%" height={400}>
-                        <BarChart data={financeiroCorpData} margin={{top:30, right:0, left:-10, bottom:0}} barGap={8}>
+                        <ComposedChart data={financeiroCorpData} margin={{top:30, right:0, left:-10, bottom:0}} barGap={8}>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e4e4e7" />
                             <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 'bold', fill: '#71717a'}} dy={10} />
                             <YAxis axisLine={false} tickLine={false} tickFormatter={(val) => formatCurrencyShort(val)} tick={{fontSize: 10, fill: '#71717a', fontWeight: 'bold'}} dx={-10} />
                             <Tooltip content={<CustomTooltipFinanceiro2 />} cursor={{fill: '#f4f4f5'}} />
                             <Legend wrapperStyle={{fontSize: '11px', fontWeight: 'bold', paddingTop: '20px'}} />
-                            <Bar dataKey="EBIT Budget" fill="#fde047" radius={[4, 4, 0, 0]} maxBarSize={45}>
-                                <LabelList dataKey="EBIT Budget" position="top" fill="#71717a" fontSize={11} fontWeight="900" formatter={(val) => val !== 0 ? formatCurrencyShort(val) : ''} />
-                            </Bar>
+                            <Line type="monotone" dataKey="EBIT Budget" stroke="#fde047" strokeWidth={2} strokeDasharray="5 5" dot={{r: 3}} />
                             <Bar dataKey="EBIT" fill="#f59e0b" radius={[4, 4, 0, 0]} maxBarSize={45}>
                                 <LabelList dataKey="EBIT" position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={(val) => val !== 0 ? formatCurrencyShort(val) : ''} />
                             </Bar>
-                        </BarChart>
+                        </ComposedChart>
                     </ResponsiveContainer>
                 </div>
 
                 <div className="bg-white p-6 rounded-3xl shadow-sm border border-zinc-200 mt-6 mb-8">
-                    <h3 className="text-sm font-bold text-zinc-800 uppercase tracking-widest mb-4">EBITDA x Budget</h3>
+                    <h3 className="text-sm font-bold text-zinc-800 uppercase tracking-widest mb-4">EBITDA</h3>
                     <ResponsiveContainer width="100%" height={400}>
-                        <BarChart data={financeiroCorpData} margin={{top:30, right:0, left:-10, bottom:0}} barGap={8}>
+                        <ComposedChart data={financeiroCorpData} margin={{top:30, right:0, left:-10, bottom:0}} barGap={8}>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e4e4e7" />
                             <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 'bold', fill: '#71717a'}} dy={10} />
                             <YAxis axisLine={false} tickLine={false} tickFormatter={(val) => formatCurrencyShort(val)} tick={{fontSize: 10, fill: '#71717a', fontWeight: 'bold'}} dx={-10} />
                             <Tooltip content={<CustomTooltipFinanceiro2 />} cursor={{fill: '#f4f4f5'}} />
                             <Legend wrapperStyle={{fontSize: '11px', fontWeight: 'bold', paddingTop: '20px'}} />
-                            <Bar dataKey="EBITDA Budget" fill="#93c5fd" radius={[4, 4, 0, 0]} maxBarSize={45}>
-                                <LabelList dataKey="EBITDA Budget" position="top" fill="#71717a" fontSize={11} fontWeight="900" formatter={(val) => val !== 0 ? formatCurrencyShort(val) : ''} />
-                            </Bar>
+                            <Line type="monotone" dataKey="EBITDA Budget" stroke="#93c5fd" strokeWidth={2} strokeDasharray="5 5" dot={{r: 3}} />
                             <Bar dataKey="EBITDA" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={45}>
                                 <LabelList dataKey="EBITDA" position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={(val) => val !== 0 ? formatCurrencyShort(val) : ''} />
                             </Bar>
-                        </BarChart>
+                        </ComposedChart>
                     </ResponsiveContainer>
                 </div>
 
@@ -2656,7 +2646,26 @@ export default function App() {
 
     let CustomBars = null;
     let modifiedGraphData = baseGraphData;
+    const supplyPtNames = {
+        'solicitações compras': 'Solicitações de compras recebidas',
+        'solicitacoes compras': 'Solicitações de compras recebidas',
+        'ordens de compra': 'Ordens de compra emitidas',
+        'compras urgentes': 'Solicitações de compra urgentes',
+        'industrializações': 'Solicitações de industrializações',
+        'industrializacoes': 'Solicitações de industrializações urgentes',
+        'compras fora do prazo': 'Solicitações de compra atendidas fora do prazo',
+        'compras sem especificação': 'Solicitações de compras recebidas sem especificação',
+        'compras sem especificacao': 'Solicitações de compras recebidas sem especificação',
+        'oc sem solicitação': 'Ordens de compra emitidas sem solicitação',
+        'oc sem solicitacao': 'Ordens de compra emitidas sem solicitação',
+    };
     let displayName = tInd(item.name);
+    if (kpiOwnerId === 5) {
+        const lk = item.name.toLowerCase().trim();
+        for (const [k, v] of Object.entries(supplyPtNames)) {
+            if (lk === k || lk.includes(k)) { displayName = v; break; }
+        }
+    }
 
     if (kpiOwnerId === 4 && item.id === 41) { 
         displayName = t("Projetos: Previstos vs Em Atraso", "Projects: Planned vs Overdue");
@@ -3741,33 +3750,33 @@ export default function App() {
                 </div>
             </div>
 
-            <nav className="hidden xl:flex gap-1 bg-zinc-900 p-1.5 rounded-2xl border border-zinc-800 shadow-inner">
+            <nav className="hidden xl:flex gap-1 bg-zinc-900 p-1.5 rounded-2xl border border-zinc-800 shadow-inner relative z-[110]">
                 {(user.role === 'admin' || user.role === 'dev') && (
-                    <button onClick={() => setActiveTab('diretoria')} className={`px-5 py-2.5 rounded-xl font-black uppercase tracking-wider text-xs transition-all flex items-center gap-2 ${activeTab === 'diretoria' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
+                    <button type="button" onClick={() => setActiveTab('diretoria')} className={`px-5 py-2.5 rounded-xl font-black uppercase tracking-wider text-xs transition-all flex items-center gap-2 ${activeTab === 'diretoria' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
                         <BarChart3 size={16} /> {t('Diretoria', 'Board')}
                     </button>
                 )}
-                <button onClick={() => setActiveTab('kpi')} className={`px-5 py-2.5 rounded-xl font-black uppercase tracking-wider text-xs transition-all flex items-center gap-2 ${activeTab === 'kpi' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
+                <button type="button" onClick={() => setActiveTab('kpi')} className={`px-5 py-2.5 rounded-xl font-black uppercase tracking-wider text-xs transition-all flex items-center gap-2 ${activeTab === 'kpi' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
                     <LineChartIcon size={16} /> {t('KPIs', 'KPIs')}
                 </button>
 
                 {(user.role === 'admin' || user.role === 'dev' || user.area === 'Comercial') && (
-                    <button onClick={() => setActiveTab('comercial')} className={`px-5 py-2.5 rounded-xl font-black uppercase tracking-wider text-xs transition-all flex items-center gap-2 ${activeTab === 'comercial' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
+                    <button type="button" onClick={() => setActiveTab('comercial')} className={`px-5 py-2.5 rounded-xl font-black uppercase tracking-wider text-xs transition-all flex items-center gap-2 ${activeTab === 'comercial' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
                         <DollarSign size={16} /> {t('Comercial', 'Commercial')}
                     </button>
                 )}
 
                 {(user.role === 'admin' || user.role === 'dev' || user.area === 'Financeiro' || user.username.toUpperCase().includes('FABIO')) && (
-                    <button onClick={() => setActiveTab('financeiro')} className={`px-5 py-2.5 rounded-xl font-black uppercase tracking-wider text-xs transition-all flex items-center gap-2 ${activeTab === 'financeiro' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
+                    <button type="button" onClick={() => setActiveTab('financeiro')} className={`px-5 py-2.5 rounded-xl font-black uppercase tracking-wider text-xs transition-all flex items-center gap-2 ${activeTab === 'financeiro' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
                         <Globe size={16} /> {t('Financeiro', 'Finance')}
                     </button>
                 )}
 
-                <button onClick={() => setActiveTab('5w2h')} className={`px-5 py-2.5 rounded-xl font-black uppercase tracking-wider text-xs transition-all flex items-center gap-2 ${activeTab === '5w2h' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
+                <button type="button" onClick={() => setActiveTab('5w2h')} className={`px-5 py-2.5 rounded-xl font-black uppercase tracking-wider text-xs transition-all flex items-center gap-2 ${activeTab === '5w2h' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
                     <ListChecks size={16} /> {t('Matriz 5W2H', '5W2H Matrix')}
                 </button>
                 {(user.username.toUpperCase() === 'LUCIENE' || user.area === 'Comercial' || user.role === 'admin' || user.role === 'dev') && (
-                    <button onClick={() => setActiveTab('auditoria')} className={`px-5 py-2.5 rounded-xl font-black uppercase tracking-wider text-xs transition-all flex items-center gap-2 ${activeTab === 'auditoria' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
+                    <button type="button" onClick={() => setActiveTab('auditoria')} className={`px-5 py-2.5 rounded-xl font-black uppercase tracking-wider text-xs transition-all flex items-center gap-2 ${activeTab === 'auditoria' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
                         <FileSpreadsheet size={16} /> {t('Auditoria', 'Audit')}
                     </button>
                 )}
@@ -3777,21 +3786,21 @@ export default function App() {
                 <input type="file" id="logo-upload-input" accept="image/*" onChange={handleLogoUpload} className="hidden" />
                 
                 {(user.role === 'admin' || user.role === 'dev') && (
-                    <button onClick={triggerLogoUpload} className="hidden sm:block p-3 text-zinc-500 hover:bg-zinc-800 hover:text-yellow-500 rounded-xl transition-colors" title={t('Alterar Logo da Empresa', 'Change Company Logo')}>
+                    <button type="button" onClick={triggerLogoUpload} className="hidden sm:block p-3 text-zinc-500 hover:bg-zinc-800 hover:text-yellow-500 rounded-xl transition-colors" title={t('Alterar Logo da Empresa', 'Change Company Logo')}>
                         <ImageIcon size={20} />
                     </button>
                 )}
 
                 <div className="hidden sm:flex items-center gap-1 bg-zinc-900 p-1 rounded-xl border border-zinc-800 mr-2">
-                    <button onClick={() => setLang('PT')} className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${lang === 'PT' ? 'bg-yellow-500 text-black shadow-sm' : 'text-zinc-500 hover:text-white hover:bg-zinc-800'}`}>PT</button>
-                    <button onClick={() => setLang('EN')} className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${lang === 'EN' ? 'bg-yellow-500 text-black shadow-sm' : 'text-zinc-500 hover:text-white hover:bg-zinc-800'}`}>EN</button>
+                    <button type="button" onClick={() => setLang('PT')} className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${lang === 'PT' ? 'bg-yellow-500 text-black shadow-sm' : 'text-zinc-500 hover:text-white hover:bg-zinc-800'}`}>PT</button>
+                    <button type="button" onClick={() => setLang('EN')} className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${lang === 'EN' ? 'bg-yellow-500 text-black shadow-sm' : 'text-zinc-500 hover:text-white hover:bg-zinc-800'}`}>EN</button>
                 </div>
 
                 <div className="flex items-center gap-3 bg-zinc-900 px-4 py-2 rounded-full border border-zinc-800 shadow-sm">
                     <div className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse shadow-sm shadow-green-500/50"></div>
                     <span className="text-xs font-black text-white uppercase tracking-wider">{user.username}</span>
                 </div>
-                <button onClick={() => window.location.reload()} className="hidden xl:block p-3 text-zinc-500 hover:bg-red-500/10 hover:text-red-500 rounded-xl transition-colors" title={t('Sair com Segurança', 'Logout Safely')}>
+                <button type="button" onClick={() => window.location.reload()} className="hidden xl:block p-3 text-zinc-500 hover:bg-red-500/10 hover:text-red-500 rounded-xl transition-colors" title={t('Sair com Segurança', 'Logout Safely')}>
                     <LogOut size={20} />
                 </button>
                 <button 
@@ -3832,7 +3841,7 @@ export default function App() {
                     </button>
                 )}
                 <div className="h-px w-full bg-zinc-800 my-2"></div>
-                <button onClick={() => window.location.reload()} className="px-5 py-4 rounded-xl font-black uppercase tracking-wider text-sm text-red-500 hover:bg-red-500/10 transition-all flex items-center gap-3">
+                <button type="button" onClick={() => window.location.reload()} className="px-5 py-4 rounded-xl font-black uppercase tracking-wider text-sm text-red-500 hover:bg-red-500/10 transition-all flex items-center gap-3">
                     <LogOut size={20} /> {t('Sair com Segurança', 'Logout Safely')}
                 </button>
             </div>
