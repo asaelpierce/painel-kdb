@@ -1146,7 +1146,7 @@ export default function App() {
         let percFaltas = 0, percAtestados = 0;
         if (colabAtivos > 0) {
             percFaltas = (faltas / (diasUteis * colabAtivos)) * 100;
-            percaatestados = (atestados / (diasUteis * colabAtivos)) * 100;
+            perctestados = (atestados / (diasUteis * colabAtivos)) * 100;
         }
         setRes(87, percFaltas, 7);    
         setRes(88, percAtestados, 7); 
