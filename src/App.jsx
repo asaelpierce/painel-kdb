@@ -154,7 +154,6 @@ const CustomTooltipFinanceiro2 = ({ active, payload, label }) => {
                     } else {
                         valStr = formatCurrency(entry.value);
                     }
-
                     return (
                         <p key={index} className="text-sm font-black flex justify-between gap-6 mb-1" style={{ color: entry.color }}>
                             <span>{entry.name}:</span>
@@ -162,6 +161,21 @@ const CustomTooltipFinanceiro2 = ({ active, payload, label }) => {
                         </p>
                     )
                 })}
+            </div>
+        );
+    }
+    return null;
+};
+
+const CustomTooltipPie = ({ active, payload }) => {
+    if (active && payload && payload.length) {
+        const data = payload[0];
+        return (
+            <div className="bg-zinc-950 text-white p-4 rounded-xl shadow-2xl border border-zinc-800 z-50">
+                <p className="text-sm font-black flex justify-between gap-4" style={{ color: data.payload.fill }}>
+                    <span>{data.name}:</span>
+                    <span>{formatCurrency(data.value)} ({(data.percent * 100).toFixed(1)}%)</span>
+                </p>
             </div>
         );
     }
@@ -420,7 +434,7 @@ export default function App() {
   };
 
   const translateArea = (ar) => {
-      const map = { 'Comercial': 'Commercial', 'Engenharia': 'Engineering', 'Produção': 'Production', 'Qualidade': 'Quality', 'DP': 'HR', 'Estoque': 'Inventory', 'Supply': 'Procurement', 'PCP': 'PCP', 'Financeiro': 'Finance' };
+      const map = { 'Comercial': 'Commercial', 'Engenharia': 'Engineering', 'Produção': 'Production', 'Qualidade': 'Quality', 'DP': 'HR', 'Estoque': 'Inventory', 'Supply': 'Procurement', 'PCP': 'PCP' };
       return lang === 'EN' ? (map[ar] || ar) : ar;
   };
 
@@ -526,9 +540,6 @@ export default function App() {
               setCurrentSectorIndex(prev => (prev + 1) % 7);
           }, 5000);
           return () => clearInterval(timer);
-      }
-      if (activeTab === 'financeiro') {
-          setKpiOwnerId(9);
       }
   }, [activeTab, currentSectorIndex]);
 
@@ -848,7 +859,6 @@ export default function App() {
           else if(upper.includes('LUCIENE')) setKpiOwnerId(6);
           else if(upper.includes('MARIELE')) setKpiOwnerId(7);
           else if(upper.includes('DANIELA')) setKpiOwnerId(8);
-          else if(upper.includes('FABIO') || upper.includes('FINANCEIRO')) setKpiOwnerId(9);
           else setKpiOwnerId(1);
 
           if (data.role !== 'admin' && data.role !== 'dev' && upper !== 'DANIEL') {
@@ -1343,7 +1353,6 @@ export default function App() {
                 const hasExclude = excludeKeywords.some(kw => n.includes(kw));
                 return hasKeywords && !hasExclude;
             });
-            
             for (let ind of matchingIndicators) {
                 const val = getV(ind.id);
                 if (val !== 0) return val;
@@ -1404,49 +1413,6 @@ export default function App() {
               </div>
            </div>
 
-           {/* NOVA ÁREA DE DIGITAÇÃO FINANCEIRA */}
-           <div className="bg-white rounded-3xl shadow-sm border border-zinc-200 overflow-hidden mb-6">
-               <div className="p-6 border-b border-zinc-100 bg-zinc-50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                   <div>
-                       <h3 className="text-xl font-extrabold text-zinc-900 flex items-center gap-3">
-                           <FileSpreadsheet className="text-yellow-600" size={24} /> {t('Lançamento de Resultados Financeiros', 'Financial Data Entry')}
-                       </h3>
-                       <p className="text-sm text-zinc-500 mt-1 font-medium">{t('Preencha os valores para o mês selecionado.', 'Fill in the values for the selected month.')}</p>
-                   </div>
-                   <div className="flex items-center gap-3 bg-zinc-900 p-2 rounded-2xl shadow-sm border border-zinc-800 shrink-0">
-                       <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest px-3">{t('Mês de Edição', 'Edit Month')}</label>
-                       <select className="border-none bg-zinc-800 text-yellow-500 px-5 py-2 rounded-xl text-sm font-bold outline-none cursor-pointer shadow-sm" value={kpiEditPeriod} onChange={(e) => setKpiEditPeriod(e.target.value)}>
-                           {months.map(m => <option key={m} value={m}>{m}</option>)}
-                       </select>
-                   </div>
-               </div>
-               <form onSubmit={handleSaveFinanceKPIs} className="p-6">
-                   <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                       {financeIndicators.map(ind => (
-                           <div key={ind.id} className="bg-zinc-50 p-3 rounded-xl border border-zinc-200 flex flex-col justify-between gap-2">
-                               <label className="text-[10px] font-bold text-zinc-700 leading-tight h-8 line-clamp-2" title={tInd(ind.name)}>{tInd(ind.name).replace(/^\d+\.\s*/, '')}</label>
-                               <div className="flex items-center gap-2">
-                                   <input 
-                                       type="number" step="any"
-                                       value={formValues[ind.id] !== undefined ? formValues[ind.id] : ''}
-                                       onChange={(e) => handleValueChange(ind.id, e.target.value)}
-                                       className="w-full text-right bg-white border border-zinc-300 focus:border-yellow-500 rounded-lg p-2 font-black text-sm outline-none transition-colors"
-                                       placeholder="0"
-                                   />
-                                   <span className="text-[9px] font-black text-zinc-400 w-5">{ind.unit}</span>
-                               </div>
-                           </div>
-                       ))}
-                   </div>
-                   <div className="mt-6 flex justify-end pt-4 border-t border-zinc-100">
-                       <button type="submit" disabled={loading} className="bg-black text-yellow-500 px-8 py-3 rounded-xl font-bold hover:bg-zinc-800 shadow-lg active:scale-95 flex items-center gap-2 transition-all disabled:opacity-50">
-                           <Save size={18} /> {t('Gravar Valores', 'Save Data')}
-                       </button>
-                   </div>
-               </form>
-           </div>
-
-           {/* PAINEL DE GRÁFICOS CORPORATIVOS FINANCEIRO */}
            <div className="pt-8 mt-8 border-t border-zinc-200">
                 <div className="mb-6">
                     <h2 className="text-2xl font-black text-zinc-900 tracking-tight flex items-center gap-3">
@@ -1466,15 +1432,12 @@ export default function App() {
                             <YAxis yAxisId="right" width={50} orientation="right" axisLine={false} tickLine={false} tickFormatter={(val) => val.toFixed(0)+'%'} tick={{fontSize: 10, fill: '#71717a', fontWeight: 'bold'}} dx={10} domain={[0, 100]} />
                             <Tooltip content={<CustomTooltipFinanceiro2 />} cursor={{fill: '#f4f4f5'}} />
                             <Legend wrapperStyle={{fontSize: '11px', fontWeight: 'bold', paddingTop: '20px'}} />
-                            
                             <Bar yAxisId="left" dataKey="Receita Budget" fill="#94a3b8" radius={[4, 4, 0, 0]} maxBarSize={45}>
                                 <LabelList dataKey="Receita Budget" position="top" fill="#71717a" fontSize={11} fontWeight="900" formatter={(val) => val !== 0 ? formatCurrencyShort3(val) : ''} />
                             </Bar>
-                            
                             <Bar yAxisId="left" dataKey="Receita Liquida" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={45}>
                                 <LabelList dataKey="Receita Liquida" position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={(val) => val !== 0 ? formatCurrencyShort3(val) : ''} />
                             </Bar>
-                            
                             <Line yAxisId="right" type="monotone" dataKey="Margem Bruta %" stroke="#eab308" strokeWidth={3} dot={{r: 4, strokeWidth: 2, fill: 'white'}}>
                                 <LabelList dataKey="Margem Bruta %" content={(props) => {
                                     const { x, y, value } = props;
@@ -1511,7 +1474,6 @@ export default function App() {
                     </ResponsiveContainer>
                 </div>
 
-                {/* GRÁFICO ROE - DESTAQUE E EXPANSÍVEL */}
                 <div className="bg-white p-6 rounded-3xl shadow-sm border border-zinc-200 mb-6">
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 border-b border-zinc-100 pb-4">
                         <div>
@@ -1549,11 +1511,9 @@ export default function App() {
                         </LineChart>
                     </ResponsiveContainer>
 
-                    {/* EXPANSÃO DUPONT DINÂMICA */}
                     {isDuPontExpanded && (
                         <div className="mt-8 pt-8 border-t-2 border-dashed border-zinc-200 animate-in slide-in-from-top-4 fade-in duration-300">
                             <div className="bg-zinc-50 p-6 md:p-8 rounded-3xl border border-zinc-200 relative overflow-hidden">
-                                
                                 <div className="flex items-center justify-between mb-8">
                                     <button onClick={() => setDuPontActiveIndex(prev => prev === 0 ? 2 : prev - 1)} className="p-3 bg-white border border-zinc-200 rounded-full hover:bg-zinc-100 hover:scale-105 transition-all shadow-sm">
                                         <ChevronLeft size={24} className="text-zinc-700" />
@@ -1582,19 +1542,13 @@ export default function App() {
                                         <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 'bold', fill: '#71717a'}} dy={10} />
                                         <YAxis axisLine={false} tickLine={false} tickFormatter={v => v.toFixed(1) + '%'} tick={{fontSize: 10, fill: '#71717a', fontWeight: 'bold'}} dx={-5} />
                                         <Tooltip content={<CustomTooltipFinanceiro2 />} cursor={{fill: '#f4f4f5'}} />
-                                        
                                         {duPontActiveIndex === 0 && (
                                             <Line type="monotone" dataKey="Margem Liquida %" stroke="#ec4899" strokeWidth={4} dot={{r: 5, strokeWidth: 2, fill: 'white'}} activeDot={{r: 7}} animationDuration={500}>
                                                 <LabelList dataKey="Margem Liquida %" content={(props) => {
                                                     const { x, y, value } = props;
                                                     if (!value) return null;
                                                     const valStr = value.toFixed(1) + '%';
-                                                    return (
-                                                        <g>
-                                                            <text x={x} y={value >= 0 ? y - 12 : y + 20} stroke="white" strokeWidth={5} strokeLinejoin="round" fill="white" fontSize={11} fontWeight="900" textAnchor="middle">{valStr}</text>
-                                                            <text x={x} y={value >= 0 ? y - 12 : y + 20} fill="#ec4899" fontSize={11} fontWeight="900" textAnchor="middle">{valStr}</text>
-                                                        </g>
-                                                    );
+                                                    return (<g><text x={x} y={value >= 0 ? y - 12 : y + 20} stroke="white" strokeWidth={5} strokeLinejoin="round" fill="white" fontSize={11} fontWeight="900" textAnchor="middle">{valStr}</text><text x={x} y={value >= 0 ? y - 12 : y + 20} fill="#ec4899" fontSize={11} fontWeight="900" textAnchor="middle">{valStr}</text></g>);
                                                 }} />
                                             </Line>
                                         )}
@@ -1604,12 +1558,7 @@ export default function App() {
                                                     const { x, y, value } = props;
                                                     if (!value) return null;
                                                     const valStr = value.toFixed(1) + '%';
-                                                    return (
-                                                        <g>
-                                                            <text x={x} y={value >= 0 ? y - 12 : y + 20} stroke="white" strokeWidth={5} strokeLinejoin="round" fill="white" fontSize={11} fontWeight="900" textAnchor="middle">{valStr}</text>
-                                                            <text x={x} y={value >= 0 ? y - 12 : y + 20} fill="#14b8a6" fontSize={11} fontWeight="900" textAnchor="middle">{valStr}</text>
-                                                        </g>
-                                                    );
+                                                    return (<g><text x={x} y={value >= 0 ? y - 12 : y + 20} stroke="white" strokeWidth={5} strokeLinejoin="round" fill="white" fontSize={11} fontWeight="900" textAnchor="middle">{valStr}</text><text x={x} y={value >= 0 ? y - 12 : y + 20} fill="#14b8a6" fontSize={11} fontWeight="900" textAnchor="middle">{valStr}</text></g>);
                                                 }} />
                                             </Line>
                                         )}
@@ -1619,12 +1568,7 @@ export default function App() {
                                                     const { x, y, value } = props;
                                                     if (!value) return null;
                                                     const valStr = value.toFixed(1) + '%';
-                                                    return (
-                                                        <g>
-                                                            <text x={x} y={value >= 0 ? y - 12 : y + 20} stroke="white" strokeWidth={5} strokeLinejoin="round" fill="white" fontSize={11} fontWeight="900" textAnchor="middle">{valStr}</text>
-                                                            <text x={x} y={value >= 0 ? y - 12 : y + 20} fill="#f59e0b" fontSize={11} fontWeight="900" textAnchor="middle">{valStr}</text>
-                                                        </g>
-                                                    );
+                                                    return (<g><text x={x} y={value >= 0 ? y - 12 : y + 20} stroke="white" strokeWidth={5} strokeLinejoin="round" fill="white" fontSize={11} fontWeight="900" textAnchor="middle">{valStr}</text><text x={x} y={value >= 0 ? y - 12 : y + 20} fill="#f59e0b" fontSize={11} fontWeight="900" textAnchor="middle">{valStr}</text></g>);
                                                 }} />
                                             </Line>
                                         )}
@@ -1633,12 +1577,7 @@ export default function App() {
 
                                 <div className="flex justify-center gap-3 mt-6">
                                     {[0, 1, 2].map((idx) => (
-                                        <button 
-                                            key={idx} 
-                                            onClick={() => setDuPontActiveIndex(idx)} 
-                                            className={`h-2.5 rounded-full transition-all duration-300 ${idx === duPontActiveIndex ? 'w-8 bg-purple-500' : 'w-2.5 bg-zinc-300 hover:bg-zinc-400'}`}
-                                            title={`Ver Gráfico ${idx + 1}`}
-                                        />
+                                        <button key={idx} onClick={() => setDuPontActiveIndex(idx)} className={`h-2.5 rounded-full transition-all duration-300 ${idx === duPontActiveIndex ? 'w-8 bg-purple-500' : 'w-2.5 bg-zinc-300 hover:bg-zinc-400'}`} title={`Ver Gráfico ${idx + 1}`} />
                                     ))}
                                 </div>
                             </div>
@@ -1668,12 +1607,7 @@ export default function App() {
                                             const { x, y, value } = props;
                                             if (!value) return null;
                                             const valStr = value.toFixed(1) + '%';
-                                            return (
-                                                <g>
-                                                    <text x={x} y={value >= 0 ? y - 12 : y + 20} stroke="white" strokeWidth={5} strokeLinejoin="round" fill="white" fontSize={11} fontWeight="900" textAnchor="middle">{valStr}</text>
-                                                    <text x={x} y={value >= 0 ? y - 12 : y + 20} fill={graph.color} fontSize={11} fontWeight="900" textAnchor="middle">{valStr}</text>
-                                                </g>
-                                            );
+                                            return (<g><text x={x} y={value >= 0 ? y - 12 : y + 20} stroke="white" strokeWidth={5} strokeLinejoin="round" fill="white" fontSize={11} fontWeight="900" textAnchor="middle">{valStr}</text><text x={x} y={value >= 0 ? y - 12 : y + 20} fill={graph.color} fontSize={11} fontWeight="900" textAnchor="middle">{valStr}</text></g>);
                                         }} />
                                     </Line>
                                 </LineChart>
@@ -1704,7 +1638,25 @@ export default function App() {
                     </ResponsiveContainer>
                 </div>
 
-                {/* GRÁFICOS NOVOS EBIT / EBITDA */}
+                <div className="bg-white p-6 rounded-3xl shadow-sm border border-zinc-200 mt-6 mb-8">
+                    <h3 className="text-sm font-bold text-zinc-800 uppercase tracking-widest mb-4">EBT x EBT Budget</h3>
+                    <ResponsiveContainer width="100%" height={400}>
+                        <BarChart data={financeiroCorpData} margin={{top:30, right:0, left:-10, bottom:0}} barGap={8}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e4e4e7" />
+                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 'bold', fill: '#71717a'}} dy={10} />
+                            <YAxis axisLine={false} tickLine={false} tickFormatter={(val) => formatCurrencyShort(val)} tick={{fontSize: 10, fill: '#71717a', fontWeight: 'bold'}} dx={-10} />
+                            <Tooltip content={<CustomTooltipFinanceiro2 />} cursor={{fill: '#f4f4f5'}} />
+                            <Legend wrapperStyle={{fontSize: '11px', fontWeight: 'bold', paddingTop: '20px'}} />
+                            <Bar dataKey="EBIT Budget" name="EBT Budget" fill="#d4d4d8" radius={[4, 4, 0, 0]} maxBarSize={45}>
+                                <LabelList dataKey="EBIT Budget" position="top" fill="#71717a" fontSize={11} fontWeight="900" formatter={(val) => val !== 0 ? formatCurrencyShort(val) : ''} />
+                            </Bar>
+                            <Bar dataKey="EBIT" name="EBT" fill="#6366f1" radius={[4, 4, 0, 0]} maxBarSize={45}>
+                                <LabelList dataKey="EBIT" position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={(val) => val !== 0 ? formatCurrencyShort(val) : ''} />
+                            </Bar>
+                        </BarChart>
+                    </ResponsiveContainer>
+                </div>
+
                 <div className="bg-white p-6 rounded-3xl shadow-sm border border-zinc-200 mt-6 mb-8">
                     <h3 className="text-sm font-bold text-zinc-800 uppercase tracking-widest mb-4">EBIT x Budget</h3>
                     <ResponsiveContainer width="100%" height={400}>
@@ -1796,6 +1748,48 @@ export default function App() {
                       </div>
                    </div>
                </div>
+           </div>
+
+
+           <div className="bg-white rounded-3xl shadow-sm border border-zinc-200 overflow-hidden mb-6">
+               <div className="p-6 border-b border-zinc-100 bg-zinc-50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                   <div>
+                       <h3 className="text-xl font-extrabold text-zinc-900 flex items-center gap-3">
+                           <FileSpreadsheet className="text-yellow-600" size={24} /> {t('Lançamento de Resultados Financeiros', 'Financial Data Entry')}
+                       </h3>
+                       <p className="text-sm text-zinc-500 mt-1 font-medium">{t('Preencha os valores para o mês selecionado.', 'Fill in the values for the selected month.')}</p>
+                   </div>
+                   <div className="flex items-center gap-3 bg-zinc-900 p-2 rounded-2xl shadow-sm border border-zinc-800 shrink-0">
+                       <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest px-3">{t('Mês de Edição', 'Edit Month')}</label>
+                       <select className="border-none bg-zinc-800 text-yellow-500 px-5 py-2 rounded-xl text-sm font-bold outline-none cursor-pointer shadow-sm" value={kpiEditPeriod} onChange={(e) => setKpiEditPeriod(e.target.value)}>
+                           {months.map(m => <option key={m} value={m}>{m}</option>)}
+                       </select>
+                   </div>
+               </div>
+               <form onSubmit={handleSaveFinanceKPIs} className="p-6">
+                   <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                       {financeIndicators.map(ind => (
+                           <div key={ind.id} className="bg-zinc-50 p-3 rounded-xl border border-zinc-200 flex flex-col justify-between gap-2">
+                               <label className="text-[10px] font-bold text-zinc-700 leading-tight h-8 line-clamp-2" title={tInd(ind.name)}>{tInd(ind.name).replace(/^\d+\.\s*/, '')}</label>
+                               <div className="flex items-center gap-2">
+                                   <input 
+                                       type="number" step="any"
+                                       value={formValues[ind.id] !== undefined ? formValues[ind.id] : ''}
+                                       onChange={(e) => handleValueChange(ind.id, e.target.value)}
+                                       className="w-full text-right bg-white border border-zinc-300 focus:border-yellow-500 rounded-lg p-2 font-black text-sm outline-none transition-colors"
+                                       placeholder="0"
+                                   />
+                                   <span className="text-[9px] font-black text-zinc-400 w-5">{ind.unit}</span>
+                               </div>
+                           </div>
+                       ))}
+                   </div>
+                   <div className="mt-6 flex justify-end pt-4 border-t border-zinc-100">
+                       <button type="submit" disabled={loading} className="bg-black text-yellow-500 px-8 py-3 rounded-xl font-bold hover:bg-zinc-800 shadow-lg active:scale-95 flex items-center gap-2 transition-all disabled:opacity-50">
+                           <Save size={18} /> {t('Gravar Valores', 'Save Data')}
+                       </button>
+                   </div>
+               </form>
            </div>
 
         </div>
@@ -1913,7 +1907,7 @@ export default function App() {
                                   <YAxis axisLine={false} tickLine={false} tickFormatter={(val) => formatCurrencyShort(val)} tick={{fontSize: 10, fill: '#71717a', fontWeight: 'bold'}} dx={-10} />
                                   <Tooltip content={<CustomTooltipGeral />} cursor={{fill: '#f4f4f5'}} />
                                   <Bar dataKey="value" name={t('Vendido', 'Booked')} fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={50}>
-                                      <LabelList dataKey="value" position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={(val) => formatCurrencyShort(val)} />
+                                      <LabelList dataKey="value" position="top" fill="#71717a" fontSize={9} fontWeight="bold" formatter={(val) => formatCurrencyShort(val)} />
                                   </Bar>
                               </BarChart>
                           </ResponsiveContainer>
@@ -1933,7 +1927,7 @@ export default function App() {
                                   <YAxis axisLine={false} tickLine={false} tickFormatter={(val) => formatCurrencyShort(val)} tick={{fontSize: 10, fill: '#71717a', fontWeight: 'bold'}} dx={-10} />
                                   <Tooltip content={<CustomTooltipGeral />} cursor={{fill: '#f4f4f5'}} />
                                   <Bar dataKey="value" name={t('Vendido', 'Booked')} fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={50}>
-                                      <LabelList dataKey="value" position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={(val) => formatCurrencyShort(val)} />
+                                      <LabelList dataKey="value" position="top" fill="#71717a" fontSize={9} fontWeight="bold" formatter={(val) => formatCurrencyShort(val)} />
                                   </Bar>
                               </BarChart>
                           </ResponsiveContainer>
@@ -1963,7 +1957,7 @@ export default function App() {
                       <div className="bg-white p-6 rounded-3xl shadow-sm border border-zinc-200 flex-1 flex flex-col min-h-0">
                           <div className="mb-2">
                               <h3 className="text-xs font-bold text-zinc-800 uppercase tracking-widest">{t('Modalidade de Vendas', 'Contract Type Breakdown')}</h3>
-                              <p className="text-[9px] font-bold text-zinc-500 mt-0.5 uppercase">{t('Contrato vs Spot (R$)', 'Contract vs. Spot (BRL)')}</p>
+                              <p className="text-[9px] font-bold text-zinc-500 mt-0.5 uppercase">{t('Contrato vs Spot', 'Contract vs. Spot')}</p>
                           </div>
                           <div className="flex-1 min-h-0 mt-2">
                               <ResponsiveContainer width="100%" height="100%">
@@ -2555,6 +2549,1180 @@ export default function App() {
     );
   };
 
+  const renderSparklineCard = (item, isResultado) => {
+    if (kpiOwnerId === 1 && item.id === 6) return null; 
+    if (kpiOwnerId === 2 && item.id === 12) return null; 
+    if (kpiOwnerId === 3 && item.id === 33) return null; 
+    if (kpiOwnerId === 4 && item.id === 36) return null; 
+
+    let displayHist = computedData.filter(v => v.indicator_id === item.id && v.owner_id === kpiOwnerId);
+    
+    const uniqueMap = new Map();
+    displayHist.forEach(h => uniqueMap.set(h.period, h));
+    displayHist = Array.from(uniqueMap.values());
+    
+    const isMonthFilled = (period) => {
+        if (kpiOwnerId === 8) return dbValues.some(v => v.indicator_id === 56 && v.period === period);
+        return dbValues.some(v => v.owner_id === kpiOwnerId && v.period === period);
+    };
+
+    if (kpiViewPeriod !== 'ALL') {
+        displayHist = displayHist.filter(h => monthOrder[h.period] <= monthOrder[kpiViewPeriod]);
+    }
+
+    displayHist.sort((a, b) => monthOrder[a.period] - monthOrder[b.period]);
+    
+    if (kpiViewMode === 'ANNUAL') {
+        let cumulativeData = [];
+        let currentSum = 0;
+        let monthsCount = 0;
+        months.forEach((m) => {
+            if (kpiViewPeriod !== 'ALL' && monthOrder[m] > monthOrder[kpiViewPeriod]) return;
+            
+            let h = displayHist.find(d => d.period === m);
+            let val = h ? parseFloat(h.value) : 0;
+            
+            if (!isMonthFilled(m)) {
+                currentSum = 0;
+            } else {
+                monthsCount++;
+                if (item.unit === '%' || item.unit === 'DIAS') {
+                    if (item.name.includes('MÉDIA AC') || item.name.includes('TOTAL')) currentSum = val;
+                    else currentSum = ((currentSum * (monthsCount - 1)) + val) / monthsCount;
+                } else if (item.id === 56 || item.name.toLowerCase().includes('estoque')) {
+                    currentSum = val; 
+                } else {
+                    currentSum += val;
+                }
+            }
+            cumulativeData.push({ period: m, value: currentSum, originalValue: val });
+        });
+        displayHist = cumulativeData;
+    } else {
+        let monthlyData = [];
+        months.forEach(m => {
+            if (kpiViewPeriod !== 'ALL' && monthOrder[m] > monthOrder[kpiViewPeriod]) return;
+            let h = displayHist.find(d => d.period === m);
+            let val = h ? parseFloat(h.value) : 0;
+            if (!isMonthFilled(m)) val = 0;
+            monthlyData.push({ period: m, value: val, originalValue: val });
+        });
+        displayHist = monthlyData;
+    }
+
+    const goalObj = dbGoals.find(g => g.indicator_id === item.id);
+    const metaVal = goalObj ? parseFloat(goalObj.goal_value) : undefined;
+    
+    let curr = null, prev = null, latestVal = '-', trendHtml = null;
+    let latestRawVal = null;
+
+    if (displayHist.length > 0) {
+        const filledHistory = displayHist.filter(h => isMonthFilled(h.period));
+        if (filledHistory.length > 0) {
+            curr = parseFloat(filledHistory[filledHistory.length - 1].value);
+            latestRawVal = curr;
+            if (filledHistory.length > 1) prev = parseFloat(filledHistory[filledHistory.length - 2].value);
+            
+            latestVal = formatNumber(curr, item.unit);
+            
+            if (prev !== null && prev !== 0) {
+                const diff = curr - prev;
+                let perc = (diff / prev) * 100;
+                if (perc > 999) perc = 999;
+                
+                const isPositiveTrend = diff > 0;
+                let colorClass = 'text-zinc-400';
+                
+                if (diff !== 0) {
+                    if (isPositiveTrend) colorClass = item.inverse_goal ? 'text-red-500' : 'text-emerald-500';
+                    else colorClass = item.inverse_goal ? 'text-emerald-500' : 'text-red-500';
+                    trendHtml = (
+                        <span className={`flex items-center gap-0.5 text-[11px] font-black ${colorClass} bg-zinc-100 px-2 py-0.5 rounded-full`}>
+                            {isPositiveTrend ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+                            {Math.abs(perc).toFixed(1)}%
+                        </span>
+                    );
+                }
+            }
+        } else {
+            latestVal = '0';
+        }
+    }
+
+    const baseGraphData = displayHist.map(h => {
+        const commentObj = dbComments.find(c => c.indicator_id === item.id && c.period === h.period);
+        return { name: h.period, value: parseFloat(h.value), originalValue: h.originalValue, comment: commentObj ? commentObj.comment : null };
+    });
+
+    let CustomBars = null;
+    let modifiedGraphData = baseGraphData;
+    let displayName = tInd(item.name);
+
+    if (kpiOwnerId === 4 && item.id === 41) { 
+        displayName = t("Projetos: Previstos vs Em Atraso", "Projects: Planned vs Overdue");
+        const previstosHist = computedData.filter(v => v.indicator_id === 36 && v.owner_id === 4);
+        modifiedGraphData = baseGraphData.map(g => {
+            const pVal = previstosHist.find(v => v.period === g.name)?.value || 0;
+            return { ...g, 'Total Projetos': isMonthFilled(g.name) ? parseFloat(pVal) : 0, 'Em Atraso': g.value };
+        });
+        CustomBars = [
+            <Bar key="bar1" dataKey="Total Projetos" name={t('Total Projetos', 'Total Projects')} fill="#eab308" radius={[4, 4, 0, 0]} maxBarSize={30}>
+                <LabelList dataKey="Total Projetos" position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={v => v > 0 ? v : ''} />
+            </Bar>,
+            <Bar key="bar2" dataKey="Em Atraso" name={t('Em Atraso', 'Overdue')} fill="#ef4444" radius={[4, 4, 0, 0]} maxBarSize={30}>
+                <LabelList dataKey="Em Atraso" position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={v => v > 0 ? v : ''} />
+            </Bar>
+        ];
+    } else if (kpiOwnerId === 2 && item.id === 13) {
+        displayName = t("Orçamentos: Elaborados vs Em Atraso", "Quotes: Prepared vs Overdue");
+        const elabHist = computedData.filter(v => v.indicator_id === 12 && v.owner_id === 2);
+        modifiedGraphData = baseGraphData.map(g => {
+            const eVal = elabHist.find(v => v.period === g.name)?.value || 0;
+            return { ...g, 'Enviados': isMonthFilled(g.name) ? parseFloat(eVal) : 0, 'Atraso': g.value };
+        });
+        CustomBars = [
+            <Bar key="bar1" dataKey="Enviados" name={t('Enviados', 'Prepared')} fill="#eab308" radius={[4, 4, 0, 0]} maxBarSize={30}>
+                <LabelList dataKey="Enviados" position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={v => v > 0 ? v : ''} />
+            </Bar>,
+            <Bar key="bar2" dataKey="Atraso" name={t('Atraso', 'Overdue')} fill="#ef4444" radius={[4, 4, 0, 0]} maxBarSize={30}>
+                <LabelList dataKey="Atraso" position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={v => v > 0 ? v : ''} />
+            </Bar>
+        ];
+    } else if (kpiOwnerId === 1 && typeof item.name === 'string' && item.name.toLowerCase().includes('atraso pendentes')) {
+        displayName = t("Orçamentos: Enviados vs Em Atraso", "Quotes: Submitted vs Overdue");
+        const enviadosHist = computedData.filter(v => v.indicator_id === 6 && v.owner_id === 1);
+        modifiedGraphData = baseGraphData.map(g => {
+            const eVal = enviadosHist.find(v => v.period === g.name)?.value || 0;
+            return { ...g, 'Enviados': isMonthFilled(g.name) ? parseFloat(eVal) : 0, 'Atraso': g.value };
+        });
+        CustomBars = [
+            <Bar key="bar1" dataKey="Enviados" name={t('Enviados', 'Submitted')} fill="#eab308" radius={[4, 4, 0, 0]} maxBarSize={30}>
+                <LabelList dataKey="Enviados" position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={v => v > 0 ? v : ''} />
+            </Bar>,
+            <Bar key="bar2" dataKey="Atraso" name={t('Atraso', 'Overdue')} fill="#ef4444" radius={[4, 4, 0, 0]} maxBarSize={30}>
+                <LabelList dataKey="Atraso" position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={v => v > 0 ? v : ''} />
+            </Bar>
+        ];
+    } else if (kpiOwnerId === 3 && item.id === 35) {
+        displayName = t("Pedidos: Faturados vs Fora do Prazo", "Orders: Invoiced vs Late");
+        const faturadosHist = computedData.filter(v => v.indicator_id === 33 && v.owner_id === 3);
+        modifiedGraphData = baseGraphData.map(g => {
+            const fVal = faturadosHist.find(v => v.period === g.name)?.value || 0;
+            return { ...g, 'Faturados': isMonthFilled(g.name) ? parseFloat(fVal) : 0, 'Atraso': g.value };
+        });
+        CustomBars = [
+            <Bar key="bar1" dataKey="Faturados" name={t('Faturados', 'Invoiced')} fill="#eab308" radius={[4, 4, 0, 0]} maxBarSize={30}>
+                <LabelList dataKey="Faturados" position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={v => v > 0 ? v : ''} />
+            </Bar>,
+            <Bar key="bar2" dataKey="Atraso" name={t('Fora do Prazo', 'Late')} fill="#ef4444" radius={[4, 4, 0, 0]} maxBarSize={30}>
+                <LabelList dataKey="Atraso" position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={v => v > 0 ? v : ''} />
+            </Bar>
+        ];
+    } else if (kpiOwnerId === 1 && item.id === 2) {
+        displayName = t("Ticket Médio (Mensal vs YTD)", "Average Order Value (MoM vs YTD)");
+        let sumAcum = 0;
+        modifiedGraphData = baseGraphData.map(g => {
+             if (isMonthFilled(g.name)) {
+                 sumAcum += g.originalValue; 
+             } else {
+                 sumAcum = 0;
+             }
+             return { ...g, 'Mensal': g.originalValue, 'Acumulado': sumAcum };
+        });
+        CustomBars = [
+            <Bar key="bar1" dataKey="Mensal" name={t('Mensal', 'Monthly')} fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={30}>
+                <LabelList dataKey="Mensal" position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={v => formatCurrencyShort(v)} />
+            </Bar>,
+            <Bar key="bar2" dataKey="Acumulado" name={t('Acumulado', 'YTD')} fill="#f97316" radius={[4, 4, 0, 0]} maxBarSize={30}>
+                <LabelList dataKey="Acumulado" position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={v => formatCurrencyShort(v)} />
+            </Bar>
+        ];
+    } else {
+        CustomBars = (
+            <Bar dataKey="value" name={t('Resultado', 'Actual')} radius={[4, 4, 0, 0]} maxBarSize={45}>
+                {modifiedGraphData.map((entry, index) => {
+                    let barColor = isResultado ? '#18181b' : '#eab308';
+                    if (metaVal !== undefined) {
+                        const targetVal = kpiViewMode === 'ANNUAL' && (item.unit === 'R$' || item.unit === 'QTE') ? metaVal * (index + 1) : metaVal;
+                        const isBad = item.inverse_goal ? entry.value > targetVal : entry.value < targetVal;
+                        if (isBad) {
+                            barColor = '#ef4444'; 
+                        } else {
+                            barColor = '#10b981'; 
+                        }
+                    }
+                    return <Cell key={`cell-${index}`} fill={barColor} />;
+                })}
+                <LabelList dataKey="value" position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={v => {
+                    if (!v || v === 0) return '';
+                    if(item.unit === 'R$') return formatCurrencyShort(v);
+                    if(item.unit === '%') return v.toFixed(1) + '%';
+                    return v;
+                }} />
+            </Bar>
+        );
+    }
+
+    const commentsList = baseGraphData.filter(d => d.comment && d.comment.trim() !== '').reverse();
+    const hasComments = commentsList.length > 0;
+
+    let currentMetaBadgeVal = metaVal;
+    if (kpiViewMode === 'ANNUAL' && metaVal !== undefined && (item.unit === 'R$' || item.unit === 'QTE')) {
+        currentMetaBadgeVal = metaVal * displayHist.length; 
+    }
+
+    let headerColorClass = isResultado ? 'text-zinc-800' : 'text-zinc-500';
+    let valueColorClass = 'text-zinc-900';
+    
+    if (metaVal !== undefined && latestRawVal !== null) {
+        const isBad = item.inverse_goal ? latestRawVal > currentMetaBadgeVal : latestRawVal < currentMetaBadgeVal;
+        if (isBad) {
+            headerColorClass = 'text-red-500';
+            valueColorClass = 'text-red-600';
+        } else {
+            headerColorClass = 'text-emerald-600';
+            valueColorClass = 'text-emerald-500';
+        }
+    }
+
+    return (
+        <div key={item.id} className={`bg-white p-6 rounded-[24px] shadow-sm border ${isResultado ? 'border-zinc-300' : 'border-zinc-200'} flex flex-col justify-between hover:shadow-xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden group h-[350px]`}>
+            <div className="relative z-10 flex-shrink-0">
+                <div className="flex justify-between items-start mb-3 gap-2">
+                    <h4 className={`text-xs font-black ${headerColorClass} uppercase tracking-widest leading-relaxed w-full`} title={displayName}>{displayName}</h4>
+                    <div className="flex items-center gap-2 shrink-0">
+                         {hasComments && (
+                             <button 
+                                 onClick={() => setExpandedCardId(expandedCardId === item.id ? null : item.id)}
+                                 className={`p-1.5 rounded-lg transition-colors ${expandedCardId === item.id ? 'bg-yellow-500 text-black' : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'} shadow-sm`}
+                                 title={t("Ver Observações", "View Comments")}
+                             >
+                                 <MessageSquareText size={14} />
+                             </button>
+                         )}
+                        {metaVal !== undefined && (
+                            <span className="text-[10px] font-black text-black bg-yellow-400 px-2 py-1 rounded uppercase">
+                                {t('Meta:', 'Target:')} {formatNumber(currentMetaBadgeVal, item.unit)}
+                            </span>
+                        )}
+                    </div>
+                </div>
+                <div className="flex items-center gap-3 mb-4">
+                    <span className={`text-3xl font-black ${valueColorClass}`}>{latestVal}</span>
+                    {trendHtml}
+                </div>
+            </div>
+            {modifiedGraphData.length > 0 && (
+                <div className="flex-1 w-[100%] relative opacity-80 group-hover:opacity-100 transition-opacity mt-4">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <ComposedChart data={modifiedGraphData} margin={{top: 20, right: 0, left: 0, bottom: 0}}>
+                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 9, fontWeight: 'bold', fill: '#a1a1aa'}} dy={5} height={20} />
+                            <Tooltip content={<CustomTooltipSparkline unit={item.unit} lang={lang} />} cursor={{ fill: 'rgba(0,0,0,0.03)' }} />
+                            
+                            {CustomBars}
+
+                            {metaVal !== undefined && kpiViewMode === 'MONTHLY' && (
+                                <Line type="step" dataKey={() => metaVal} name={t("Meta", "Target")} stroke="#a1a1aa" strokeWidth={2} strokeDasharray="4 4" dot={false} isAnimationActive={false} />
+                            )}
+                        </ComposedChart>
+                    </ResponsiveContainer>
+                </div>
+            )}
+
+            {expandedCardId === item.id && (
+                <div className="absolute inset-0 z-20 bg-zinc-950/95 backdrop-blur-md p-5 flex flex-col rounded-[24px] border border-zinc-800 shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
+                    <div className="flex justify-between items-center mb-3 border-b border-zinc-800 pb-2 shrink-0">
+                        <h4 className="text-xs font-black text-yellow-500 uppercase flex items-center gap-2">
+                            <MessageSquareText size={14} /> {t('Observações', 'Comments / Notes')} ({commentsList.length})
+                        </h4>
+                        <button onClick={() => setExpandedCardId(null)} className="text-zinc-400 hover:text-white bg-zinc-800 hover:bg-zinc-700 p-1 rounded-full transition-colors"><X size={14} /></button>
+                    </div>
+                    <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+                        {commentsList.map(c => (
+                            <div key={c.name} className="bg-zinc-900 p-3 rounded-xl border border-zinc-800">
+                                <div className="flex justify-between items-center mb-1">
+                                    <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">{c.name}</span>
+                                    <span className="text-[10px] font-bold text-yellow-500">{formatNumber(c.value, item.unit)}</span>
+                                </div>
+                                <p className="text-xs font-medium text-white leading-relaxed whitespace-pre-wrap">{c.comment}</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+  };
+
+  const renderKPI = () => {
+    const ownerIndicatorIds = [...new Set(dbValues.filter(v => v.owner_id === kpiOwnerId).map(v => v.indicator_id))];
+    const finalIndicators = dbIndicators.filter(i => {
+        if (i.id === 56 || i.name.toLowerCase().includes('estoque')) {
+            return kpiOwnerId === 8;
+        }
+
+        if (i.category === 'ESFORCO') return ownerIndicatorIds.includes(i.id);
+        if (kpiOwnerId === 1 && i.id >= 74 && i.id <= 78) return true;
+        if (kpiOwnerId === 2 && i.id >= 79 && i.id <= 80) return true;
+        if (kpiOwnerId === 3 && i.id === 81) return true;
+        if (kpiOwnerId === 4 && i.id >= 85 && i.id <= 86) return true;
+        if (kpiOwnerId === 5 && i.id >= 83 && i.id <= 84) return true;
+        if (kpiOwnerId === 6 && i.id === 82) return true;
+        if (kpiOwnerId === 7 && i.id >= 87 && i.id <= 89) return true;
+        return false;
+    });
+
+    const esforcoList = finalIndicators.filter(i => i.category === 'ESFORCO');
+    const resultadoList = finalIndicators.filter(i => i.category === 'RESULTADO');
+
+    const autoOrdersIds = [
+        dbIndicators.find(i => i.name.toLowerCase().includes('pedidos contrato'))?.id,
+        dbIndicators.find(i => i.name.toLowerCase().includes('pedidos spot'))?.id,
+        dbIndicators.find(i => i.name.toLowerCase().includes('pg1'))?.id,
+        dbIndicators.find(i => i.name.toLowerCase().includes('pg2'))?.id,
+        dbIndicators.find(i => i.name.toLowerCase().includes('pg3'))?.id,
+        dbIndicators.find(i => i.name.toLowerCase().includes('pedidos serviço') || i.name.toLowerCase().includes('pedidos servico'))?.id,
+    ].filter(Boolean);
+
+    const isAutoCalculatedEsforco = [2, 25, 27, 29, 43, ...autoOrdersIds];
+    const visibleEsforcoList = esforcoList.filter(ind => !autoOrdersIds.includes(ind.id));
+
+    const handleSaveKPIs = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        const payload = [];
+        const commentsPayload = [];
+        let hasError = false;
+        
+        esforcoList.forEach(ind => {
+            const val = formValues[ind.id];
+            if (val !== undefined && val !== '') {
+                payload.push({ indicator_id: ind.id, owner_id: kpiOwnerId, period: kpiEditPeriod, value: parseFloat(val) });
+            }
+            
+            const isMandatory = needsComment(ind.id, kpiOwnerId, val);
+            const comment = formComments[ind.id];
+            
+            if (isMandatory && (!comment || comment.trim() === '')) {
+                hasError = true;
+                setExpandedCommentId(ind.id);
+            }
+
+            if (comment && comment.trim() !== '') {
+                commentsPayload.push({ indicator_id: ind.id, period: kpiEditPeriod, comment });
+            }
+        });
+
+        if (hasError) {
+            showToast(t('Preencha as observações obrigatórias (sinalizadas a vermelho).', 'Fill in the mandatory observations (highlighted in red).'), 'error');
+            setLoading(false);
+            return;
+        }
+
+        if(payload.length === 0) {
+            showToast(t('Preencha ao menos um valor.', 'Fill in at least one value.'), 'error');
+            setLoading(false);
+            return;
+        }
+
+        try {
+            const indIds = payload.map(p => p.indicator_id);
+            await supabaseClient.from('indicator_values').delete().eq('owner_id', kpiOwnerId).eq('period', kpiEditPeriod).in('indicator_id', indIds);
+            await supabaseClient.from('indicator_values').insert(payload);
+            
+            if (commentsPayload.length > 0) {
+                const cIndIds = commentsPayload.map(c => c.indicator_id);
+                await supabaseClient.from('indicator_comments').delete().eq('period', kpiEditPeriod).in('indicator_id', cIndIds);
+                await supabaseClient.from('indicator_comments').insert(commentsPayload);
+            } else {
+                 await supabaseClient.from('indicator_comments').delete().eq('period', kpiEditPeriod);
+            }
+
+            showToast(t(`Dados de ${kpiEditPeriod} guardados com sucesso!`, `${kpiEditPeriod} data saved successfully!`));
+            setExpandedCommentId(null);
+            loadData();
+        } catch (err) {
+            showToast(t('Erro ao salvar no banco de dados.', 'Error saving to database.'), 'error');
+        }
+        setLoading(false);
+    };
+
+    return (
+        <div className="space-y-8 animate-in fade-in duration-500">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-4 rounded-3xl shadow-sm border border-zinc-200">
+                <div className="flex items-center gap-4">
+                    <div className="bg-zinc-900 p-3 rounded-2xl text-yellow-500 shadow-md"><LineChartIcon size={24} /></div>
+                    {(user.role === 'admin' || user.role === 'dev' || user.username.toUpperCase() === 'DANIEL') ? (
+                        <select 
+                            className="bg-transparent text-zinc-900 text-2xl font-black focus:ring-0 outline-none cursor-pointer"
+                            value={kpiOwnerId}
+                            onChange={(e) => setKpiOwnerId(parseInt(e.target.value))}
+                        >
+                            {dbOwners.filter(o => {
+                                 if(user.username.toUpperCase() === 'DANIEL') return o.id === 3 || o.id === 4;
+                                return true;
+                            }).map(o => <option key={o.id} value={o.id} className="text-base font-bold">{t('Visão:', 'View:')} {translateArea(o.name)}</option>)}
+                        </select>
+                    ) : (
+                        <div>
+                            <h2 className="text-2xl font-black text-zinc-900 tracking-tight">{translateArea(user.area)}</h2>
+                            <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest mt-0.5">{t('Visão do Setor', 'Department View')}</p>
+                        </div>
+                    )}
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3">
+                    <div className="flex items-center gap-3 bg-zinc-50 p-2 rounded-2xl border border-zinc-200">
+                        <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest px-2">{t('Análise', 'View Mode')}</label>
+                        <select className="border-none bg-white px-4 py-2 rounded-xl text-sm font-bold text-zinc-800 outline-none cursor-pointer shadow-sm" value={kpiViewMode} onChange={(e) => setKpiViewMode(e.target.value)}>
+                            <option value="MONTHLY">{t('Mensal (Mês a Mês)', 'Monthly (MoM)')}</option>
+                            <option value="ANNUAL">{t('Acumulado Anual (YTD)', 'Year-to-Date (YTD)')}</option>
+                        </select>
+                    </div>
+
+                    <div className="flex items-center gap-3 bg-zinc-50 p-2 rounded-2xl border border-zinc-200">
+                        <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest px-2">{t('Até Mês', 'Up to Month')}</label>
+                        <select className="border-none bg-white px-5 py-2 rounded-xl text-sm font-bold text-zinc-800 outline-none cursor-pointer shadow-sm" value={kpiViewPeriod} onChange={(e) => setKpiViewPeriod(e.target.value)}>
+                            <option value="ALL">{t('Geral (Mais Recente)', 'Latest Available')}</option>
+                            {months.map(m => <option key={m} value={m}>{m}</option>)}
+                        </select>
+                    </div>
+
+                    <div className="flex items-center gap-3 bg-zinc-900 p-2 rounded-2xl shadow-sm border border-zinc-800">
+                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest px-2">{t('Período de Edição', 'Data Entry Period')}</label>
+                        <select className="border-none bg-zinc-800 text-yellow-500 px-5 py-2 rounded-xl text-sm font-bold outline-none cursor-pointer shadow-sm" value={kpiEditPeriod} onChange={(e) => setKpiEditPeriod(e.target.value)}>
+                            {months.map(m => <option key={m} value={m}>{m}</option>)}
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            {/* MUDANÇA AQUI: Alterado de lg:grid-cols-3 para lg:grid-cols-2 */}
+            <div>
+                <h3 className="text-xs font-black text-zinc-400 uppercase tracking-widest mb-4 ml-2">{t('Indicadores de Resultado (Performance)', 'Key Performance Indicators (Results)')}</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 mb-8">
+                    {resultadoList.length === 0 && <p className="text-sm text-zinc-400 italic col-span-full ml-2">{t('Nenhum resultado de performance encontrado.', 'No performance metrics found.')}</p>}
+                    {resultadoList.map(ind => renderSparklineCard(ind, true))}
+                </div>
+            </div>
+
+            {/* MUDANÇA AQUI: Alterado de lg:grid-cols-3 para lg:grid-cols-2 */}
+            <div>
+                <h3 className="text-xs font-black text-zinc-400 uppercase tracking-widest mb-4 ml-2">{t('Métricas Operacionais (Esforço)', 'Operational Metrics (Leading)')}</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 mb-8">
+                    {visibleEsforcoList.length === 0 && <p className="text-sm text-zinc-400 italic col-span-full ml-2">{t('Nenhuma métrica operacional encontrada.', 'No operational metrics found.')}</p>}
+                    {visibleEsforcoList.map(ind => renderSparklineCard(ind, false))}
+                </div>
+            </div>
+
+            <form onSubmit={handleSaveKPIs} className="bg-white rounded-3xl shadow-sm border border-zinc-200 overflow-hidden">
+                <div className="p-6 border-b border-zinc-100 bg-zinc-50">
+                    <h3 className="text-xl font-extrabold text-zinc-900 flex items-center gap-3">
+                        <FileSpreadsheet className="text-yellow-600" /> {t('Formulário de Lançamento:', 'Data Entry Form:')} {kpiEditPeriod}
+                    </h3>
+                    <p className="text-sm text-zinc-500 mt-1 font-medium">{t('Lançamento de métricas. Clique no ícone de mensagem para adicionar observações e justificativas.', 'Please enter your metrics. Click the message icon to add mandatory notes/justifications.')}</p>
+                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 divide-y lg:divide-y-0 lg:divide-x divide-zinc-100">
+                    <div className="p-8 bg-zinc-50/50">
+                        <h4 className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-6 flex items-center gap-2">
+                            <Target size={16} /> {t('Espelho de Resultados', 'Calculated Results')}
+                        </h4>
+                        <div className="space-y-3">
+                            {resultadoList.length === 0 && <p className="text-sm text-zinc-400 italic">{t('Nenhum resultado mapeado.', 'No KPIs assigned.')}</p>}
+                            {resultadoList.map(ind => {
+                                const valObj = computedData.find(v => v.indicator_id === ind.id && v.owner_id === kpiOwnerId && v.period === kpiEditPeriod);
+                                const valStr = valObj ? valObj.value : '';
+                                return (
+                                    <div key={ind.id} className="flex items-center justify-between bg-white p-4 rounded-2xl border border-zinc-200 shadow-sm gap-4">
+                                        <div className="flex-1">
+                                            <label className="text-xs font-bold text-zinc-800 leading-snug block">{tInd(ind.name)}</label>
+                                        </div>
+                                        <div className="flex items-center gap-2 shrink-0">
+                                            <input type="text" readOnly value={valStr !== '' ? parseFloat(valStr).toFixed(2).replace('.', ',') : ''} className="w-24 text-right bg-zinc-100 border border-zinc-200 text-zinc-500 rounded-lg p-2 font-black text-sm cursor-not-allowed outline-none" title={t("Calculado automaticamente pelo sistema", "Calculated automatically by the system")} />
+                                            <span className="text-[10px] font-black text-zinc-400 w-6 text-left uppercase">{ind.unit}</span>
+                                        </div>
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    </div>
+
+                    <div className="p-8">
+                        <h4 className="text-[10px] font-black text-yellow-600 uppercase tracking-widest mb-6 flex items-center gap-2">
+                            <LineChartIcon size={16} /> {t('Digitação de Esforço', 'Operational Data Entry')}
+                        </h4>
+                        <div className="space-y-4">
+                            {visibleEsforcoList.length === 0 && <p className="text-sm text-zinc-400 italic">{t('Nenhuma métrica atribuída.', 'No metrics assigned.')}</p>}
+                            {visibleEsforcoList.map(ind => {
+                                const isAuto = isAutoCalculatedEsforco.includes(ind.id);
+                                let displayName = tInd(ind.name);
+                                if (ind.name === "Não conformidade (%)") displayName = t("Nº de Não Conformidades (Qtd)", "Number of Non-Conformities (Qty)");
+                                
+                                const currentVal = formValues[ind.id] !== undefined ? formValues[ind.id] : '';
+                                const currentComment = formComments[ind.id] || '';
+                                const hasComment = currentComment.trim() !== '';
+                                const isMandatory = needsComment(ind.id, kpiOwnerId, currentVal);
+
+                                let iconColorClass = 'text-zinc-400 bg-zinc-50 hover:bg-zinc-100 border border-zinc-200';
+                                if (hasComment) {
+                                    iconColorClass = 'text-yellow-700 bg-yellow-100 hover:bg-yellow-200 border border-yellow-300 shadow-sm';
+                                } else if (isMandatory) {
+                                    iconColorClass = 'text-red-500 bg-red-50 hover:bg-red-100 border border-red-200 shadow-sm animate-pulse';
+                                }
+
+                                return (
+                                    <div key={ind.id} className="flex flex-col border-b border-zinc-100 pb-4 gap-2 transition-colors">
+                                        <div className="flex items-center justify-between gap-4 group">
+                                            <label className="text-xs font-bold text-zinc-700 flex-1 group-hover:text-black leading-snug">{displayName}</label>
+                                            <div className="flex items-center gap-2 shrink-0">
+                                                <button 
+                                                    type="button" 
+                                                    onClick={() => setExpandedCommentId(expandedCommentId === ind.id ? null : ind.id)}
+                                                    className={`p-2 rounded-xl transition-all ${iconColorClass}`}
+                                                    title={hasComment ? t("Ver/Editar Observação", "View/Edit Comment") : (isMandatory ? t("Observação Obrigatória!", "Mandatory Comment Required!") : t("Adicionar Observação opcional", "Add Optional Comment"))}
+                                                >
+                                                    <MessageSquareText size={18} />
+                                                </button>
+                                                <input 
+                                                    type="number" 
+                                                    step="any" 
+                                                    value={currentVal} 
+                                                    onChange={(e) => handleValueChange(ind.id, e.target.value)}
+                                                    readOnly={isAuto}
+                                                    placeholder="0" 
+                                                    className={`w-28 text-right border-2 rounded-xl p-2.5 font-bold text-sm outline-none transition-all shadow-sm ${isAuto ? 'bg-zinc-100 border-zinc-200 text-zinc-500 cursor-not-allowed' : 'bg-white border-zinc-300 focus:border-yellow-500 text-zinc-900'}`} 
+                                                    title={isAuto ? t("Valor calculado por fórmula", "Calculated by formula") : t("Digite o valor", "Enter value")}
+                                                />
+                                                <span className="text-[10px] font-black text-zinc-400 w-6 text-left uppercase">{ind.name === "Não conformidade (%)" ? t('QTE', 'QTY') : ind.unit}</span>
+                                            </div>
+                                        </div>
+                                        {expandedCommentId === ind.id && (
+                                            <div className="w-full mt-2 animate-in slide-in-from-top-2">
+                                                <textarea 
+                                                    placeholder={kpiOwnerId === 5 ? t("Justificativa de Supply (Ex: Matéria prima em falta)", "Supply Justification (e.g., Raw material shortage)") : t("Observação (Qual o BR? Cliente? Detalhes...)", "Notes (e.g., BR code, Client, Details...)")} 
+                                                    value={formComments[ind.id] || ''}
+                                                    onChange={(e) => handleCommentChange(ind.id, e.target.value)}
+                                                    className={`w-full ${isMandatory && !hasComment ? 'bg-red-50 border-red-200 focus:border-red-400 placeholder:text-red-300' : 'bg-yellow-50/50 border-yellow-200 focus:border-yellow-400 placeholder:text-yellow-600/50'} text-zinc-800 text-sm p-3 rounded-xl outline-none shadow-inner resize-none min-h-[60px] transition-colors`}
+                                                />
+                                            </div>
+                                        )}
+                                    </div>
+                                )
+                            })}
+                        </div>
+                        
+                        <div className="mt-10 pt-6 border-t border-zinc-100 flex justify-end">
+                            <button type="submit" disabled={loading} className="bg-black text-yellow-500 px-10 py-4 rounded-2xl font-black hover:bg-zinc-900 shadow-xl shadow-zinc-200 transition-all flex items-center gap-3 active:scale-95 uppercase tracking-wider text-sm">
+                                {loading ? <ArrowRightCircle className="animate-spin" size={20} /> : <Save size={20} />}
+                                {t('Gravar no Banco', 'Submit Data')}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    );
+  };
+
+  const renderAuditoria = () => {
+    const exportToCSV = () => {
+        const rows = document.querySelectorAll('#tab-auditoria table tr');
+        let csvContent = "";
+        rows.forEach(row => {
+            const cols = row.querySelectorAll('th, td');
+            const rowData = Array.from(cols).map(col => {
+                let text = col.innerText.replace(/"/g, '""');
+                return `"${text}"`;
+            }).join(",");
+            csvContent += rowData + "\r\n";
+        });
+        const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", "auditoria_kdb_completa.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    const getOwnerName = (indId) => {
+        if ([1,2,3,4,5,6,7,8,9,10,11, 74,75,76,77,78, 90,91,92,93,94,95].includes(indId)) return 'Comercial';
+        if ([12,13,14,15,16,17,18,19,20,21,22, 79,80].includes(indId)) return 'Engenharia';
+        if ([23,24,25,26,27,28,29,30,31,32,33,34,35, 81].includes(indId)) return 'PCP';
+        if ([36,37,38,39,40,41,42,43,44, 85,86].includes(indId)) return 'Produção';
+        if ([45,46,47,48,49,50,51,52,53,54,55,56, 83,84].includes(indId)) return 'Supply';
+        if ([57,58,59,60,61,62,63, 82].includes(indId)) return 'Qualidade';
+        if ([64,65,66,67,68,69,70,71,72,73, 87,88,89].includes(indId)) return 'RH';
+        if (indId === 56) return 'Estoque';
+        return 'Geral';
+    };
+
+    return (
+        <div id="tab-auditoria" className="bg-white rounded-3xl shadow-sm border border-zinc-200 p-8 flex flex-col h-[85vh] animate-in fade-in">
+            <div className="flex justify-between items-center mb-6">
+                <div>
+                    <h2 className="text-2xl font-black text-zinc-900 flex items-center gap-3">
+                        <div className="p-3 bg-yellow-50 rounded-2xl text-yellow-600"><FileSpreadsheet size={28} /></div> {t('Auditoria Global', 'Master Data Audit')}
+                    </h2>
+                    <p className="text-zinc-500 text-sm mt-2 font-medium">{t('Base bruta do Banco de Dados. Clique nos valores destacados a amarelo para ler a justificação completa.', 'Raw database overview. Click on highlighted values to read full justifications.')}</p>
+                </div>
+                <div className="flex items-center gap-3">
+                    <input type="file" id="incoming-upload" accept=".xlsx, .xls, .csv" onChange={processExcelFile} className="hidden" />
+                    
+                    <button onClick={() => document.getElementById('incoming-upload').click()} disabled={loading} className="flex items-center gap-2 px-6 py-3 bg-white text-zinc-800 border border-zinc-200 font-bold rounded-xl hover:bg-zinc-50 transition-all shadow-sm active:scale-95 disabled:opacity-50">
+                        <Download size={18} className="rotate-180" /> {loading ? t('Enviando...', 'Uploading...') : t('Atualizar Base Vendas (Excel)', 'Import Sales Data (Excel)')}
+                    </button>
+
+                    <button onClick={exportIncomingToExcel} disabled={loading} className="flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 transition-all shadow-md active:scale-95 disabled:opacity-50">
+                        <FileSpreadsheet size={18} /> {t('Exportar Vendas (XLSX)', 'Export Sales Data (XLSX)')}
+                    </button>
+
+                    <button onClick={exportToCSV} className="flex items-center gap-2 px-6 py-3 bg-black text-yellow-500 font-bold rounded-xl hover:bg-zinc-800 transition-all shadow-md active:scale-95">
+                        <Download size={18} /> {t('Baixar Painel (CSV)', 'Export Audit Data (CSV)')}
+                    </button>
+                </div>
+            </div>
+            
+            <div className="flex-1 overflow-x-auto overflow-y-auto rounded-xl border border-zinc-200 shadow-inner bg-zinc-50 relative w-full">
+                <table className="w-full min-w-[1200px] text-left text-sm whitespace-nowrap audit-table">
+                    <thead className="text-zinc-500 uppercase font-black text-[10px] tracking-widest bg-white sticky top-0 shadow-sm z-10">
+                        <tr>
+                            <th className="p-4 border-b border-zinc-200 text-center bg-white">{t('ID', 'ID')}</th>
+                            <th className="p-4 border-b border-zinc-200 bg-white">{t('Indicador Mapeado', 'KPI Description')}</th>
+                            <th className="p-4 border-b border-zinc-200 bg-white">{t('Setor', 'Department')}</th>
+                            <th className="p-4 border-b border-zinc-200 bg-white text-center">{t('TIPO', 'TYPE')}</th>
+                            <th className="p-4 border-b border-zinc-200 bg-zinc-100 text-zinc-800 text-center">{t('META', 'TARGET')}</th>
+                            {months.map(m => <th key={m} className="p-4 border-b border-zinc-200 text-right bg-zinc-50">{m}</th>)}
+                        </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-zinc-100">
+                        {[...dbIndicators].sort((a,b)=>a.id-b.id).map(ind => {
+                            const isRes = ind.category === 'RESULTADO';
+                            const goalObj = dbGoals.find(g => g.indicator_id === ind.id);
+                            const metaVal = goalObj ? formatNumber(goalObj.goal_value, ind.unit) : '-';
+
+                            return (
+                                <tr key={ind.id} className={`hover:bg-yellow-50/30 transition-colors ${isRes ? 'bg-zinc-50/50' : ''}`}>
+                                    <td className="p-3 font-black text-zinc-400 text-xs text-center border-r border-zinc-50">{ind.id}</td>
+                                    <td className={`p-3 font-bold text-xs border-r border-zinc-50 truncate max-w-[300px] ${isRes ? 'text-zinc-900' : 'text-zinc-700'}`}>{tInd(ind.name)}</td>
+                                    <td className="p-3 font-bold text-zinc-500 text-[10px] uppercase border-r border-zinc-50">{translateArea(getOwnerName(ind.id))}</td>
+                                    <td className={`p-3 font-black text-[9px] text-center uppercase border-r border-zinc-50 ${isRes ? 'text-zinc-600 bg-zinc-100' : 'text-yellow-600'}`}>{ind.category}</td>
+                                    <td className="p-3 font-bold text-zinc-800 text-xs text-center border-r border-zinc-50 bg-zinc-100/50">{metaVal}</td>
+                                    {months.map(m => {
+                                        const valObj = computedData.find(v => v.indicator_id === ind.id && v.period === m);
+                                        const val = valObj ? valObj.value : undefined;
+                                        const commentObj = dbComments.find(c => c.indicator_id === ind.id && c.period === m);
+                                        const hasComment = !!commentObj;
+                                        
+                                        return (
+                                            <td 
+                                                key={m} 
+                                                className={`p-3 text-xs text-right font-medium border-r border-zinc-50 ${val === undefined ? 'text-zinc-300' : 'text-zinc-900 font-bold'} ${hasComment ? 'bg-yellow-100 cursor-pointer hover:bg-yellow-200 transition-colors' : ''}`}
+                                                onClick={hasComment ? () => setSelectedCommentModal({
+                                                    indicatorName: tInd(ind.name),
+                                                    sector: translateArea(getOwnerName(ind.id)),
+                                                    period: m,
+                                                    value: formatNumber(val, ind.unit),
+                                                    meta: metaVal,
+                                                    comment: commentObj.comment
+                                                }) : undefined}
+                                            >
+                                                <div className="flex items-center justify-end gap-2">
+                                                    {hasComment && <MessageSquareText size={14} className="text-yellow-600" />}
+                                                    <span>{formatNumber(val, ind.unit)}</span>
+                                                </div>
+                                            </td>
+                                        );
+                                    })}
+                                </tr>
+                            )
+                        })}
+                    </tbody>
+                </table>
+            </div>
+
+            {selectedCommentModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-zinc-900/80 backdrop-blur-sm" onClick={() => setSelectedCommentModal(null)}></div>
+                    <div className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="p-6 border-b border-zinc-100 bg-yellow-50 flex justify-between items-start">
+                            <div className="flex items-center gap-3">
+                                <div className="p-3 bg-yellow-200 text-yellow-800 rounded-xl"><MessageSquareText size={24} /></div>
+                                <div>
+                                    <h3 className="text-lg font-black text-zinc-900">{t('Justificativa Registrada', 'Logged Justification')}</h3>
+                                    <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest">{selectedCommentModal.period}</p>
+                                </div>
+                            </div>
+                            <button onClick={() => setSelectedCommentModal(null)} className="text-zinc-400 hover:text-zinc-800"><X size={24} /></button>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <div>
+                                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">{t('Indicador', 'KPI Description')}</p>
+                                <p className="text-sm font-bold text-zinc-900">{selectedCommentModal.indicatorName}</p>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="bg-zinc-50 p-3 rounded-xl border border-zinc-100">
+                                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">{t('Setor', 'Department')}</p>
+                                    <p className="text-sm font-bold text-zinc-800">{selectedCommentModal.sector}</p>
+                                </div>
+                                <div className="bg-zinc-50 p-3 rounded-xl border border-zinc-100">
+                                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">{t('Valor Registrado', 'Logged Value')}</p>
+                                    <p className="text-sm font-black text-yellow-600">{selectedCommentModal.value}</p>
+                                </div>
+                            </div>
+                            <div className="mt-4 border-t border-zinc-100 pt-4">
+                                <p className="text-[10px] font-black text-yellow-600 uppercase tracking-widest mb-2">{t('Comentário / Observação da Equipe', 'Team Comment / Note')}</p>
+                                <div className="bg-yellow-50/50 p-4 rounded-xl border border-yellow-100">
+                                    <p className="text-sm text-zinc-800 leading-relaxed font-medium whitespace-pre-wrap">{selectedCommentModal.comment}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    )
+  }
+
+  const render5W2H = () => {
+    let filteredActions = actions;
+    if (user.role !== 'admin' && user.role !== 'dev') {
+        if (user.username.toUpperCase() === 'DANIEL') {
+            filteredActions = filteredActions.filter(a => a.area === 'Produção' || a.area === 'PCP');
+        } else {
+            filteredActions = filteredActions.filter(a => a.area === user.area);
+        }
+    }
+    
+    const availableAreas = ['Todas'];
+    if (user.role === 'admin' || user.role === 'dev') {
+        availableAreas.push('Comercial', 'Produção', 'Estoque', 'Engenharia', 'Supply', 'DP', 'PCP', 'Qualidade');
+    } else if (user.username.toUpperCase() === 'DANIEL') {
+        availableAreas.push('Produção', 'PCP');
+    } else {
+        availableAreas.push(user.area);
+    }
+
+    if (actionFilterArea !== 'Todas') filteredActions = filteredActions.filter(a => a.area === actionFilterArea);
+    if (actionFilterStatus !== 'Todos') filteredActions = filteredActions.filter(a => a.status === actionFilterStatus);
+
+    const total = filteredActions.length || 1;
+    const overdue = filteredActions.filter(a => checkOverdue(a.when, a.status)).length;
+    const completed = filteredActions.filter(a => a.status === 'Concluído').length;
+    const eff = Math.round((completed/total)*100) || 0;
+
+    const sCounts = { 'Urgente': 0, 'A Fazer': 0, 'Em Andamento': 0, 'Concluído': 0 };
+    filteredActions.forEach(a => { if(sCounts[a.status] !== undefined) sCounts[a.status]++; });
+    
+    const pieColors = {
+        [t('Urgente', 'Urgent')]: '#ef4444',
+        [t('A Fazer', 'To Do')]: '#a1a1aa',
+        [t('Em Andamento', 'In Progress')]: '#eab308',
+        [t('Concluído', 'Completed')]: '#10b981'
+    };
+    
+    const pieData = Object.keys(sCounts).map(k => {
+        const translatedKey = translateStatus(k);
+        return { name: translatedKey, value: sCounts[k] };
+    });
+
+    const aCounts = {};
+    filteredActions.forEach(a => { aCounts[a.area] = (aCounts[a.area] || 0) + 1; });
+    const barData = Object.entries(aCounts).map(([name, value]) => ({name: translateArea(name), value})).sort((a,b) => b.value - a.value);
+
+    return (
+        <div className="space-y-6 animate-in fade-in duration-500">
+            <div className="flex justify-between items-center bg-white p-6 rounded-3xl shadow-sm border border-zinc-200">
+                <h2 className="text-2xl font-black text-zinc-900 tracking-tight flex items-center gap-3">
+                    <div className="p-3 bg-yellow-100 text-yellow-600 rounded-xl"><ListChecks size={24} /></div>
+                    {t('Gestão de Ações (5W2H)', 'Strategic Action Plan (5W2H)')}
+                </h2>
+                <button 
+                    onClick={() => {
+                        setEditingActionId(null);
+                        setActionForm({ 
+                            what: '', 
+                            why: '', 
+                            area: availableAreas.length > 1 ? availableAreas[1] : 'Comercial', 
+                            who: '', 
+                            when: '',
+                            status: 'A Fazer'
+                        });
+                        setIsAddActionModalOpen(true);
+                    }}
+                    className="flex items-center gap-2 px-6 py-3 bg-black text-yellow-500 font-bold rounded-2xl hover:bg-zinc-800 shadow-lg shadow-zinc-200 transition-all active:scale-95"
+                >
+                    <PlusCircle size={20} /> {t('Registrar Nova Ação', 'Create New Action')}
+                </button>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                <div className="bg-white p-6 rounded-3xl border border-zinc-200 shadow-sm flex flex-col items-center">
+                    <p className="text-[9px] font-black text-zinc-400 uppercase mb-1">{t('Carga Total', 'Total Actions')}</p>
+                    <h3 className="text-3xl font-black text-zinc-900">{filteredActions.length}</h3>
+                </div>
+                <div className="bg-white p-6 rounded-3xl border border-red-200 shadow-lg shadow-red-50 flex flex-col items-center ring-2 ring-red-50">
+                    <p className="text-[9px] font-black text-red-500 uppercase mb-1">{t('Atrasados', 'Overdue')}</p>
+                    <h3 className="text-3xl font-black text-red-600">{overdue}</h3>
+                </div>
+                <div className="bg-white p-6 rounded-3xl border border-zinc-200 shadow-sm flex flex-col items-center">
+                    <p className="text-[9px] font-black text-zinc-400 uppercase mb-1">{t('Pendentes', 'Pending Actions')}</p>
+                    <h3 className="text-3xl font-black text-zinc-900">{filteredActions.length - completed}</h3>
+                </div>
+                <div className="bg-white p-6 rounded-3xl border border-emerald-200 shadow-sm flex flex-col items-center">
+                    <p className="text-[9px] font-black text-emerald-600 uppercase mb-1">{t('Finais', 'Completed')}</p>
+                    <h3 className="text-3xl font-black text-emerald-600">{completed}</h3>
+                </div>
+                <div className="bg-zinc-900 p-6 rounded-3xl text-yellow-500 flex flex-col items-center shadow-xl shadow-zinc-200">
+                    <p className="text-[9px] font-black opacity-70 uppercase mb-1 text-white">{t('Eficiência', 'Completion Rate')}</p>
+                    <h3 className="text-3xl font-black">{eff}%</h3>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="bg-white p-8 rounded-3xl shadow-sm border border-zinc-200 flex flex-col h-[350px]">
+                    <div className="flex justify-between items-center mb-6">
+                        <h3 className="text-sm font-bold text-zinc-500 uppercase tracking-widest">{t('Saúde das Ações', 'Action Plan Health')}</h3>
+                        <PieChartIcon className="text-zinc-400" size={20} />
+                    </div>
+                    <div className="flex-1 relative min-h-0">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                                <Pie 
+                                    data={pieData} 
+                                    cx="50%" cy="50%" 
+                                    innerRadius={40} outerRadius={70} 
+                                    dataKey="value" stroke="none"
+                                    label={({ name, value, percent }) => value > 0 ? `${value} (${(percent * 100).toFixed(0)}%)` : ''}
+                                    labelLine={true}
+                                >
+                                    {pieData.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={pieColors[entry.name]} />
+                                    ))}
+                                </Pie>
+                                <Tooltip contentStyle={{borderRadius:'12px', border:'none', boxShadow:'0 10px 15px -3px rgba(0,0,0,0.1)'}} />
+                                <Legend verticalAlign="bottom" height={36} wrapperStyle={{fontSize: '11px', fontWeight: 'bold'}} />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+                <div className="bg-white p-8 rounded-3xl shadow-sm border border-zinc-200 flex flex-col h-[350px] lg:col-span-2">
+                    <div className="flex justify-between items-center mb-6">
+                        <h3 className="text-sm font-bold text-zinc-500 uppercase tracking-widest">{t('Carga por Área', 'Actions by Department')}</h3>
+                        <BarChart3 className="text-zinc-400" size={20} />
+                    </div>
+                    <div className="flex-1 relative min-h-0">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={barData} layout="vertical" margin={{right: 30}}>
+                                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f4f4f5" />
+                                <XAxis type="number" hide />
+                                <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{fontSize: 12, fontWeight: 'bold', fill: '#52525b'}} width={100} />
+                                <Tooltip cursor={{fill: '#f4f4f5'}} contentStyle={{borderRadius:'12px', border:'none', boxShadow:'0 10px 15px -3px rgba(0,0,0,0.1)'}} />
+                                <Bar dataKey="value" name={t('Ações', 'Actions')} fill="#18181b" radius={[0, 8, 8, 0]} barSize={24}>
+                                    <LabelList dataKey="value" position="right" fill="#71717a" fontSize={11} fontWeight="bold" />
+                                </Bar>
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+            </div>
+
+            <div className="bg-white rounded-3xl shadow-sm border border-zinc-200 overflow-hidden">
+                 <div className="p-6 border-b border-zinc-200 bg-zinc-50 flex flex-wrap justify-between items-center gap-4">
+                    <h3 className="font-extrabold text-zinc-900 flex items-center gap-3">
+                        <ListChecks className="text-yellow-600" size={24} /> {t('Matriz de Acompanhamento', 'Action Tracking Matrix')}
+                    </h3>
+                    <div className="flex gap-3">
+                        {availableAreas.length > 1 && (
+                            <select 
+                                className="border border-zinc-300 bg-white px-4 py-2 rounded-xl text-sm font-bold text-zinc-700 outline-none focus:border-zinc-500"
+                                value={actionFilterArea} onChange={(e) => setActionFilterArea(e.target.value)}
+                            >
+                                {availableAreas.map(a => <option key={a} value={a}>{a === 'Todas' ? t('Todas Áreas', 'All Departments') : translateArea(a)}</option>)}
+                            </select>
+                        )}
+                        <select 
+                            className="border border-zinc-300 bg-white px-4 py-2 rounded-xl text-sm font-bold text-zinc-700 outline-none focus:border-zinc-500"
+                            value={actionFilterStatus} onChange={(e) => setActionFilterStatus(e.target.value)}
+                        >
+                            <option value="Todos">{t('Todos os Status', 'All Statuses')}</option>
+                            <option value="Urgente">{t('Urgente', 'Urgent')}</option>
+                            <option value="A Fazer">{t('A Fazer', 'To Do')}</option>
+                            <option value="Em Andamento">{t('Em Andamento', 'In Progress')}</option>
+                            <option value="Concluído">{t('Concluído', 'Completed')}</option>
+                        </select>
+                    </div>
+                </div>
+                <div className="overflow-x-auto w-full pb-4">
+                    <table className="w-full text-left text-sm min-w-[800px]">
+                        <thead className="bg-white text-zinc-500 uppercase font-bold text-[11px] border-b border-zinc-200">
+                            <tr>
+                                <th className="p-6">{t('Ref', 'Ref')}</th>
+                                <th>{t('Área / Dono', 'Department / Owner')}</th>
+                                <th>{t('Ação Estratégica', 'Action Item (What)')}</th>
+                                <th>{t('Causa Raiz', 'Root Cause (Why)')}</th>
+                                <th>{t('Prazo', 'Due Date (When)')}</th>
+                                <th>{t('Status', 'Status')}</th>
+                                <th className="text-center">{t('Gerir', 'Manage')}</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-zinc-100 font-medium text-zinc-800">
+                            {filteredActions.length === 0 && <tr><td colSpan="7" className="p-10 text-center text-zinc-400 italic">{t('Nenhuma ação encontrada.', 'No actions found.')}</td></tr>}
+                            {filteredActions.map(a => {
+                                const isOverdue = checkOverdue(a.when, a.status);
+                                const mySubs = subActions.filter(s => s.action_id === a.id);
+                                return (
+                                    <tr key={a.id} className={`hover:bg-yellow-50 transition-colors group ${isOverdue ? 'bg-red-50/50' : ''}`}>
+                                        <td className="p-6 font-bold text-zinc-400 text-xs">#{a.id}</td>
+                                        <td className="py-6">
+                                            <div className="font-bold text-zinc-900">{translateArea(a.area)}</div>
+                                            <div className="text-[9px] uppercase font-black text-zinc-500">{a.who}</div>
+                                        </td>
+                                        <td className="py-6 max-w-sm pr-4">
+                                            <div className="font-bold text-zinc-800 leading-tight">{a.what}</div>
+                                            {mySubs.length > 0 && (
+                                                <div className="mt-2 text-[10px] font-bold text-zinc-700 bg-zinc-100 px-2 py-1 rounded inline-flex items-center gap-1 border border-zinc-200">
+                                                    <GitBranch size={12} /> {mySubs.length} {t('Sub-ação(ões)', 'Subtask(s)')} ({mySubs.filter(x=>x.status==='Concluído').length} {t('fin.', 'comp.')})
+                                                </div>
+                                            )}
+                                        </td>
+                                        <td className="py-6 min-w-[280px] max-w-md pr-6">
+                                            <div className="text-xs italic text-zinc-500 leading-relaxed flex items-start gap-1.5">
+                                                <Info size={16} className="mt-0.5 shrink-0 text-zinc-400" />
+                                                <span>{a.why}</span>
+                                            </div>
+                                        </td>
+                                        <td className="py-6 whitespace-nowrap">
+                                            <div className="flex flex-col gap-1">
+                                                <span className="text-xs font-bold text-zinc-700">{a.when?.toLowerCase().trim() === 'imediato' ? t('Imediato', 'Immediate') : a.when}</span>
+                                                {isOverdue && <span className="text-[8px] font-black text-red-600 uppercase bg-red-100 px-1.5 py-0.5 rounded-full w-fit">{t('Atrasado', 'Overdue')}</span>}
+                                            </div>
+                                        </td>
+                                        <td className="py-6">
+                                            <span className={`px-3 py-1 rounded-full text-[10px] font-black border ${getStatusColor(a.status)} uppercase`}>
+                                                {translateStatus(a.status)}
+                                            </span>
+                                        </td>
+                                        <td className="py-6 text-center">
+                                            <button 
+                                                onClick={() => setSelectedReportAction(a)}
+                                                className="inline-flex p-3 bg-white border border-zinc-200 text-zinc-800 rounded-2xl hover:bg-black hover:text-yellow-500 transition-all shadow-sm"
+                                            >
+                                                <ChevronRight size={20} />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                )
+                            })}
+                        </tbody>
+                    </table>
+                 </div>
+            </div>
+            
+            {isAddActionModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center">
+                    <div className="absolute inset-0 bg-zinc-900/80 backdrop-blur-sm" onClick={() => setIsAddActionModalOpen(false)}></div>
+                    <div className="relative w-full max-w-xl bg-white rounded-[40px] shadow-2xl p-10 m-4 flex flex-col fade-in max-h-[90vh] overflow-y-auto">
+                        <h2 className="text-3xl font-black mb-8 flex items-center gap-3 text-zinc-900 tracking-tight">
+                            {editingActionId ? <Edit2 className="text-yellow-600" size={40} /> : <PlusCircle className="text-emerald-500" size={40} />}
+                            {editingActionId ? t('Editar Ação 5W2H', 'Edit 5W2H Action') : t('Nova Ação 5W2H', 'New 5W2H Action')}
+                        </h2>
+                        <form onSubmit={handleSaveAction} className="space-y-6">
+                            <div>
+                                <label className="block text-[11px] font-black text-zinc-500 uppercase tracking-widest mb-2">{t('O Quê? (Ação Estratégica)', 'What? (Action Item)')}</label>
+                                <input type="text" required value={actionForm.what} onChange={e=>setActionForm({...actionForm, what: e.target.value})} className="w-full border-2 border-zinc-200 p-4 rounded-2xl outline-none focus:border-yellow-500 bg-zinc-50 transition-all font-medium text-zinc-900" />
+                            </div>
+                            <div>
+                                <label className="block text-[11px] font-black text-zinc-500 uppercase tracking-widest mb-2">{t('Por Quê? (Causa Raiz)', 'Why? (Reason / Root Cause)')}</label>
+                                <input type="text" required value={actionForm.why} onChange={e=>setActionForm({...actionForm, why: e.target.value})} className="w-full border-2 border-zinc-200 p-4 rounded-2xl outline-none focus:border-yellow-500 bg-zinc-50 transition-all font-medium text-zinc-900" />
+                            </div>
+                            <div className="grid grid-cols-2 gap-6">
+                                <div>
+                                    <label className="block text-[11px] font-black text-zinc-500 uppercase tracking-widest mb-2">{t('Área', 'Department')}</label>
+                                    <select required value={actionForm.area} onChange={e=>setActionForm({...actionForm, area: e.target.value})} className="w-full border-2 border-zinc-200 p-4 rounded-2xl outline-none bg-zinc-50 cursor-pointer font-bold text-zinc-900">
+                                        {availableAreas.filter(a => a !== 'Todas').map(a => <option key={a} value={a}>{translateArea(a)}</option>)}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-[11px] font-black text-zinc-500 uppercase tracking-widest mb-2">{t('Quem? (Responsável)', 'Who? (Owner)')}</label>
+                                    <input type="text" required value={actionForm.who} onChange={e=>setActionForm({...actionForm, who: e.target.value})} className="w-full border-2 border-zinc-200 p-4 rounded-2xl outline-none focus:border-yellow-500 bg-zinc-50 transition-all font-medium text-zinc-900" />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-[11px] font-black text-zinc-500 uppercase tracking-widest mb-2">{t('Quando? (Prazo Limite)', 'When? (Due Date)')}</label>
+                                <input type="text" required placeholder={t("Ex: 30/05/2026 ou Imediato", "e.g., 05/30/2026 or Immediate")} value={actionForm.when} onChange={e=>setActionForm({...actionForm, when: e.target.value})} className="w-full border-2 border-zinc-200 p-4 rounded-2xl outline-none focus:border-yellow-500 bg-zinc-50 transition-all font-medium text-zinc-900" />
+                            </div>
+                            <div className="flex gap-4">
+                                <button type="button" onClick={() => setIsAddActionModalOpen(false)} className="flex-1 bg-zinc-100 text-zinc-600 font-bold py-5 rounded-2xl hover:bg-zinc-200 transition-all">{t('Cancelar', 'Cancel')}</button>
+                                <button type="submit" disabled={loading} className="flex-[2] bg-black text-yellow-500 font-bold py-5 rounded-2xl hover:bg-zinc-900 transition-all shadow-xl active:scale-95">{t('Registrar no Banco', 'Save to Database')}</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {selectedReportAction && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8">
+                    <div className="absolute inset-0 bg-zinc-900/90 backdrop-blur-sm" onClick={() => setSelectedReportAction(null)}></div>
+                    <div className="relative w-full max-w-6xl bg-white h-full max-h-[90vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-300">
+                        
+                        <div className="p-6 border-b border-zinc-200 bg-zinc-50 flex justify-between items-start shrink-0">
+                            <div className="flex-1 pr-6">
+                                <div className="flex items-center gap-3 mb-3">
+                                    <span className="text-[10px] font-black px-3 py-1 bg-black rounded-full text-yellow-500 uppercase tracking-widest">Ref #{selectedReportAction.id}</span>
+                                    <span className="text-[10px] font-black px-3 py-1 bg-zinc-200 rounded-full text-zinc-700 uppercase tracking-widest">{translateArea(selectedReportAction.area)}</span>
+                                    
+                                    {(user.role === 'admin' || user.role === 'dev' || user.username.toUpperCase() === 'DANIEL') && (
+                                        <div className="flex gap-2 ml-4 border-l border-zinc-300 pl-4">
+                                            <button onClick={() => {
+                                                setEditingActionId(selectedReportAction.id);
+                                                setActionForm({ what: selectedReportAction.what, why: selectedReportAction.why, area: selectedReportAction.area, who: selectedReportAction.who, when: selectedReportAction.when });
+                                                setSelectedReportAction(null);
+                                                setIsAddActionModalOpen(true);
+                                            }} className="text-blue-600 hover:text-blue-800 transition-colors flex items-center gap-1 text-xs font-bold"><Edit2 size={14} /> {t('Editar', 'Edit')}</button>
+                                            <button onClick={() => requestDeleteAction(selectedReportAction.id)} className="text-red-600 hover:text-red-800 transition-colors flex items-center gap-1 text-xs font-bold"><Trash2 size={14} /> {t('Excluir', 'Delete')}</button>
+                                        </div>
+                                    )}
+                                </div>
+                                <h2 className="font-extrabold text-2xl md:text-3xl text-zinc-900 leading-tight">{selectedReportAction.what}</h2>
+                            </div>
+                            <button onClick={() => setSelectedReportAction(null)} className="p-2 text-zinc-400 hover:text-zinc-700 hover:bg-zinc-200 rounded-full transition-colors shrink-0"><X size={24} /></button>
+                        </div>
+                        
+                        <div className="flex flex-col md:flex-row flex-1 min-h-0 overflow-hidden">
+                            <div className="flex-[3] border-r border-zinc-200 flex flex-col min-h-0 bg-white">
+                                <div className="p-6 border-b border-zinc-100 flex flex-col sm:flex-row gap-6 items-start sm:items-center justify-between">
+                                    <div className="bg-yellow-50 p-4 rounded-2xl border border-yellow-200 text-sm flex gap-3 shadow-sm flex-1">
+                                        <HelpCircle className="text-yellow-600 shrink-0 mt-0.5" size={20} />
+                                        <div>
+                                            <span className="block font-bold text-yellow-800 uppercase text-[10px] mb-1">{t('Causa Raiz Identificada', 'Identified Root Cause')}</span>
+                                            <span className="text-yellow-900 italic font-medium leading-relaxed">{selectedReportAction.why}</span>
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-col gap-2 shrink-0 w-full sm:w-auto">
+                                        <span className="text-[11px] font-black text-zinc-500 uppercase tracking-widest text-right">{t('Estado Atual', 'Current Status')}</span>
+                                        <select 
+                                            className="font-bold text-sm rounded-xl px-4 py-3 border-2 border-transparent outline-none cursor-pointer text-white shadow-md"
+                                            style={{backgroundColor: getHex(selectedReportAction.status), color: selectedReportAction.status==='Em Andamento'?'black':'white'}}
+                                            value={selectedReportAction.status}
+                                            onChange={(e) => handleStatusChangeAction(selectedReportAction.id, e.target.value, selectedReportAction.area)}
+                                        >
+                                            <option value="Urgente" style={{backgroundColor:'white', color:'black'}}>🔴 {t('Urgente', 'Urgent')}</option>
+                                            <option value="A Fazer" style={{backgroundColor:'white', color:'black'}}>⚪ {t('A Fazer', 'To Do')}</option>
+                                            <option value="Em Andamento" style={{backgroundColor:'white', color:'black'}}>🟡 {t('Em Andamento', 'In Progress')}</option>
+                                            <option value="Concluído" style={{backgroundColor:'white', color:'black'}}>🟢 {t('Concluído', 'Completed')}</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <div className="flex-1 p-6 overflow-y-auto bg-zinc-50/30">
+                                    <h3 className="text-sm font-bold text-zinc-800 uppercase tracking-wider mb-6 flex items-center gap-2">
+                                        <History className="text-zinc-500" size={18} /> {t('Diário de Bordo (Histórico)', 'Progress Log (History)')}
+                                    </h3>
+                                    <div className="space-y-6">
+                                        {(!selectedReportAction.updates || selectedReportAction.updates.length === 0) && (
+                                            <div className="text-center py-16 opacity-40"><History size={48} className="mx-auto mb-3" /><p className="text-sm font-bold uppercase">{t('Sem registros ainda', 'No progress logged yet')}</p></div>
+                                        )}
+                                        {[...(selectedReportAction.updates || [])].sort((a,b) => new Date(b.created_at) - new Date(a.created_at)).map(u => (
+                                            <div key={u.id} className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-sm relative">
+                                                <div className="flex justify-between items-center mb-4 border-b border-zinc-100 pb-3">
+                                                    <span className={`text-[10px] font-black px-2 py-1 rounded uppercase tracking-widest ${u.type === 'realizado' ? 'bg-emerald-50 text-emerald-700' : 'bg-blue-50 text-blue-700'}`}>
+                                                        {u.type === 'realizado' ? t('Ação Feita', 'Action Done') : t('Próximo Passo', 'Next Step')}
+                                                    </span>
+                                                    <span className="text-xs font-bold text-zinc-400">{u.date}</span>
+                                                </div>
+                                                <p className="text-sm text-zinc-800 leading-relaxed font-medium whitespace-pre-wrap">{u.text}</p>
+                                                <div className="mt-4 pt-3 border-t border-zinc-50 flex items-center gap-2">
+                                                    <div className="w-6 h-6 bg-zinc-200 rounded-full flex items-center justify-center text-[10px] font-bold text-zinc-600">{u.author ? u.author[0] : 'U'}</div>
+                                                    <span className="text-[10px] font-black text-zinc-500 uppercase">{u.author || t('Usuário', 'User')}</span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="p-6 border-t border-zinc-200 bg-white shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.02)]">
+                                    <form onSubmit={handleAddUpdate} className="space-y-4">
+                                        <div className="flex gap-3">
+                                            <label className={`flex-1 flex items-center justify-center gap-2 py-3 border-2 rounded-xl cursor-pointer text-xs font-black uppercase transition-all shadow-sm ${updateType === 'realizado' ? 'bg-emerald-50 text-emerald-700 border-emerald-300' : 'bg-white text-zinc-400 border-zinc-200 hover:bg-zinc-50'}`}>
+                                                <input type="radio" className="hidden" checked={updateType === 'realizado'} onChange={()=>setUpdateType('realizado')} /> <CheckCircle2 size={16}/> {t('Ação Feita', 'Log Progress')}
+                                            </label>
+                                            <label className={`flex-1 flex items-center justify-center gap-2 py-3 border-2 rounded-xl cursor-pointer text-xs font-black uppercase transition-all shadow-sm ${updateType === 'proximo_passo' ? 'bg-blue-50 text-blue-700 border-blue-300' : 'bg-white text-zinc-400 border-zinc-200 hover:bg-zinc-50'}`}>
+                                                <input type="radio" className="hidden" checked={updateType === 'proximo_passo'} onChange={()=>setUpdateType('proximo_passo')} /> <ArrowRightCircle size={16}/> {t('Próximo Passo', 'Next Step')}
+                                            </label>
+                                        </div>
+                                        <textarea 
+                                            className="w-full border-2 border-zinc-200 p-4 rounded-xl text-sm outline-none focus:border-yellow-500 bg-zinc-50 font-medium resize-none h-[100px] shadow-inner text-zinc-900" 
+                                            placeholder={t("Descreva o que aconteceu ou o plano a seguir...", "Describe progress made or next steps...")}
+                                            value={updateText}
+                                            onChange={e=>setUpdateText(e.target.value)}
+                                        ></textarea>
+                                        <div className="flex justify-end">
+                                            <button type="submit" disabled={loading || !updateText.trim()} className="bg-black text-yellow-500 px-8 py-3 rounded-xl font-bold hover:bg-zinc-800 shadow-lg active:scale-95 flex items-center justify-center gap-2 transition-all disabled:opacity-50">
+                                                <Save size={18} /> {t('Salvar no Diário', 'Save Progress')}
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+
+                            <div className="flex-[2] flex flex-col min-h-0 bg-zinc-50">
+                                <div className="p-6 border-b border-zinc-200 bg-white">
+                                    <h3 className="text-sm font-bold text-zinc-800 uppercase tracking-wider flex items-center gap-2">
+                                        <GitBranch className="text-zinc-500" size={18} /> {t('Desdobramento de Tarefas', 'Sub-tasks Breakdown')}
+                                    </h3>
+                                    <p className="text-xs text-zinc-500 mt-1 font-medium">{t('Divida a ação principal em subtarefas com responsáveis.', 'Break down the main action into assigned sub-tasks.')}</p>
+                                </div>
+                                <div className="flex-1 p-6 overflow-y-auto space-y-3">
+                                    {subActions.filter(s => s.action_id === selectedReportAction.id).length === 0 && (
+                                        <div className="text-center py-10 opacity-40"><ListChecks size={32} className="mx-auto mb-2" /><p className="text-xs font-bold uppercase">{t('Nenhuma subtarefa', 'No subtasks')}</p></div>
+                                    )}
+                                    {subActions.filter(s => s.action_id === selectedReportAction.id).map(s => (
+                                        <div key={s.id} className="bg-white p-4 rounded-2xl border border-zinc-200 shadow-sm relative group transition-all hover:border-zinc-400">
+                                            <p className="text-sm font-bold text-zinc-800 mb-3 pr-8 leading-tight">{s.what}</p>
+                                            <div className="flex flex-wrap items-center justify-between gap-3">
+                                                <div className="flex items-center gap-3 bg-zinc-50 px-3 py-1.5 rounded-lg border border-zinc-100">
+                                                    <span className="text-[10px] font-black text-zinc-500 uppercase flex items-center gap-1"><User size={12} className="text-yellow-600" /> {s.who}</span>
+                                                    <span className="text-[10px] font-black text-zinc-500 uppercase flex items-center gap-1 border-l border-zinc-200 pl-3"><Calendar size={12} className="text-emerald-600" /> {s.when?.toLowerCase().trim() === 'imediato' ? t('Imediato', 'Immediate') : s.when}</span>
+                                                </div>
+                                                <select 
+                                                    onChange={(e) => handleSubStatusChange(s.id, e.target.value)} 
+                                                    value={s.status}
+                                                    className={`text-[10px] font-bold rounded-lg px-3 py-1.5 outline-none cursor-pointer border shadow-sm ${getSubHex(s.status)}`}
+                                                >
+                                                    <option value="Urgente">🔴 {t('Urgente', 'Urgent')}</option>
+                                                    <option value="A Fazer">⚪ {t('A Fazer', 'To Do')}</option>
+                                                    <option value="Em Andamento">🟡 {t('Em Andamento', 'In Progress')}</option>
+                                                    <option value="Concluído">🟢 {t('Concluído', 'Completed')}</option>
+                                                </select>
+                                            </div>
+                                            <button onClick={() => requestDeleteSubAction(s.id)} className="absolute top-3 right-3 p-1.5 text-zinc-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100"><Trash2 size={16} /></button>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="p-6 border-t border-zinc-200 bg-white">
+                                    <h4 className="text-[10px] font-black text-zinc-800 uppercase tracking-widest mb-3 flex items-center gap-2"><PlusCircle size={14} className="text-yellow-500"/> {t('Nova Subtarefa', 'Add Sub-task')}</h4>
+                                    <div className="flex flex-col gap-3">
+                                        <input type="text" placeholder={t("O que deve ser feito?", "Sub-task description")} value={subActionForm.what} onChange={e=>setSubActionForm({...subActionForm, what: e.target.value})} className="w-full text-sm font-bold text-zinc-800 p-3 rounded-xl border-2 border-zinc-200 outline-none focus:border-yellow-500 bg-zinc-50" />
+                                        <div className="flex gap-3">
+                                            <input type="text" placeholder={t("Responsável", "Owner")} value={subActionForm.who} onChange={e=>setSubActionForm({...subActionForm, who: e.target.value})} className="flex-1 text-sm font-bold text-zinc-800 p-3 rounded-xl border-2 border-zinc-200 outline-none focus:border-yellow-500 bg-zinc-50" />
+                                            <input type="text" placeholder={t("Prazo", "Deadline")} value={subActionForm.when} onChange={e=>setSubActionForm({...subActionForm, when: e.target.value})} className="w-1/3 text-sm font-bold text-zinc-800 p-3 rounded-xl border-2 border-zinc-200 outline-none focus:border-yellow-500 bg-zinc-50" />
+                                        </div>
+                                        <button type="button" onClick={handleAddSubAction} className="w-full mt-1 bg-zinc-800 text-yellow-500 px-4 py-3 rounded-xl font-black uppercase tracking-wider hover:bg-black transition-colors shadow-md flex justify-center items-center gap-2">{t('Adicionar à Lista', 'Add to List')}</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            )}
+
+        </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-zinc-100 font-sans text-zinc-900 selection:bg-yellow-200 selection:text-black">
       <header className="bg-black border-b border-zinc-800 sticky top-0 z-[100] shadow-xl pointer-events-auto">
@@ -2573,63 +3741,62 @@ export default function App() {
                 </div>
             </div>
 
-            <nav className="hidden lg:flex gap-1 bg-zinc-900 p-1.5 rounded-2xl border border-zinc-800 shadow-inner relative z-[110]">
+            <nav className="hidden xl:flex gap-1 bg-zinc-900 p-1.5 rounded-2xl border border-zinc-800 shadow-inner">
                 {(user.role === 'admin' || user.role === 'dev') && (
-                    <button type="button" onClick={() => setActiveTab('diretoria')} className={`px-4 xl:px-5 py-2.5 rounded-xl font-black uppercase tracking-wider text-xs transition-all flex items-center gap-2 cursor-pointer ${activeTab === 'diretoria' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
+                    <button onClick={() => setActiveTab('diretoria')} className={`px-5 py-2.5 rounded-xl font-black uppercase tracking-wider text-xs transition-all flex items-center gap-2 ${activeTab === 'diretoria' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
                         <BarChart3 size={16} /> {t('Diretoria', 'Board')}
                     </button>
                 )}
-                <button type="button" onClick={() => setActiveTab('kpi')} className={`px-4 xl:px-5 py-2.5 rounded-xl font-black uppercase tracking-wider text-xs transition-all flex items-center gap-2 cursor-pointer ${activeTab === 'kpi' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
+                <button onClick={() => setActiveTab('kpi')} className={`px-5 py-2.5 rounded-xl font-black uppercase tracking-wider text-xs transition-all flex items-center gap-2 ${activeTab === 'kpi' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
                     <LineChartIcon size={16} /> {t('KPIs', 'KPIs')}
                 </button>
 
                 {(user.role === 'admin' || user.role === 'dev' || user.area === 'Comercial') && (
-                    <button type="button" onClick={() => setActiveTab('comercial')} className={`px-4 xl:px-5 py-2.5 rounded-xl font-black uppercase tracking-wider text-xs transition-all flex items-center gap-2 cursor-pointer ${activeTab === 'comercial' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
+                    <button onClick={() => setActiveTab('comercial')} className={`px-5 py-2.5 rounded-xl font-black uppercase tracking-wider text-xs transition-all flex items-center gap-2 ${activeTab === 'comercial' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
                         <DollarSign size={16} /> {t('Comercial', 'Commercial')}
                     </button>
                 )}
 
                 {(user.role === 'admin' || user.role === 'dev' || user.area === 'Financeiro' || user.username.toUpperCase().includes('FABIO')) && (
-                    <button type="button" onClick={() => setActiveTab('financeiro')} className={`px-4 xl:px-5 py-2.5 rounded-xl font-black uppercase tracking-wider text-xs transition-all flex items-center gap-2 cursor-pointer ${activeTab === 'financeiro' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
+                    <button onClick={() => setActiveTab('financeiro')} className={`px-5 py-2.5 rounded-xl font-black uppercase tracking-wider text-xs transition-all flex items-center gap-2 ${activeTab === 'financeiro' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
                         <Globe size={16} /> {t('Financeiro', 'Finance')}
                     </button>
                 )}
 
-                <button type="button" onClick={() => setActiveTab('5w2h')} className={`px-4 xl:px-5 py-2.5 rounded-xl font-black uppercase tracking-wider text-xs transition-all flex items-center gap-2 cursor-pointer ${activeTab === '5w2h' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
+                <button onClick={() => setActiveTab('5w2h')} className={`px-5 py-2.5 rounded-xl font-black uppercase tracking-wider text-xs transition-all flex items-center gap-2 ${activeTab === '5w2h' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
                     <ListChecks size={16} /> {t('Matriz 5W2H', '5W2H Matrix')}
                 </button>
                 {(user.username.toUpperCase() === 'LUCIENE' || user.area === 'Comercial' || user.role === 'admin' || user.role === 'dev') && (
-                    <button type="button" onClick={() => setActiveTab('auditoria')} className={`px-4 xl:px-5 py-2.5 rounded-xl font-black uppercase tracking-wider text-xs transition-all flex items-center gap-2 cursor-pointer ${activeTab === 'auditoria' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
+                    <button onClick={() => setActiveTab('auditoria')} className={`px-5 py-2.5 rounded-xl font-black uppercase tracking-wider text-xs transition-all flex items-center gap-2 ${activeTab === 'auditoria' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
                         <FileSpreadsheet size={16} /> {t('Auditoria', 'Audit')}
                     </button>
                 )}
             </nav>
 
-            <div className="flex items-center gap-2 md:gap-4 relative z-[110]">
+            <div className="flex items-center gap-2 md:gap-4">
                 <input type="file" id="logo-upload-input" accept="image/*" onChange={handleLogoUpload} className="hidden" />
                 
                 {(user.role === 'admin' || user.role === 'dev') && (
-                    <button type="button" onClick={triggerLogoUpload} className="hidden sm:block p-3 text-zinc-500 hover:bg-zinc-800 hover:text-yellow-500 rounded-xl transition-colors cursor-pointer" title={t('Alterar Logo da Empresa', 'Change Company Logo')}>
+                    <button onClick={triggerLogoUpload} className="hidden sm:block p-3 text-zinc-500 hover:bg-zinc-800 hover:text-yellow-500 rounded-xl transition-colors" title={t('Alterar Logo da Empresa', 'Change Company Logo')}>
                         <ImageIcon size={20} />
                     </button>
                 )}
 
                 <div className="hidden sm:flex items-center gap-1 bg-zinc-900 p-1 rounded-xl border border-zinc-800 mr-2">
-                    <button type="button" onClick={() => setLang('PT')} className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all cursor-pointer ${lang === 'PT' ? 'bg-yellow-500 text-black shadow-sm' : 'text-zinc-500 hover:text-white hover:bg-zinc-800'}`}>PT</button>
-                    <button type="button" onClick={() => setLang('EN')} className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all cursor-pointer ${lang === 'EN' ? 'bg-yellow-500 text-black shadow-sm' : 'text-zinc-500 hover:text-white hover:bg-zinc-800'}`}>EN</button>
+                    <button onClick={() => setLang('PT')} className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${lang === 'PT' ? 'bg-yellow-500 text-black shadow-sm' : 'text-zinc-500 hover:text-white hover:bg-zinc-800'}`}>PT</button>
+                    <button onClick={() => setLang('EN')} className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${lang === 'EN' ? 'bg-yellow-500 text-black shadow-sm' : 'text-zinc-500 hover:text-white hover:bg-zinc-800'}`}>EN</button>
                 </div>
 
-                <div className="flex items-center gap-3 bg-zinc-900 px-3 xl:px-4 py-2 rounded-full border border-zinc-800 shadow-sm shrink-0">
+                <div className="flex items-center gap-3 bg-zinc-900 px-4 py-2 rounded-full border border-zinc-800 shadow-sm">
                     <div className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse shadow-sm shadow-green-500/50"></div>
-                    <span className="text-[10px] xl:text-xs font-black text-white uppercase tracking-wider hidden sm:block truncate max-w-[80px] xl:max-w-[120px]">{user.username}</span>
+                    <span className="text-xs font-black text-white uppercase tracking-wider">{user.username}</span>
                 </div>
-                <button type="button" onClick={() => window.location.reload()} className="hidden lg:block p-3 text-zinc-500 hover:bg-red-500/10 hover:text-red-500 rounded-xl transition-colors cursor-pointer" title={t('Sair com Segurança', 'Logout Safely')}>
+                <button onClick={() => window.location.reload()} className="hidden xl:block p-3 text-zinc-500 hover:bg-red-500/10 hover:text-red-500 rounded-xl transition-colors" title={t('Sair com Segurança', 'Logout Safely')}>
                     <LogOut size={20} />
                 </button>
                 <button 
-                    type="button"
                     onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                    className="lg:hidden p-3 text-zinc-400 hover:text-yellow-500 rounded-xl transition-colors bg-zinc-900 border border-zinc-800 cursor-pointer"
+                    className="xl:hidden p-3 text-zinc-400 hover:text-yellow-500 rounded-xl transition-colors bg-zinc-900 border border-zinc-800"
                 >
                     {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
                 </button>
@@ -2637,42 +3804,42 @@ export default function App() {
         </div>
 
         {isMobileMenuOpen && (
-            <div className="lg:hidden absolute top-20 left-0 w-full border-t border-zinc-800 bg-zinc-950 p-4 flex flex-col gap-2 shadow-2xl animate-in slide-in-from-top-2 z-[120]">
+            <div className="xl:hidden absolute top-20 left-0 w-full border-t border-zinc-800 bg-zinc-950 p-4 flex flex-col gap-2 shadow-2xl animate-in slide-in-from-top-2 z-50">
                 {(user.role === 'admin' || user.role === 'dev') && (
-                    <button type="button" onClick={() => { setActiveTab('diretoria'); setIsMobileMenuOpen(false); }} className={`px-5 py-4 rounded-xl font-black uppercase tracking-wider text-sm transition-all flex items-center gap-3 cursor-pointer ${activeTab === 'diretoria' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
+                    <button onClick={() => { setActiveTab('diretoria'); setIsMobileMenuOpen(false); }} className={`px-5 py-4 rounded-xl font-black uppercase tracking-wider text-sm transition-all flex items-center gap-3 ${activeTab === 'diretoria' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
                         <BarChart3 size={20} /> {t('Diretoria', 'Board')}
                     </button>
                 )}
-                <button type="button" onClick={() => { setActiveTab('kpi'); setIsMobileMenuOpen(false); }} className={`px-5 py-4 rounded-xl font-black uppercase tracking-wider text-sm transition-all flex items-center gap-3 cursor-pointer ${activeTab === 'kpi' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
+                <button onClick={() => { setActiveTab('kpi'); setIsMobileMenuOpen(false); }} className={`px-5 py-4 rounded-xl font-black uppercase tracking-wider text-sm transition-all flex items-center gap-3 ${activeTab === 'kpi' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
                     <LineChartIcon size={20} /> {t('KPIs', 'KPIs')}
                 </button>
                 {(user.role === 'admin' || user.role === 'dev' || user.area === 'Comercial') && (
-                    <button type="button" onClick={() => { setActiveTab('comercial'); setIsMobileMenuOpen(false); }} className={`px-5 py-4 rounded-xl font-black uppercase tracking-wider text-sm transition-all flex items-center gap-3 cursor-pointer ${activeTab === 'comercial' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
+                    <button onClick={() => { setActiveTab('comercial'); setIsMobileMenuOpen(false); }} className={`px-5 py-4 rounded-xl font-black uppercase tracking-wider text-sm transition-all flex items-center gap-3 ${activeTab === 'comercial' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
                         <DollarSign size={20} /> {t('Comercial', 'Commercial')}
                     </button>
                 )}
                 {(user.role === 'admin' || user.role === 'dev' || user.area === 'Financeiro' || user.username.toUpperCase().includes('FABIO')) && (
-                    <button type="button" onClick={() => { setActiveTab('financeiro'); setIsMobileMenuOpen(false); }} className={`px-5 py-4 rounded-xl font-black uppercase tracking-wider text-sm transition-all flex items-center gap-3 cursor-pointer ${activeTab === 'financeiro' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
+                    <button onClick={() => { setActiveTab('financeiro'); setIsMobileMenuOpen(false); }} className={`px-5 py-4 rounded-xl font-black uppercase tracking-wider text-sm transition-all flex items-center gap-3 ${activeTab === 'financeiro' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
                         <Globe size={20} /> {t('Financeiro', 'Finance')}
                     </button>
                 )}
-                <button type="button" onClick={() => { setActiveTab('5w2h'); setIsMobileMenuOpen(false); }} className={`px-5 py-4 rounded-xl font-black uppercase tracking-wider text-sm transition-all flex items-center gap-3 cursor-pointer ${activeTab === '5w2h' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
+                <button onClick={() => { setActiveTab('5w2h'); setIsMobileMenuOpen(false); }} className={`px-5 py-4 rounded-xl font-black uppercase tracking-wider text-sm transition-all flex items-center gap-3 ${activeTab === '5w2h' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
                     <ListChecks size={20} /> {t('Matriz 5W2H', '5W2H Matrix')}
                 </button>
                 {(user.username.toUpperCase() === 'LUCIENE' || user.area === 'Comercial' || user.role === 'admin' || user.role === 'dev') && (
-                    <button type="button" onClick={() => { setActiveTab('auditoria'); setIsMobileMenuOpen(false); }} className={`px-5 py-4 rounded-xl font-black uppercase tracking-wider text-sm transition-all flex items-center gap-3 cursor-pointer ${activeTab === 'auditoria' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
+                    <button onClick={() => { setActiveTab('auditoria'); setIsMobileMenuOpen(false); }} className={`px-5 py-4 rounded-xl font-black uppercase tracking-wider text-sm transition-all flex items-center gap-3 ${activeTab === 'auditoria' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
                         <FileSpreadsheet size={20} /> {t('Auditoria', 'Audit')}
                     </button>
                 )}
                 <div className="h-px w-full bg-zinc-800 my-2"></div>
-                <button type="button" onClick={() => window.location.reload()} className="px-5 py-4 rounded-xl font-black uppercase tracking-wider text-sm text-red-500 hover:bg-red-500/10 transition-all flex items-center gap-3 cursor-pointer">
+                <button onClick={() => window.location.reload()} className="px-5 py-4 rounded-xl font-black uppercase tracking-wider text-sm text-red-500 hover:bg-red-500/10 transition-all flex items-center gap-3">
                     <LogOut size={20} /> {t('Sair com Segurança', 'Logout Safely')}
                 </button>
             </div>
         )}
       </header>
 
-      <main className="max-w-[1600px] mx-auto px-6 py-8 relative z-10">
+      <main className="max-w-[1600px] mx-auto px-6 py-8">
         {activeTab === 'diretoria' && renderDiretoria()}
         {activeTab === 'kpi' && renderKPI()}
         {activeTab === 'comercial' && renderComercial()}
