@@ -2497,7 +2497,7 @@ export default function App() {
                 </div>
             </div>
 
-            <div className="bg-white p-6 rounded-3xl shadow-sm border border-zinc-200 flex flex col h-[400px]">
+            <div className="bg-white p-6 rounded-3xl shadow-sm border border-zinc-200 flex flex-col h-[400px]">
                 <div className="mb-4">
                     <h3 className="text-sm font-bold text-zinc-800 uppercase tracking-widest">{t('Margem de Lucro Projetado', 'Projected Profit (Production Revenue)')}</h3>
                     <p className="text-[10px] font-bold text-zinc-500 mt-1 uppercase">{t('Top Categorias (R$)', 'Top Categories (BRL)')}</p>
