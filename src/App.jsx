@@ -43,6 +43,14 @@ const formatCurrencyShort = (val) => {
   return num.toFixed(0);
 };
 
+const formatCurrencyShort3 = (val) => {
+  if (val === undefined || val === null || isNaN(val) || val === '') return '';
+  const num = parseFloat(val);
+  if (Math.abs(num) >= 1000000) return (num / 1000000).toFixed(3).replace('.', ',') + 'M';
+  if (Math.abs(num) >= 1000) return (num / 1000).toFixed(3).replace('.', ',') + 'K';
+  return num.toFixed(3).replace('.', ',');
+};
+
 const formatNumber = (val, unit) => {
     if (val === undefined || val === null || isNaN(val) || val === '') return '-';
     if (unit === 'R$') return formatCurrency(val);
@@ -229,6 +237,7 @@ export default function App() {
   const [appLogo, setAppLogo] = useState('');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isDuPontExpanded, setIsDuPontExpanded] = useState(false); 
+  const [duPontActiveIndex, setDuPontActiveIndex] = useState(0);
   
   const [lang, setLang] = useState('PT');
   const t = (pt, en) => lang === 'PT' ? pt : en;
@@ -1137,7 +1146,7 @@ export default function App() {
         let percFaltas = 0, percAtestados = 0;
         if (colabAtivos > 0) {
             percFaltas = (faltas / (diasUteis * colabAtivos)) * 100;
-            percAtestados = (atestados / (diasUteis * colabAtivos)) * 100;
+            percaatestados = (atestados / (diasUteis * colabAtivos)) * 100;
         }
         setRes(87, percFaltas, 7);    
         setRes(88, percAtestados, 7); 
@@ -1287,7 +1296,12 @@ export default function App() {
     const pcpYtd = computedData.filter(v => v.indicator_id === 24).reduce((a,c) => a + parseFloat(c.value||0), 0);
     const pcpProfit = (pcpYtd * (parseFloat(pcpMargin)||0)) / 100;
 
-    const financeIndicators = dbIndicators.filter(i => i.id >= 101 && i.id <= 117).sort((a,b) => a.id - b.id);
+    const financeIndicators = dbIndicators.filter(i => {
+        if (i.id >= 101 && i.id <= 130) return true;
+        if (!i.name) return false;
+        const cleanName = i.name.toUpperCase().replace(/[^A-Z]/g, '');
+        return ['EBT', 'EBTBUDGET', 'EBITDA', 'EBITDABUDGET', 'EBTREALIZADO', 'EBITDAREALIZADO'].includes(cleanName);
+    }).sort((a,b) => a.id - b.id);
 
     const handleSaveFinanceKPIs = async (e) => {
         e.preventDefault();
@@ -1320,9 +1334,31 @@ export default function App() {
 
     const financeiroCorpData = months.filter(m => kpiViewPeriod === 'ALL' || monthOrder[m] <= monthOrder[kpiViewPeriod]).map(m => {
         const getV = (id) => parseFloat(computedData.find(v => v.indicator_id === id && v.period === m)?.value || 0);
+        
+        const getVByFuzzyName = (keywords, excludeKeywords = []) => {
+            const matchingIndicators = dbIndicators.filter(i => {
+                if (!i.name) return false;
+                const n = i.name.toUpperCase();
+                const hasKeywords = keywords.every(kw => n.includes(kw));
+                const hasExclude = excludeKeywords.some(kw => n.includes(kw));
+                return hasKeywords && !hasExclude;
+            });
+            
+            for (let ind of matchingIndicators) {
+                const val = getV(ind.id);
+                if (val !== 0) return val;
+            }
+            return 0;
+        };
+
         const v1 = getV(101), v2 = getV(102), v3 = getV(103), v4 = getV(104), v5 = getV(105);
         const v10 = getV(110), v11 = getV(111), v12 = getV(112), v13 = getV(113), v14 = getV(114), v15 = getV(115);
         const v16 = getV(116), v17 = getV(117);
+        
+        const ebitVal = getV(106) || getVByFuzzyName(['EBIT'], ['BUDGET', 'META', 'PREVISTO', 'EBITDA']) || getVByFuzzyName(['EBT'], ['BUDGET', 'META', 'PREVISTO', 'EBITDA']) || 0;
+        const ebitBudgetVal = getV(107) || getVByFuzzyName(['EBIT', 'BUDGET'], ['EBITDA']) || getVByFuzzyName(['EBT', 'BUDGET'], ['EBITDA']) || 0;
+        const ebitdaVal = getV(108) || getVByFuzzyName(['EBITDA'], ['BUDGET', 'META', 'PREVISTO']) || 0;
+        const ebitdaBudgetVal = getV(109) || getVByFuzzyName(['EBITDA', 'BUDGET']) || getVByFuzzyName(['EBITDA', 'META']) || 0;
 
         return {
             name: m,
@@ -1340,7 +1376,15 @@ export default function App() {
             'Liq Corrente': v15 * 100,
             'Var Nao Realizada': v16,
             'Var Realizada': v17,
-            'Var Total': v16 + v17
+            'Var Total': v16 + v17,
+            'EBIT': ebitVal,
+            'EBIT Budget': ebitBudgetVal,
+            'EBIT %': v1 > 0 ? (ebitVal / v1) * 100 : 0,
+            'EBIT Budget %': v2 > 0 ? (ebitBudgetVal / v2) * 100 : 0,
+            'EBITDA': ebitdaVal,
+            'EBITDA Budget': ebitdaBudgetVal,
+            'EBITDA %': v1 > 0 ? (ebitdaVal / v1) * 100 : 0,
+            'EBITDA Budget %': v2 > 0 ? (ebitdaBudgetVal / v2) * 100 : 0
         };
     });
 
@@ -1412,42 +1456,59 @@ export default function App() {
                     <p className="text-zinc-500 text-sm mt-2 font-medium">{t('Análise de Receita, DuPont e Variação Cambial', 'Revenue, DuPont Analysis and FX Variation')}</p>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                    <div className="bg-white p-6 rounded-3xl shadow-sm border border-zinc-200">
-                        <h3 className="text-sm font-bold text-zinc-800 uppercase tracking-widest mb-4">Receita Líquida x Margem Bruta</h3>
-                        <ResponsiveContainer width="100%" height={300}>
-                            <ComposedChart data={financeiroCorpData} margin={{top:20, right:20, left:-10, bottom:0}}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e4e4e7" />
-                                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 'bold', fill: '#71717a'}} dy={10} />
-                                <YAxis yAxisId="left" axisLine={false} tickLine={false} tickFormatter={(val) => formatCurrencyShort(val)} tick={{fontSize: 10, fill: '#71717a', fontWeight: 'bold'}} dx={-10} />
-                                <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} tickFormatter={(val) => val.toFixed(0)+'%'} tick={{fontSize: 10, fill: '#71717a', fontWeight: 'bold'}} dx={10} />
-                                <Tooltip content={<CustomTooltipFinanceiro2 />} cursor={{fill: '#f4f4f5'}} />
-                                <Legend wrapperStyle={{fontSize: '11px', fontWeight: 'bold', paddingTop: '20px'}} />
-                                <Bar yAxisId="left" dataKey="Receita Budget" fill="#94a3b8" radius={[4, 4, 0, 0]} maxBarSize={40} />
-                                <Bar yAxisId="left" dataKey="Receita Liquida" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={40}>
-                                    <LabelList dataKey="Receita Liquida" position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={(val) => val > 0 ? formatCurrencyShort(val) : ''} />
-                                </Bar>
-                                <Line yAxisId="right" type="monotone" dataKey="Margem Bruta %" stroke="#eab308" strokeWidth={3} dot={{r: 4, strokeWidth: 2}} />
-                            </ComposedChart>
-                        </ResponsiveContainer>
-                    </div>
-                    
-                    <div className="bg-white p-6 rounded-3xl shadow-sm border border-zinc-200">
-                        <h3 className="text-sm font-bold text-zinc-800 uppercase tracking-widest mb-4">SG&A x Budget</h3>
-                        <ResponsiveContainer width="100%" height={300}>
-                            <BarChart data={financeiroCorpData} margin={{top:20, right:0, left:-10, bottom:0}}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e4e4e7" />
-                                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 'bold', fill: '#71717a'}} dy={10} />
-                                <YAxis axisLine={false} tickLine={false} tickFormatter={(val) => formatCurrencyShort(val)} tick={{fontSize: 10, fill: '#71717a', fontWeight: 'bold'}} dx={-10} />
-                                <Tooltip content={<CustomTooltipFinanceiro2 />} cursor={{fill: '#f4f4f5'}} />
-                                <Legend wrapperStyle={{fontSize: '11px', fontWeight: 'bold', paddingTop: '20px'}} />
-                                <Bar dataKey="SG&A Budget" fill="#fca5a5" radius={[4, 4, 0, 0]} maxBarSize={40} />
-                                <Bar dataKey="SG&A" fill="#ef4444" radius={[4, 4, 0, 0]} maxBarSize={40}>
-                                    <LabelList dataKey="SG&A" position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={(val) => val > 0 ? formatCurrencyShort(val) : ''} />
-                                </Bar>
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </div>
+                <div className="bg-white p-6 rounded-3xl shadow-sm border border-zinc-200 mb-6">
+                    <h3 className="text-sm font-bold text-zinc-800 uppercase tracking-widest mb-4">Receita Líquida x Margem Bruta</h3>
+                    <ResponsiveContainer width="100%" height={400}>
+                        <ComposedChart data={financeiroCorpData} margin={{top:40, right:20, left:20, bottom:0}} barGap={8}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e4e4e7" />
+                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 'bold', fill: '#71717a'}} dy={10} />
+                            <YAxis yAxisId="left" width={80} axisLine={false} tickLine={false} tickFormatter={(val) => formatCurrencyShort3(val)} tick={{fontSize: 10, fill: '#71717a', fontWeight: 'bold'}} dx={-10} />
+                            <YAxis yAxisId="right" width={50} orientation="right" axisLine={false} tickLine={false} tickFormatter={(val) => val.toFixed(0)+'%'} tick={{fontSize: 10, fill: '#71717a', fontWeight: 'bold'}} dx={10} domain={[0, 100]} />
+                            <Tooltip content={<CustomTooltipFinanceiro2 />} cursor={{fill: '#f4f4f5'}} />
+                            <Legend wrapperStyle={{fontSize: '11px', fontWeight: 'bold', paddingTop: '20px'}} />
+                            
+                            <Bar yAxisId="left" dataKey="Receita Budget" fill="#94a3b8" radius={[4, 4, 0, 0]} maxBarSize={45}>
+                                <LabelList dataKey="Receita Budget" position="top" fill="#71717a" fontSize={11} fontWeight="900" formatter={(val) => val !== 0 ? formatCurrencyShort3(val) : ''} />
+                            </Bar>
+                            
+                            <Bar yAxisId="left" dataKey="Receita Liquida" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={45}>
+                                <LabelList dataKey="Receita Liquida" position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={(val) => val !== 0 ? formatCurrencyShort3(val) : ''} />
+                            </Bar>
+                            
+                            <Line yAxisId="right" type="monotone" dataKey="Margem Bruta %" stroke="#eab308" strokeWidth={3} dot={{r: 4, strokeWidth: 2, fill: 'white'}}>
+                                <LabelList dataKey="Margem Bruta %" content={(props) => {
+                                    const { x, y, value } = props;
+                                    if (!value) return null;
+                                    const valStr = value.toFixed(1) + '%';
+                                    return (
+                                        <g>
+                                            <text x={x} y={y - 12} stroke="white" strokeWidth={5} strokeLinejoin="round" fill="white" fontSize={11} fontWeight="900" textAnchor="middle">{valStr}</text>
+                                            <text x={x} y={y - 12} fill="#eab308" fontSize={11} fontWeight="900" textAnchor="middle">{valStr}</text>
+                                        </g>
+                                    );
+                                }} />
+                            </Line>
+                        </ComposedChart>
+                    </ResponsiveContainer>
+                </div>
+
+                <div className="bg-white p-6 rounded-3xl shadow-sm border border-zinc-200 mb-6">
+                    <h3 className="text-sm font-bold text-zinc-800 uppercase tracking-widest mb-4">SG&A</h3>
+                    <ResponsiveContainer width="100%" height={300}>
+                        <BarChart data={financeiroCorpData} margin={{top:30, right:0, left:-10, bottom:0}}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e4e4e7" />
+                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 'bold', fill: '#71717a'}} dy={10} />
+                            <YAxis axisLine={false} tickLine={false} tickFormatter={(val) => formatCurrencyShort(val)} tick={{fontSize: 10, fill: '#71717a', fontWeight: 'bold'}} dx={-10} />
+                            <Tooltip content={<CustomTooltipFinanceiro2 />} cursor={{fill: '#f4f4f5'}} />
+                            <Legend wrapperStyle={{fontSize: '11px', fontWeight: 'bold', paddingTop: '20px'}} />
+                            <Bar dataKey="SG&A Budget" fill="#fca5a5" radius={[4, 4, 0, 0]} maxBarSize={60}>
+                                <LabelList dataKey="SG&A Budget" position="top" fill="#71717a" fontSize={11} fontWeight="900" formatter={(val) => val !== 0 ? formatCurrencyShort(val) : ''} />
+                            </Bar>
+                            <Bar dataKey="SG&A" fill="#ef4444" radius={[4, 4, 0, 0]} maxBarSize={60}>
+                                <LabelList dataKey="SG&A" position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={(val) => val !== 0 ? formatCurrencyShort(val) : ''} />
+                            </Bar>
+                        </BarChart>
+                    </ResponsiveContainer>
                 </div>
 
                 {/* GRÁFICO ROE - DESTAQUE E EXPANSÍVEL */}
@@ -1459,7 +1520,7 @@ export default function App() {
                         </div>
                         <button 
                             onClick={() => setIsDuPontExpanded(!isDuPontExpanded)} 
-                            className={`flex items-center gap-2 text-xs font-black uppercase tracking-wider px-5 py-2.5 rounded-xl transition-all shadow-sm ${isDuPontExpanded ? 'bg-zinc-800 text-white' : 'bg-purple-100 text-purple-700 hover:bg-purple-200'}`}
+                            className={`flex items-center gap-2 text-xs font-black uppercase tracking-wider px-5 py-2.5 rounded-xl transition-all shadow-md ${isDuPontExpanded ? 'bg-purple-600 text-white shadow-purple-500/30' : 'bg-purple-100 text-purple-700 hover:bg-purple-200'}`}
                         >
                             <GitBranch size={16} />
                             {isDuPontExpanded ? t('Ocultar Justificativas', 'Hide Justifications') : t('Ver Justificativas (Árvore de Valor)', 'View Justifications')}
@@ -1473,34 +1534,114 @@ export default function App() {
                             <YAxis axisLine={false} tickLine={false} tickFormatter={v => v.toFixed(1) + '%'} tick={{fontSize: 10, fill: '#71717a', fontWeight: 'bold'}} dx={-5} />
                             <Tooltip content={<CustomTooltipFinanceiro2 />} cursor={{fill: '#f4f4f5'}} />
                             <Line type="monotone" dataKey="ROE %" stroke="#8b5cf6" strokeWidth={5} dot={{r: 6, strokeWidth: 2, fill: 'white'}} activeDot={{r: 8}}>
-                                <LabelList dataKey="ROE %" position="top" fill="#18181b" fontSize={12} fontWeight="900" formatter={v => v > 0 ? v.toFixed(1) + '%' : ''} />
+                                <LabelList dataKey="ROE %" content={(props) => {
+                                    const { x, y, value } = props;
+                                    if (!value) return null;
+                                    const valStr = value.toFixed(1) + '%';
+                                    return (
+                                        <g>
+                                            <text x={x} y={value >= 0 ? y - 15 : y + 22} stroke="white" strokeWidth={5} strokeLinejoin="round" fill="white" fontSize={12} fontWeight="900" textAnchor="middle">{valStr}</text>
+                                            <text x={x} y={value >= 0 ? y - 15 : y + 22} fill="#8b5cf6" fontSize={12} fontWeight="900" textAnchor="middle">{valStr}</text>
+                                        </g>
+                                    );
+                                }} />
                             </Line>
                         </LineChart>
                     </ResponsiveContainer>
 
-                    {/* EXPANSÃO DUPONT */}
+                    {/* EXPANSÃO DUPONT DINÂMICA */}
                     {isDuPontExpanded && (
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8 pt-8 border-t-2 border-dashed border-zinc-100 animate-in slide-in-from-top-4 fade-in duration-300">
-                            {[
-                                { key: 'Margem Liquida %', color: '#ec4899', format: v => v.toFixed(1) + '%' },
-                                { key: 'Giro Ativo', color: '#14b8a6', format: v => v.toFixed(1) + '%' },
-                                { key: 'Alavancagem', color: '#f59e0b', format: v => v.toFixed(1) + '%' }
-                            ].map(graph => (
-                                <div key={graph.key} className="bg-zinc-50 p-5 rounded-2xl border border-zinc-200 relative">
-                                    <h4 className="text-[11px] font-black text-zinc-600 uppercase tracking-widest mb-4 flex items-center gap-1.5"><ArrowRightCircle size={14}/> {graph.key}</h4>
-                                    <ResponsiveContainer width="100%" height={180}>
-                                        <LineChart data={financeiroCorpData} margin={{top:20, right:10, left:-20, bottom:0}}>
-                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e4e4e7" />
-                                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 9, fontWeight: 'bold', fill: '#71717a'}} dy={10} />
-                                            <YAxis axisLine={false} tickLine={false} tickFormatter={graph.format} tick={{fontSize: 9, fill: '#71717a', fontWeight: 'bold'}} dx={-5} />
-                                            <Tooltip content={<CustomTooltipFinanceiro2 />} cursor={{fill: '#f4f4f5'}} />
-                                            <Line type="monotone" dataKey={graph.key} stroke={graph.color} strokeWidth={3} dot={{r: 3, strokeWidth: 2, fill: 'white'}}>
-                                                <LabelList dataKey={graph.key} position="top" fill="#18181b" fontSize={10} fontWeight="900" formatter={v => v > 0 ? graph.format(v) : ''} />
-                                            </Line>
-                                        </LineChart>
-                                    </ResponsiveContainer>
+                        <div className="mt-8 pt-8 border-t-2 border-dashed border-zinc-200 animate-in slide-in-from-top-4 fade-in duration-300">
+                            <div className="bg-zinc-50 p-6 md:p-8 rounded-3xl border border-zinc-200 relative overflow-hidden">
+                                
+                                <div className="flex items-center justify-between mb-8">
+                                    <button onClick={() => setDuPontActiveIndex(prev => prev === 0 ? 2 : prev - 1)} className="p-3 bg-white border border-zinc-200 rounded-full hover:bg-zinc-100 hover:scale-105 transition-all shadow-sm">
+                                        <ChevronLeft size={24} className="text-zinc-700" />
+                                    </button>
+                                    <div className="text-center flex-1 px-4">
+                                        <h4 className="text-base md:text-lg font-black text-zinc-800 uppercase tracking-widest flex items-center justify-center gap-2">
+                                            <ArrowRightCircle size={20} className="text-purple-500"/> 
+                                            {duPontActiveIndex === 0 && 'Margem Líquida %'}
+                                            {duPontActiveIndex === 1 && 'Giro Ativo'}
+                                            {duPontActiveIndex === 2 && 'Alavancagem'}
+                                        </h4>
+                                        <p className="text-xs md:text-sm text-zinc-500 font-bold mt-1.5">
+                                            {duPontActiveIndex === 0 && t('Mede a Eficiência Operacional (Lucratividade)', 'Measures Operational Efficiency (Profitability)')}
+                                            {duPontActiveIndex === 1 && t('Mede a Eficiência no Uso dos Ativos', 'Measures Asset Utilization Efficiency')}
+                                            {duPontActiveIndex === 2 && t('Mede o Multiplicador de Capital Próprio (Risco)', 'Measures Equity Multiplier (Financial Risk)')}
+                                        </p>
+                                    </div>
+                                    <button onClick={() => setDuPontActiveIndex(prev => prev === 2 ? 0 : prev + 1)} className="p-3 bg-white border border-zinc-200 rounded-full hover:bg-zinc-100 hover:scale-105 transition-all shadow-sm">
+                                        <ChevronRight size={24} className="text-zinc-700" />
+                                    </button>
                                 </div>
-                            ))}
+
+                                <ResponsiveContainer width="100%" height={280}>
+                                    <LineChart data={financeiroCorpData} margin={{top:20, right:20, left:-20, bottom:0}}>
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e4e4e7" />
+                                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 'bold', fill: '#71717a'}} dy={10} />
+                                        <YAxis axisLine={false} tickLine={false} tickFormatter={v => v.toFixed(1) + '%'} tick={{fontSize: 10, fill: '#71717a', fontWeight: 'bold'}} dx={-5} />
+                                        <Tooltip content={<CustomTooltipFinanceiro2 />} cursor={{fill: '#f4f4f5'}} />
+                                        
+                                        {duPontActiveIndex === 0 && (
+                                            <Line type="monotone" dataKey="Margem Liquida %" stroke="#ec4899" strokeWidth={4} dot={{r: 5, strokeWidth: 2, fill: 'white'}} activeDot={{r: 7}} animationDuration={500}>
+                                                <LabelList dataKey="Margem Liquida %" content={(props) => {
+                                                    const { x, y, value } = props;
+                                                    if (!value) return null;
+                                                    const valStr = value.toFixed(1) + '%';
+                                                    return (
+                                                        <g>
+                                                            <text x={x} y={value >= 0 ? y - 12 : y + 20} stroke="white" strokeWidth={5} strokeLinejoin="round" fill="white" fontSize={11} fontWeight="900" textAnchor="middle">{valStr}</text>
+                                                            <text x={x} y={value >= 0 ? y - 12 : y + 20} fill="#ec4899" fontSize={11} fontWeight="900" textAnchor="middle">{valStr}</text>
+                                                        </g>
+                                                    );
+                                                }} />
+                                            </Line>
+                                        )}
+                                        {duPontActiveIndex === 1 && (
+                                            <Line type="monotone" dataKey="Giro Ativo" stroke="#14b8a6" strokeWidth={4} dot={{r: 5, strokeWidth: 2, fill: 'white'}} activeDot={{r: 7}} animationDuration={500}>
+                                                <LabelList dataKey="Giro Ativo" content={(props) => {
+                                                    const { x, y, value } = props;
+                                                    if (!value) return null;
+                                                    const valStr = value.toFixed(1) + '%';
+                                                    return (
+                                                        <g>
+                                                            <text x={x} y={value >= 0 ? y - 12 : y + 20} stroke="white" strokeWidth={5} strokeLinejoin="round" fill="white" fontSize={11} fontWeight="900" textAnchor="middle">{valStr}</text>
+                                                            <text x={x} y={value >= 0 ? y - 12 : y + 20} fill="#14b8a6" fontSize={11} fontWeight="900" textAnchor="middle">{valStr}</text>
+                                                        </g>
+                                                    );
+                                                }} />
+                                            </Line>
+                                        )}
+                                        {duPontActiveIndex === 2 && (
+                                            <Line type="monotone" dataKey="Alavancagem" stroke="#f59e0b" strokeWidth={4} dot={{r: 5, strokeWidth: 2, fill: 'white'}} activeDot={{r: 7}} animationDuration={500}>
+                                                <LabelList dataKey="Alavancagem" content={(props) => {
+                                                    const { x, y, value } = props;
+                                                    if (!value) return null;
+                                                    const valStr = value.toFixed(1) + '%';
+                                                    return (
+                                                        <g>
+                                                            <text x={x} y={value >= 0 ? y - 12 : y + 20} stroke="white" strokeWidth={5} strokeLinejoin="round" fill="white" fontSize={11} fontWeight="900" textAnchor="middle">{valStr}</text>
+                                                            <text x={x} y={value >= 0 ? y - 12 : y + 20} fill="#f59e0b" fontSize={11} fontWeight="900" textAnchor="middle">{valStr}</text>
+                                                        </g>
+                                                    );
+                                                }} />
+                                            </Line>
+                                        )}
+                                    </LineChart>
+                                </ResponsiveContainer>
+
+                                <div className="flex justify-center gap-3 mt-6">
+                                    {[0, 1, 2].map((idx) => (
+                                        <button 
+                                            key={idx} 
+                                            onClick={() => setDuPontActiveIndex(idx)} 
+                                            className={`h-2.5 rounded-full transition-all duration-300 ${idx === duPontActiveIndex ? 'w-8 bg-purple-500' : 'w-2.5 bg-zinc-300 hover:bg-zinc-400'}`}
+                                            title={`Ver Gráfico ${idx + 1}`}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
                         </div>
                     )}
                 </div>
@@ -1508,7 +1649,7 @@ export default function App() {
                 <div className="mb-4 mt-8 flex items-center justify-between">
                     <h3 className="text-sm font-bold text-zinc-800 uppercase tracking-widest">Índices de Liquidez</h3>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <div className="grid grid-cols-1 gap-6 mb-6">
                     {[
                         { key: 'Liq Imediata', color: '#10b981' },
                         { key: 'Liq Seca', color: '#3b82f6' },
@@ -1516,14 +1657,24 @@ export default function App() {
                     ].map(graph => (
                         <div key={graph.key} className="bg-white p-6 rounded-3xl shadow-sm border border-zinc-200">
                             <h4 className="text-xs font-black text-zinc-500 uppercase tracking-widest mb-4">{graph.key}</h4>
-                            <ResponsiveContainer width="100%" height={200}>
+                            <ResponsiveContainer width="100%" height={300}>
                                 <LineChart data={financeiroCorpData} margin={{top:20, right:10, left:-20, bottom:0}}>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e4e4e7" />
                                     <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 9, fontWeight: 'bold', fill: '#71717a'}} dy={10} />
                                     <YAxis axisLine={false} tickLine={false} tickFormatter={v => v.toFixed(1) + '%'} tick={{fontSize: 9, fill: '#71717a', fontWeight: 'bold'}} dx={-5} />
                                     <Tooltip content={<CustomTooltipFinanceiro2 />} cursor={{fill: '#f4f4f5'}} />
                                     <Line type="monotone" dataKey={graph.key} stroke={graph.color} strokeWidth={4} dot={{r: 4, strokeWidth: 2, fill: 'white'}} activeDot={{r: 6}}>
-                                        <LabelList dataKey={graph.key} position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={v => v > 0 ? v.toFixed(1) + '%' : ''} />
+                                        <LabelList dataKey={graph.key} content={(props) => {
+                                            const { x, y, value } = props;
+                                            if (!value) return null;
+                                            const valStr = value.toFixed(1) + '%';
+                                            return (
+                                                <g>
+                                                    <text x={x} y={value >= 0 ? y - 12 : y + 20} stroke="white" strokeWidth={5} strokeLinejoin="round" fill="white" fontSize={11} fontWeight="900" textAnchor="middle">{valStr}</text>
+                                                    <text x={x} y={value >= 0 ? y - 12 : y + 20} fill={graph.color} fontSize={11} fontWeight="900" textAnchor="middle">{valStr}</text>
+                                                </g>
+                                            );
+                                        }} />
                                     </Line>
                                 </LineChart>
                             </ResponsiveContainer>
@@ -1533,21 +1684,60 @@ export default function App() {
 
                 <div className="bg-white p-6 rounded-3xl shadow-sm border border-zinc-200 mt-6 mb-8">
                     <h3 className="text-sm font-bold text-zinc-800 uppercase tracking-widest mb-4">Variação Cambial</h3>
-                    <ResponsiveContainer width="100%" height={350}>
-                        <BarChart data={financeiroCorpData} margin={{top:20, right:0, left:-10, bottom:0}}>
+                    <ResponsiveContainer width="100%" height={500}>
+                        <LineChart data={financeiroCorpData} margin={{top:40, right:30, left:-10, bottom:20}}>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e4e4e7" />
                             <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 'bold', fill: '#71717a'}} dy={10} />
                             <YAxis axisLine={false} tickLine={false} tickFormatter={(val) => formatCurrencyShort(val)} tick={{fontSize: 10, fill: '#71717a', fontWeight: 'bold'}} dx={-10} />
                             <Tooltip content={<CustomTooltipFinanceiro2 />} cursor={{fill: '#f4f4f5'}} />
                             <Legend wrapperStyle={{fontSize: '11px', fontWeight: 'bold', paddingTop: '20px'}} />
-                            <Bar dataKey="Var Nao Realizada" name="Não Realizada" fill="#8b5cf6" radius={[4, 4, 0, 0]} maxBarSize={45}>
+                            <Line type="monotone" dataKey="Var Nao Realizada" name="Não Realizada" stroke="#8b5cf6" strokeWidth={3} dot={{r: 4, strokeWidth: 2, fill: 'white'}}>
                                 <LabelList dataKey="Var Nao Realizada" position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={(val) => val !== 0 ? formatCurrencyShort(val) : ''} />
-                            </Bar>
-                            <Bar dataKey="Var Realizada" name="Realizada" fill="#ec4899" radius={[4, 4, 0, 0]} maxBarSize={45}>
+                            </Line>
+                            <Line type="monotone" dataKey="Var Realizada" name="Realizada" stroke="#ec4899" strokeWidth={3} dot={{r: 4, strokeWidth: 2, fill: 'white'}}>
                                 <LabelList dataKey="Var Realizada" position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={(val) => val !== 0 ? formatCurrencyShort(val) : ''} />
-                            </Bar>
-                            <Bar dataKey="Var Total" name="Total (Realizada + Não Realizada)" fill="#14b8a6" radius={[4, 4, 0, 0]} maxBarSize={45}>
+                            </Line>
+                            <Line type="monotone" dataKey="Var Total" name="Total (Realizada + Não Realizada)" stroke="#14b8a6" strokeWidth={4} dot={{r: 5, strokeWidth: 2, fill: 'white'}}>
                                 <LabelList dataKey="Var Total" position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={(val) => val !== 0 ? formatCurrencyShort(val) : ''} />
+                            </Line>
+                        </LineChart>
+                    </ResponsiveContainer>
+                </div>
+
+                {/* GRÁFICOS NOVOS EBIT / EBITDA */}
+                <div className="bg-white p-6 rounded-3xl shadow-sm border border-zinc-200 mt-6 mb-8">
+                    <h3 className="text-sm font-bold text-zinc-800 uppercase tracking-widest mb-4">EBIT x Budget</h3>
+                    <ResponsiveContainer width="100%" height={400}>
+                        <BarChart data={financeiroCorpData} margin={{top:30, right:0, left:-10, bottom:0}} barGap={8}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e4e4e7" />
+                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 'bold', fill: '#71717a'}} dy={10} />
+                            <YAxis axisLine={false} tickLine={false} tickFormatter={(val) => formatCurrencyShort(val)} tick={{fontSize: 10, fill: '#71717a', fontWeight: 'bold'}} dx={-10} />
+                            <Tooltip content={<CustomTooltipFinanceiro2 />} cursor={{fill: '#f4f4f5'}} />
+                            <Legend wrapperStyle={{fontSize: '11px', fontWeight: 'bold', paddingTop: '20px'}} />
+                            <Bar dataKey="EBIT Budget" fill="#fde047" radius={[4, 4, 0, 0]} maxBarSize={45}>
+                                <LabelList dataKey="EBIT Budget" position="top" fill="#71717a" fontSize={11} fontWeight="900" formatter={(val) => val !== 0 ? formatCurrencyShort(val) : ''} />
+                            </Bar>
+                            <Bar dataKey="EBIT" fill="#f59e0b" radius={[4, 4, 0, 0]} maxBarSize={45}>
+                                <LabelList dataKey="EBIT" position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={(val) => val !== 0 ? formatCurrencyShort(val) : ''} />
+                            </Bar>
+                        </BarChart>
+                    </ResponsiveContainer>
+                </div>
+
+                <div className="bg-white p-6 rounded-3xl shadow-sm border border-zinc-200 mt-6 mb-8">
+                    <h3 className="text-sm font-bold text-zinc-800 uppercase tracking-widest mb-4">EBITDA x Budget</h3>
+                    <ResponsiveContainer width="100%" height={400}>
+                        <BarChart data={financeiroCorpData} margin={{top:30, right:0, left:-10, bottom:0}} barGap={8}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e4e4e7" />
+                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 'bold', fill: '#71717a'}} dy={10} />
+                            <YAxis axisLine={false} tickLine={false} tickFormatter={(val) => formatCurrencyShort(val)} tick={{fontSize: 10, fill: '#71717a', fontWeight: 'bold'}} dx={-10} />
+                            <Tooltip content={<CustomTooltipFinanceiro2 />} cursor={{fill: '#f4f4f5'}} />
+                            <Legend wrapperStyle={{fontSize: '11px', fontWeight: 'bold', paddingTop: '20px'}} />
+                            <Bar dataKey="EBITDA Budget" fill="#93c5fd" radius={[4, 4, 0, 0]} maxBarSize={45}>
+                                <LabelList dataKey="EBITDA Budget" position="top" fill="#71717a" fontSize={11} fontWeight="900" formatter={(val) => val !== 0 ? formatCurrencyShort(val) : ''} />
+                            </Bar>
+                            <Bar dataKey="EBITDA" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={45}>
+                                <LabelList dataKey="EBITDA" position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={(val) => val !== 0 ? formatCurrencyShort(val) : ''} />
                             </Bar>
                         </BarChart>
                     </ResponsiveContainer>
@@ -3542,7 +3732,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-zinc-100 font-sans text-zinc-900 selection:bg-yellow-200 selection:text-black">
-      <header className="bg-black border-b border-zinc-800 sticky top-0 z-40 shadow-xl">
+      <header className="bg-black border-b border-zinc-800 sticky top-0 z-[100] shadow-xl pointer-events-auto">
         <div className="max-w-[1600px] mx-auto px-6 h-20 flex items-center justify-between">
             <div className="flex items-center gap-6">
                 <div className="h-12 bg-zinc-900 rounded-xl flex items-center justify-center border border-zinc-800 overflow-hidden px-3 min-w-[3rem]">
@@ -3558,62 +3748,63 @@ export default function App() {
                 </div>
             </div>
 
-            <nav className="hidden xl:flex gap-1 bg-zinc-900 p-1.5 rounded-2xl border border-zinc-800 shadow-inner">
+            <nav className="hidden lg:flex gap-1 bg-zinc-900 p-1.5 rounded-2xl border border-zinc-800 shadow-inner relative z-[110]">
                 {(user.role === 'admin' || user.role === 'dev') && (
-                    <button onClick={() => setActiveTab('diretoria')} className={`px-5 py-2.5 rounded-xl font-black uppercase tracking-wider text-xs transition-all flex items-center gap-2 ${activeTab === 'diretoria' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
+                    <button type="button" onClick={() => setActiveTab('diretoria')} className={`px-4 xl:px-5 py-2.5 rounded-xl font-black uppercase tracking-wider text-xs transition-all flex items-center gap-2 cursor-pointer ${activeTab === 'diretoria' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
                         <BarChart3 size={16} /> {t('Diretoria', 'Board')}
                     </button>
                 )}
-                <button onClick={() => setActiveTab('kpi')} className={`px-5 py-2.5 rounded-xl font-black uppercase tracking-wider text-xs transition-all flex items-center gap-2 ${activeTab === 'kpi' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
+                <button type="button" onClick={() => setActiveTab('kpi')} className={`px-4 xl:px-5 py-2.5 rounded-xl font-black uppercase tracking-wider text-xs transition-all flex items-center gap-2 cursor-pointer ${activeTab === 'kpi' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
                     <LineChartIcon size={16} /> {t('KPIs', 'KPIs')}
                 </button>
 
                 {(user.role === 'admin' || user.role === 'dev' || user.area === 'Comercial') && (
-                    <button onClick={() => setActiveTab('comercial')} className={`px-5 py-2.5 rounded-xl font-black uppercase tracking-wider text-xs transition-all flex items-center gap-2 ${activeTab === 'comercial' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
+                    <button type="button" onClick={() => setActiveTab('comercial')} className={`px-4 xl:px-5 py-2.5 rounded-xl font-black uppercase tracking-wider text-xs transition-all flex items-center gap-2 cursor-pointer ${activeTab === 'comercial' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
                         <DollarSign size={16} /> {t('Comercial', 'Commercial')}
                     </button>
                 )}
 
                 {(user.role === 'admin' || user.role === 'dev' || user.area === 'Financeiro' || user.username.toUpperCase().includes('FABIO')) && (
-                    <button onClick={() => setActiveTab('financeiro')} className={`px-5 py-2.5 rounded-xl font-black uppercase tracking-wider text-xs transition-all flex items-center gap-2 ${activeTab === 'financeiro' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
+                    <button type="button" onClick={() => setActiveTab('financeiro')} className={`px-4 xl:px-5 py-2.5 rounded-xl font-black uppercase tracking-wider text-xs transition-all flex items-center gap-2 cursor-pointer ${activeTab === 'financeiro' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
                         <Globe size={16} /> {t('Financeiro', 'Finance')}
                     </button>
                 )}
 
-                <button onClick={() => setActiveTab('5w2h')} className={`px-5 py-2.5 rounded-xl font-black uppercase tracking-wider text-xs transition-all flex items-center gap-2 ${activeTab === '5w2h' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
+                <button type="button" onClick={() => setActiveTab('5w2h')} className={`px-4 xl:px-5 py-2.5 rounded-xl font-black uppercase tracking-wider text-xs transition-all flex items-center gap-2 cursor-pointer ${activeTab === '5w2h' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
                     <ListChecks size={16} /> {t('Matriz 5W2H', '5W2H Matrix')}
                 </button>
                 {(user.username.toUpperCase() === 'LUCIENE' || user.area === 'Comercial' || user.role === 'admin' || user.role === 'dev') && (
-                    <button onClick={() => setActiveTab('auditoria')} className={`px-5 py-2.5 rounded-xl font-black uppercase tracking-wider text-xs transition-all flex items-center gap-2 ${activeTab === 'auditoria' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
+                    <button type="button" onClick={() => setActiveTab('auditoria')} className={`px-4 xl:px-5 py-2.5 rounded-xl font-black uppercase tracking-wider text-xs transition-all flex items-center gap-2 cursor-pointer ${activeTab === 'auditoria' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
                         <FileSpreadsheet size={16} /> {t('Auditoria', 'Audit')}
                     </button>
                 )}
             </nav>
 
-            <div className="flex items-center gap-2 md:gap-4">
+            <div className="flex items-center gap-2 md:gap-4 relative z-[110]">
                 <input type="file" id="logo-upload-input" accept="image/*" onChange={handleLogoUpload} className="hidden" />
                 
                 {(user.role === 'admin' || user.role === 'dev') && (
-                    <button onClick={triggerLogoUpload} className="hidden sm:block p-3 text-zinc-500 hover:bg-zinc-800 hover:text-yellow-500 rounded-xl transition-colors" title={t('Alterar Logo da Empresa', 'Change Company Logo')}>
+                    <button type="button" onClick={triggerLogoUpload} className="hidden sm:block p-3 text-zinc-500 hover:bg-zinc-800 hover:text-yellow-500 rounded-xl transition-colors cursor-pointer" title={t('Alterar Logo da Empresa', 'Change Company Logo')}>
                         <ImageIcon size={20} />
                     </button>
                 )}
 
                 <div className="hidden sm:flex items-center gap-1 bg-zinc-900 p-1 rounded-xl border border-zinc-800 mr-2">
-                    <button onClick={() => setLang('PT')} className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${lang === 'PT' ? 'bg-yellow-500 text-black shadow-sm' : 'text-zinc-500 hover:text-white hover:bg-zinc-800'}`}>PT</button>
-                    <button onClick={() => setLang('EN')} className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${lang === 'EN' ? 'bg-yellow-500 text-black shadow-sm' : 'text-zinc-500 hover:text-white hover:bg-zinc-800'}`}>EN</button>
+                    <button type="button" onClick={() => setLang('PT')} className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all cursor-pointer ${lang === 'PT' ? 'bg-yellow-500 text-black shadow-sm' : 'text-zinc-500 hover:text-white hover:bg-zinc-800'}`}>PT</button>
+                    <button type="button" onClick={() => setLang('EN')} className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all cursor-pointer ${lang === 'EN' ? 'bg-yellow-500 text-black shadow-sm' : 'text-zinc-500 hover:text-white hover:bg-zinc-800'}`}>EN</button>
                 </div>
 
-                <div className="flex items-center gap-3 bg-zinc-900 px-4 py-2 rounded-full border border-zinc-800 shadow-sm">
+                <div className="flex items-center gap-3 bg-zinc-900 px-3 xl:px-4 py-2 rounded-full border border-zinc-800 shadow-sm shrink-0">
                     <div className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse shadow-sm shadow-green-500/50"></div>
-                    <span className="text-xs font-black text-white uppercase tracking-wider">{user.username}</span>
+                    <span className="text-[10px] xl:text-xs font-black text-white uppercase tracking-wider hidden sm:block truncate max-w-[80px] xl:max-w-[120px]">{user.username}</span>
                 </div>
-                <button onClick={() => window.location.reload()} className="hidden xl:block p-3 text-zinc-500 hover:bg-red-500/10 hover:text-red-500 rounded-xl transition-colors" title={t('Sair com Segurança', 'Logout Safely')}>
+                <button type="button" onClick={() => window.location.reload()} className="hidden lg:block p-3 text-zinc-500 hover:bg-red-500/10 hover:text-red-500 rounded-xl transition-colors cursor-pointer" title={t('Sair com Segurança', 'Logout Safely')}>
                     <LogOut size={20} />
                 </button>
                 <button 
+                    type="button"
                     onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                    className="xl:hidden p-3 text-zinc-400 hover:text-yellow-500 rounded-xl transition-colors bg-zinc-900 border border-zinc-800"
+                    className="lg:hidden p-3 text-zinc-400 hover:text-yellow-500 rounded-xl transition-colors bg-zinc-900 border border-zinc-800 cursor-pointer"
                 >
                     {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
                 </button>
@@ -3621,42 +3812,42 @@ export default function App() {
         </div>
 
         {isMobileMenuOpen && (
-            <div className="xl:hidden absolute top-20 left-0 w-full border-t border-zinc-800 bg-zinc-950 p-4 flex flex-col gap-2 shadow-2xl animate-in slide-in-from-top-2 z-50">
+            <div className="lg:hidden absolute top-20 left-0 w-full border-t border-zinc-800 bg-zinc-950 p-4 flex flex-col gap-2 shadow-2xl animate-in slide-in-from-top-2 z-[120]">
                 {(user.role === 'admin' || user.role === 'dev') && (
-                    <button onClick={() => { setActiveTab('diretoria'); setIsMobileMenuOpen(false); }} className={`px-5 py-4 rounded-xl font-black uppercase tracking-wider text-sm transition-all flex items-center gap-3 ${activeTab === 'diretoria' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
+                    <button type="button" onClick={() => { setActiveTab('diretoria'); setIsMobileMenuOpen(false); }} className={`px-5 py-4 rounded-xl font-black uppercase tracking-wider text-sm transition-all flex items-center gap-3 cursor-pointer ${activeTab === 'diretoria' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
                         <BarChart3 size={20} /> {t('Diretoria', 'Board')}
                     </button>
                 )}
-                <button onClick={() => { setActiveTab('kpi'); setIsMobileMenuOpen(false); }} className={`px-5 py-4 rounded-xl font-black uppercase tracking-wider text-sm transition-all flex items-center gap-3 ${activeTab === 'kpi' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
+                <button type="button" onClick={() => { setActiveTab('kpi'); setIsMobileMenuOpen(false); }} className={`px-5 py-4 rounded-xl font-black uppercase tracking-wider text-sm transition-all flex items-center gap-3 cursor-pointer ${activeTab === 'kpi' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
                     <LineChartIcon size={20} /> {t('KPIs', 'KPIs')}
                 </button>
                 {(user.role === 'admin' || user.role === 'dev' || user.area === 'Comercial') && (
-                    <button onClick={() => { setActiveTab('comercial'); setIsMobileMenuOpen(false); }} className={`px-5 py-4 rounded-xl font-black uppercase tracking-wider text-sm transition-all flex items-center gap-3 ${activeTab === 'comercial' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
+                    <button type="button" onClick={() => { setActiveTab('comercial'); setIsMobileMenuOpen(false); }} className={`px-5 py-4 rounded-xl font-black uppercase tracking-wider text-sm transition-all flex items-center gap-3 cursor-pointer ${activeTab === 'comercial' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
                         <DollarSign size={20} /> {t('Comercial', 'Commercial')}
                     </button>
                 )}
                 {(user.role === 'admin' || user.role === 'dev' || user.area === 'Financeiro' || user.username.toUpperCase().includes('FABIO')) && (
-                    <button onClick={() => { setActiveTab('financeiro'); setIsMobileMenuOpen(false); }} className={`px-5 py-4 rounded-xl font-black uppercase tracking-wider text-sm transition-all flex items-center gap-3 ${activeTab === 'financeiro' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
+                    <button type="button" onClick={() => { setActiveTab('financeiro'); setIsMobileMenuOpen(false); }} className={`px-5 py-4 rounded-xl font-black uppercase tracking-wider text-sm transition-all flex items-center gap-3 cursor-pointer ${activeTab === 'financeiro' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
                         <Globe size={20} /> {t('Financeiro', 'Finance')}
                     </button>
                 )}
-                <button onClick={() => { setActiveTab('5w2h'); setIsMobileMenuOpen(false); }} className={`px-5 py-4 rounded-xl font-black uppercase tracking-wider text-sm transition-all flex items-center gap-3 ${activeTab === '5w2h' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
+                <button type="button" onClick={() => { setActiveTab('5w2h'); setIsMobileMenuOpen(false); }} className={`px-5 py-4 rounded-xl font-black uppercase tracking-wider text-sm transition-all flex items-center gap-3 cursor-pointer ${activeTab === '5w2h' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
                     <ListChecks size={20} /> {t('Matriz 5W2H', '5W2H Matrix')}
                 </button>
                 {(user.username.toUpperCase() === 'LUCIENE' || user.area === 'Comercial' || user.role === 'admin' || user.role === 'dev') && (
-                    <button onClick={() => { setActiveTab('auditoria'); setIsMobileMenuOpen(false); }} className={`px-5 py-4 rounded-xl font-black uppercase tracking-wider text-sm transition-all flex items-center gap-3 ${activeTab === 'auditoria' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
+                    <button type="button" onClick={() => { setActiveTab('auditoria'); setIsMobileMenuOpen(false); }} className={`px-5 py-4 rounded-xl font-black uppercase tracking-wider text-sm transition-all flex items-center gap-3 cursor-pointer ${activeTab === 'auditoria' ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
                         <FileSpreadsheet size={20} /> {t('Auditoria', 'Audit')}
                     </button>
                 )}
                 <div className="h-px w-full bg-zinc-800 my-2"></div>
-                <button onClick={() => window.location.reload()} className="px-5 py-4 rounded-xl font-black uppercase tracking-wider text-sm text-red-500 hover:bg-red-500/10 transition-all flex items-center gap-3">
+                <button type="button" onClick={() => window.location.reload()} className="px-5 py-4 rounded-xl font-black uppercase tracking-wider text-sm text-red-500 hover:bg-red-500/10 transition-all flex items-center gap-3 cursor-pointer">
                     <LogOut size={20} /> {t('Sair com Segurança', 'Logout Safely')}
                 </button>
             </div>
         )}
       </header>
 
-      <main className="max-w-[1600px] mx-auto px-6 py-8">
+      <main className="max-w-[1600px] mx-auto px-6 py-8 relative z-10">
         {activeTab === 'diretoria' && renderDiretoria()}
         {activeTab === 'kpi' && renderKPI()}
         {activeTab === 'comercial' && renderComercial()}
