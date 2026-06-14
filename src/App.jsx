@@ -541,6 +541,9 @@ export default function App() {
           }, 5000);
           return () => clearInterval(timer);
       }
+      if (activeTab === 'financeiro') {
+          setKpiOwnerId(9);
+      }
   }, [activeTab, currentSectorIndex]);
 
   const handleLogoUpload = async (event) => {
@@ -1171,11 +1174,22 @@ export default function App() {
       const newVals = {};
       const newComms = {};
       
+      // Para todos os owners: buscar de computedData (que inclui calculados)
       computedData.forEach(v => {
           if (v.owner_id === kpiOwnerId && v.period === kpiEditPeriod) {
               newVals[v.indicator_id] = v.value;
           }
       });
+
+      // Para o financeiro: buscar DIRETAMENTE de dbValues pois os indicadores
+      // 101-130 não passam pelo useMemo de computedData
+      if (activeTab === 'financeiro' || kpiOwnerId === 9) {
+          dbValues.forEach(v => {
+              if (v.owner_id === 9 && v.period === kpiEditPeriod) {
+                  newVals[v.indicator_id] = v.value;
+              }
+          });
+      }
       
       dbComments.forEach(c => {
           if (c.period === kpiEditPeriod) {
@@ -1191,7 +1205,7 @@ export default function App() {
       setFormValues(newVals);
       setFormComments(newComms);
       setExpandedCommentId(null);
-  }, [kpiOwnerId, kpiEditPeriod, computedData, dbComments]); 
+  }, [kpiOwnerId, kpiEditPeriod, computedData, dbComments, dbValues, activeTab]); 
 
   const needsComment = (id, ownerId, val) => {
     const numVal = parseFloat(val);
@@ -1364,10 +1378,17 @@ export default function App() {
         const v10 = getV(110), v11 = getV(111), v12 = getV(112), v13 = getV(113), v14 = getV(114), v15 = getV(115);
         const v16 = getV(116), v17 = getV(117);
         
-        const ebitVal = getV(106) || getVByFuzzyName(['EBIT'], ['BUDGET', 'META', 'PREVISTO', 'EBITDA']) || getVByFuzzyName(['EBT'], ['BUDGET', 'META', 'PREVISTO', 'EBITDA']) || 0;
-        const ebitBudgetVal = getV(107) || getVByFuzzyName(['EBIT', 'BUDGET'], ['EBITDA']) || getVByFuzzyName(['EBT', 'BUDGET'], ['EBITDA']) || 0;
-        const ebitdaVal = getV(108) || getVByFuzzyName(['EBITDA'], ['BUDGET', 'META', 'PREVISTO']) || 0;
-        const ebitdaBudgetVal = getV(109) || getVByFuzzyName(['EBITDA', 'BUDGET']) || getVByFuzzyName(['EBITDA', 'META']) || 0;
+        const ebitVal = getV(106) || getVByFuzzyName(['EBIT'], ['BUDGET', 'META', 'PREVISTO', 'EBITDA', 'EBT']) || 0;
+        const ebitBudgetVal = getV(107) || getVByFuzzyName(['EBIT', 'BUDGET'], ['EBITDA', 'EBT']) || 0;
+        // EBT usa os valores do EBITDA (valores corretos conforme solicitado)
+        const ebtVal = getV(108) || getVByFuzzyName(['EBITDA'], ['BUDGET', 'META', 'PREVISTO']) || 0;
+        const ebtBudgetVal = getV(109) || getVByFuzzyName(['EBITDA', 'BUDGET']) || getVByFuzzyName(['EBITDA', 'META']) || 0;
+        // Novos indicadores: NOPAT (118), Dividas Bancarias (119), Emprestimos IC (120)
+        const nopatVal = getV(118) || getVByFuzzyName(['NOPAT'], ['BUDGET']) || 0;
+        const dividasVal = getV(119) || getVByFuzzyName(['DÍVIDA', 'BANCARIA'], ['BUDGET']) || getVByFuzzyName(['DIVIDA', 'BANCARIA'], ['BUDGET']) || 0;
+        const emprestimosVal = getV(120) || getVByFuzzyName(['EMPRESTIMO'], ['BUDGET']) || getVByFuzzyName(['IC'], ['BUDGET']) || 0;
+        const capitalInvestido = dividasVal + emprestimosVal + v12; // PL = v12
+        const roicVal = capitalInvestido > 0 ? (nopatVal / capitalInvestido) * 100 : 0;
 
         return {
             name: m,
@@ -1388,12 +1409,10 @@ export default function App() {
             'Var Total': v16 + v17,
             'EBIT': ebitVal,
             'EBIT Budget': ebitBudgetVal,
-            'EBIT %': v1 > 0 ? (ebitVal / v1) * 100 : 0,
-            'EBIT Budget %': v2 > 0 ? (ebitBudgetVal / v2) * 100 : 0,
-            'EBITDA': ebitdaVal,
-            'EBITDA Budget': ebitdaBudgetVal,
-            'EBITDA %': v1 > 0 ? (ebitdaVal / v1) * 100 : 0,
-            'EBITDA Budget %': v2 > 0 ? (ebitdaBudgetVal / v2) * 100 : 0
+            'EBT': ebtVal,
+            'EBT Budget': ebtBudgetVal,
+            'NOPAT': nopatVal,
+            'ROIC %': roicVal
         };
     });
 
@@ -1470,6 +1489,59 @@ export default function App() {
                     </ResponsiveContainer>
                 </div>
 
+                <div className="bg-white p-6 rounded-3xl shadow-sm border border-zinc-200 mt-6 mb-4">
+                    <h3 className="text-sm font-bold text-zinc-800 uppercase tracking-widest mb-4">EBIT</h3>
+                    <ResponsiveContainer width="100%" height={400}>
+                        <ComposedChart data={financeiroCorpData} margin={{top:30, right:0, left:-10, bottom:0}} barGap={8}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e4e4e7" />
+                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 'bold', fill: '#71717a'}} dy={10} />
+                            <YAxis axisLine={false} tickLine={false} tickFormatter={(val) => formatCurrencyShort(val)} tick={{fontSize: 10, fill: '#71717a', fontWeight: 'bold'}} dx={-10} />
+                            <Tooltip content={<CustomTooltipFinanceiro2 />} cursor={{fill: '#f4f4f5'}} />
+                            <Legend wrapperStyle={{fontSize: '11px', fontWeight: 'bold', paddingTop: '20px'}} />
+                            <Line type="monotone" dataKey="EBIT Budget" stroke="#fde047" strokeWidth={2} strokeDasharray="5 5" dot={{r: 3}} name="EBIT Budget" />
+                            <Bar dataKey="EBIT" fill="#f59e0b" radius={[4, 4, 0, 0]} maxBarSize={45}>
+                                <LabelList dataKey="EBIT" position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={(val) => val !== 0 ? formatCurrencyShort(val) : ''} />
+                            </Bar>
+                        </ComposedChart>
+                    </ResponsiveContainer>
+                </div>
+                <div className="bg-white p-6 rounded-3xl shadow-sm border border-zinc-200 mt-4 mb-6">
+                    <h3 className="text-sm font-bold text-zinc-800 uppercase tracking-widest mb-4">EBT</h3>
+                    <ResponsiveContainer width="100%" height={400}>
+                        <ComposedChart data={financeiroCorpData} margin={{top:30, right:0, left:-10, bottom:0}} barGap={8}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e4e4e7" />
+                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 'bold', fill: '#71717a'}} dy={10} />
+                            <YAxis axisLine={false} tickLine={false} tickFormatter={(val) => formatCurrencyShort(val)} tick={{fontSize: 10, fill: '#71717a', fontWeight: 'bold'}} dx={-10} />
+                            <Tooltip content={<CustomTooltipFinanceiro2 />} cursor={{fill: '#f4f4f5'}} />
+                            <Legend wrapperStyle={{fontSize: '11px', fontWeight: 'bold', paddingTop: '20px'}} />
+                            <Line type="monotone" dataKey="EBT Budget" stroke="#a1a1aa" strokeWidth={2} strokeDasharray="5 5" dot={{r: 3}} name="EBT Budget" />
+                            <Bar dataKey="EBT" fill="#6366f1" radius={[4, 4, 0, 0]} maxBarSize={45}>
+                                <LabelList dataKey="EBT" position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={(val) => val !== 0 ? formatCurrencyShort(val) : ''} />
+                            </Bar>
+                        </ComposedChart>
+                    </ResponsiveContainer>
+                </div>
+                <div className="bg-white p-6 rounded-3xl shadow-sm border border-zinc-200 mt-6 mb-8">
+                    <h3 className="text-sm font-bold text-zinc-800 uppercase tracking-widest mb-4">Variação Cambial</h3>
+                    <ResponsiveContainer width="100%" height={500}>
+                        <LineChart data={financeiroCorpData} margin={{top:40, right:30, left:-10, bottom:20}}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e4e4e7" />
+                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 'bold', fill: '#71717a'}} dy={10} />
+                            <YAxis axisLine={false} tickLine={false} tickFormatter={(val) => formatCurrencyShort(val)} tick={{fontSize: 10, fill: '#71717a', fontWeight: 'bold'}} dx={-10} />
+                            <Tooltip content={<CustomTooltipFinanceiro2 />} cursor={{fill: '#f4f4f5'}} />
+                            <Legend wrapperStyle={{fontSize: '11px', fontWeight: 'bold', paddingTop: '20px'}} />
+                            <Line type="monotone" dataKey="Var Nao Realizada" name="Não Realizada" stroke="#8b5cf6" strokeWidth={3} dot={{r: 4, strokeWidth: 2, fill: 'white'}}>
+                                <LabelList dataKey="Var Nao Realizada" position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={(val) => val !== 0 ? formatCurrencyShort(val) : ''} />
+                            </Line>
+                            <Line type="monotone" dataKey="Var Realizada" name="Realizada" stroke="#ec4899" strokeWidth={3} dot={{r: 4, strokeWidth: 2, fill: 'white'}}>
+                                <LabelList dataKey="Var Realizada" position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={(val) => val !== 0 ? formatCurrencyShort(val) : ''} />
+                            </Line>
+                            <Line type="monotone" dataKey="Var Total" name="Total (Realizada + Não Realizada)" stroke="#14b8a6" strokeWidth={4} dot={{r: 5, strokeWidth: 2, fill: 'white'}}>
+                                <LabelList dataKey="Var Total" position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={(val) => val !== 0 ? formatCurrencyShort(val) : ''} />
+                            </Line>
+                        </LineChart>
+                    </ResponsiveContainer>
+                </div>
                 <div className="bg-white p-6 rounded-3xl shadow-sm border border-zinc-200 mb-6">
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 border-b border-zinc-100 pb-4">
                         <div>
@@ -1613,78 +1685,30 @@ export default function App() {
                 </div>
 
                 <div className="bg-white p-6 rounded-3xl shadow-sm border border-zinc-200 mt-6 mb-8">
-                    <h3 className="text-sm font-bold text-zinc-800 uppercase tracking-widest mb-4">Variação Cambial</h3>
-                    <ResponsiveContainer width="100%" height={500}>
-                        <LineChart data={financeiroCorpData} margin={{top:40, right:30, left:-10, bottom:20}}>
+                    <h3 className="text-sm font-bold text-zinc-800 uppercase tracking-widest mb-2">ROIC (%)</h3>
+                    <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest mb-4">Fórmula: NOPAT / (Dívidas Bancárias + Empréstimos IC + PL)</p>
+                    <ResponsiveContainer width="100%" height={350}>
+                        <LineChart data={financeiroCorpData} margin={{top:20, right:20, left:-20, bottom:0}}>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e4e4e7" />
                             <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 'bold', fill: '#71717a'}} dy={10} />
-                            <YAxis axisLine={false} tickLine={false} tickFormatter={(val) => formatCurrencyShort(val)} tick={{fontSize: 10, fill: '#71717a', fontWeight: 'bold'}} dx={-10} />
+                            <YAxis axisLine={false} tickLine={false} tickFormatter={v => v.toFixed(1) + '%'} tick={{fontSize: 10, fill: '#71717a', fontWeight: 'bold'}} dx={-5} />
                             <Tooltip content={<CustomTooltipFinanceiro2 />} cursor={{fill: '#f4f4f5'}} />
-                            <Legend wrapperStyle={{fontSize: '11px', fontWeight: 'bold', paddingTop: '20px'}} />
-                            <Line type="monotone" dataKey="Var Nao Realizada" name="Não Realizada" stroke="#8b5cf6" strokeWidth={3} dot={{r: 4, strokeWidth: 2, fill: 'white'}}>
-                                <LabelList dataKey="Var Nao Realizada" position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={(val) => val !== 0 ? formatCurrencyShort(val) : ''} />
-                            </Line>
-                            <Line type="monotone" dataKey="Var Realizada" name="Realizada" stroke="#ec4899" strokeWidth={3} dot={{r: 4, strokeWidth: 2, fill: 'white'}}>
-                                <LabelList dataKey="Var Realizada" position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={(val) => val !== 0 ? formatCurrencyShort(val) : ''} />
-                            </Line>
-                            <Line type="monotone" dataKey="Var Total" name="Total (Realizada + Não Realizada)" stroke="#14b8a6" strokeWidth={4} dot={{r: 5, strokeWidth: 2, fill: 'white'}}>
-                                <LabelList dataKey="Var Total" position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={(val) => val !== 0 ? formatCurrencyShort(val) : ''} />
+                            <Line type="monotone" dataKey="ROIC %" stroke="#10b981" strokeWidth={5} dot={{r: 6, strokeWidth: 2, fill: 'white'}} activeDot={{r: 8}}>
+                                <LabelList dataKey="ROIC %" content={(props) => {
+                                    const { x, y, value } = props;
+                                    if (!value) return null;
+                                    const valStr = value.toFixed(1) + '%';
+                                    return (
+                                        <g>
+                                            <text x={x} y={value >= 0 ? y - 15 : y + 22} stroke="white" strokeWidth={5} strokeLinejoin="round" fill="white" fontSize={12} fontWeight="900" textAnchor="middle">{valStr}</text>
+                                            <text x={x} y={value >= 0 ? y - 15 : y + 22} fill="#10b981" fontSize={12} fontWeight="900" textAnchor="middle">{valStr}</text>
+                                        </g>
+                                    );
+                                }} />
                             </Line>
                         </LineChart>
                     </ResponsiveContainer>
                 </div>
-
-                <div className="bg-white p-6 rounded-3xl shadow-sm border border-zinc-200 mt-6 mb-8">
-                    <h3 className="text-sm font-bold text-zinc-800 uppercase tracking-widest mb-4">EBT</h3>
-                    <ResponsiveContainer width="100%" height={400}>
-                        <ComposedChart data={financeiroCorpData} margin={{top:30, right:0, left:-10, bottom:0}} barGap={8}>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e4e4e7" />
-                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 'bold', fill: '#71717a'}} dy={10} />
-                            <YAxis axisLine={false} tickLine={false} tickFormatter={(val) => formatCurrencyShort(val)} tick={{fontSize: 10, fill: '#71717a', fontWeight: 'bold'}} dx={-10} />
-                            <Tooltip content={<CustomTooltipFinanceiro2 />} cursor={{fill: '#f4f4f5'}} />
-                            <Legend wrapperStyle={{fontSize: '11px', fontWeight: 'bold', paddingTop: '20px'}} />
-                            <Line type="monotone" dataKey="EBIT Budget" name="EBT Budget" stroke="#a1a1aa" strokeWidth={2} strokeDasharray="5 5" dot={{r: 3}} />
-                            <Bar dataKey="EBIT" name="EBT" fill="#6366f1" radius={[4, 4, 0, 0]} maxBarSize={45}>
-                                <LabelList dataKey="EBIT" position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={(val) => val !== 0 ? formatCurrencyShort(val) : ''} />
-                            </Bar>
-                        </ComposedChart>
-                    </ResponsiveContainer>
-                </div>
-
-                <div className="bg-white p-6 rounded-3xl shadow-sm border border-zinc-200 mt-6 mb-8">
-                    <h3 className="text-sm font-bold text-zinc-800 uppercase tracking-widest mb-4">EBIT</h3>
-                    <ResponsiveContainer width="100%" height={400}>
-                        <ComposedChart data={financeiroCorpData} margin={{top:30, right:0, left:-10, bottom:0}} barGap={8}>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e4e4e7" />
-                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 'bold', fill: '#71717a'}} dy={10} />
-                            <YAxis axisLine={false} tickLine={false} tickFormatter={(val) => formatCurrencyShort(val)} tick={{fontSize: 10, fill: '#71717a', fontWeight: 'bold'}} dx={-10} />
-                            <Tooltip content={<CustomTooltipFinanceiro2 />} cursor={{fill: '#f4f4f5'}} />
-                            <Legend wrapperStyle={{fontSize: '11px', fontWeight: 'bold', paddingTop: '20px'}} />
-                            <Line type="monotone" dataKey="EBIT Budget" stroke="#fde047" strokeWidth={2} strokeDasharray="5 5" dot={{r: 3}} />
-                            <Bar dataKey="EBIT" fill="#f59e0b" radius={[4, 4, 0, 0]} maxBarSize={45}>
-                                <LabelList dataKey="EBIT" position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={(val) => val !== 0 ? formatCurrencyShort(val) : ''} />
-                            </Bar>
-                        </ComposedChart>
-                    </ResponsiveContainer>
-                </div>
-
-                <div className="bg-white p-6 rounded-3xl shadow-sm border border-zinc-200 mt-6 mb-8">
-                    <h3 className="text-sm font-bold text-zinc-800 uppercase tracking-widest mb-4">EBITDA</h3>
-                    <ResponsiveContainer width="100%" height={400}>
-                        <ComposedChart data={financeiroCorpData} margin={{top:30, right:0, left:-10, bottom:0}} barGap={8}>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e4e4e7" />
-                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 'bold', fill: '#71717a'}} dy={10} />
-                            <YAxis axisLine={false} tickLine={false} tickFormatter={(val) => formatCurrencyShort(val)} tick={{fontSize: 10, fill: '#71717a', fontWeight: 'bold'}} dx={-10} />
-                            <Tooltip content={<CustomTooltipFinanceiro2 />} cursor={{fill: '#f4f4f5'}} />
-                            <Legend wrapperStyle={{fontSize: '11px', fontWeight: 'bold', paddingTop: '20px'}} />
-                            <Line type="monotone" dataKey="EBITDA Budget" stroke="#93c5fd" strokeWidth={2} strokeDasharray="5 5" dot={{r: 3}} />
-                            <Bar dataKey="EBITDA" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={45}>
-                                <LabelList dataKey="EBITDA" position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={(val) => val !== 0 ? formatCurrencyShort(val) : ''} />
-                            </Bar>
-                        </ComposedChart>
-                    </ResponsiveContainer>
-                </div>
-
            </div>
 
            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-8">
