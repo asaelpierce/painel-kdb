@@ -142,6 +142,21 @@ const CustomTooltipFinanceiro = ({ active, payload, label }) => {
     return null;
 };
 
+const CustomTooltipPie = ({ active, payload }) => {
+    if (active && payload && payload.length) {
+        const data = payload[0];
+        return (
+            <div className="bg-zinc-950 text-white p-4 rounded-xl shadow-2xl border border-zinc-800 z-50">
+                <p className="text-sm font-black flex justify-between gap-4" style={{ color: data.payload.fill }}>
+                    <span>{data.name}:</span>
+                    <span>{formatCurrency(data.value)} ({(data.percent * 100).toFixed(1)}%)</span>
+                </p>
+            </div>
+        );
+    }
+    return null;
+};
+
 const CustomTooltipFinanceiro2 = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
         return (
@@ -161,21 +176,6 @@ const CustomTooltipFinanceiro2 = ({ active, payload, label }) => {
                         </p>
                     )
                 })}
-            </div>
-        );
-    }
-    return null;
-};
-
-const CustomTooltipPie = ({ active, payload }) => {
-    if (active && payload && payload.length) {
-        const data = payload[0];
-        return (
-            <div className="bg-zinc-950 text-white p-4 rounded-xl shadow-2xl border border-zinc-800 z-50">
-                <p className="text-sm font-black flex justify-between gap-4" style={{ color: data.payload.fill }}>
-                    <span>{data.name}:</span>
-                    <span>{formatCurrency(data.value)} ({(data.percent * 100).toFixed(1)}%)</span>
-                </p>
             </div>
         );
     }
@@ -250,7 +250,7 @@ export default function App() {
   const [toast, setToast] = useState(null);
   const [appLogo, setAppLogo] = useState('');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isDuPontExpanded, setIsDuPontExpanded] = useState(false); 
+  const [isDuPontExpanded, setIsDuPontExpanded] = useState(false);
   const [duPontActiveIndex, setDuPontActiveIndex] = useState(0);
   
   const [lang, setLang] = useState('PT');
@@ -374,17 +374,17 @@ export default function App() {
           "nível de serviço em suprimentos": "Supply Service Level",
           "nivel de servico em suprimentos": "Supply Service Level",
           "solicitações de compra": "Purchase Requests",
-          "solicitações compras": "Solicitações de compras recebidas",
-          "solicitacoes compras": "Solicitações de compras recebidas",
-          "ordens de compra": "Ordens de compra emitidas",
-          "compras urgentes": "Solicitações de compra urgentes",
-          "industrializações": "Solicitações de industrializações",
-          "industrializacoes": "Solicitações de industrializações",
-          "compras sem especificação": "Solicitações de compras recebidas sem especificação",
-          "compras sem especificacao": "Solicitações de compras recebidas sem especificação",
-          "oc sem solicitação": "Ordens de compra emitidas sem solicitação",
-          "oc sem solicitacao": "Ordens de compra emitidas sem solicitação",
-          "compras fora do prazo": "Solicitações de compra atendidas fora do prazo",
+          "solicitações compras": "Purchase Requests",
+          "solicitacoes compras": "Purchase Requests",
+          "ordens de compra": "Purchase Orders",
+          "compras urgentes": "Urgent Purchases",
+          "industrializações": "Toll Manufacturing",
+          "industrializacoes": "Toll Manufacturing",
+          "compras sem especificação": "Purchases w/o Specs",
+          "compras sem especificacao": "Purchases w/o Specs",
+          "oc sem solicitação": "POs w/o Request",
+          "oc sem solicitacao": "POs w/o Request",
+          "compras fora do prazo": "Late Purchases",
           "compras erradas": "Incorrect Purchases",
           "saving (%)": "Cost Savings (%)",
           "saving": "Cost Savings",
@@ -1178,22 +1178,11 @@ export default function App() {
       const newVals = {};
       const newComms = {};
       
-      // Para todos os owners: buscar de computedData (que inclui calculados)
       computedData.forEach(v => {
           if (v.owner_id === kpiOwnerId && v.period === kpiEditPeriod) {
               newVals[v.indicator_id] = v.value;
           }
       });
-
-      // Para o financeiro: buscar DIRETAMENTE de dbValues pois os indicadores
-      // 101-130 não passam pelo useMemo de computedData
-      if (activeTab === 'financeiro' || kpiOwnerId === 9) {
-          dbValues.forEach(v => {
-              if (v.owner_id === 9 && v.period === kpiEditPeriod) {
-                  newVals[v.indicator_id] = v.value;
-              }
-          });
-      }
       
       dbComments.forEach(c => {
           if (c.period === kpiEditPeriod) {
@@ -1201,8 +1190,16 @@ export default function App() {
           }
       });
       
+      // Financeiro (owner 9): buscar direto de dbValues
+      if (activeTab === 'financeiro' || kpiOwnerId === 9) {
+          dbValues.forEach(v => {
+              if (v.owner_id === 9 && v.period === kpiEditPeriod) {
+                  newVals[v.indicator_id] = v.value;
+              }
+          });
+      }
+      // Daniela owner 8: buscar 56, 121, 122 direto de dbValues
       if (kpiOwnerId === 8) {
-          // Buscar estoque (56) e novos indicadores Daniela (121, 122) diretamente de dbValues
           [56, 121, 122].forEach(indId => {
               if (newVals[indId] === undefined) {
                   const rec = dbValues.find(v => v.owner_id === 8 && v.indicator_id === indId && v.period === kpiEditPeriod);
@@ -1221,7 +1218,7 @@ export default function App() {
     if (isNaN(numVal) || numVal <= 0) return false;
     if (ownerId === 6) return true; 
     if (ownerId === 7) return true; 
-    if (ownerId === 8 && (id === 121 || id === 122)) return true; // Daniela - comentário obrigatório
+    if (ownerId === 8 && (id === 121 || id === 122)) return true;
     const specificIds = [13, 20, 21, 22, 28, 30, 32, 40, 41, 42, 44, 47, 49, 50, 51, 52, 54, 55];
     return specificIds.includes(id);
   };
@@ -1319,14 +1316,11 @@ export default function App() {
             await supabaseClient.from('indicator_comments').insert([{ indicator_id: 9999, period: 'FINANCE_MARGINS', comment: payload }]);
             showToast(t("Margens salvas com sucesso!", "Margins saved successfully!"));
             loadData();
-        } catch(e) {
-            showToast(t("Erro ao salvar", "Error saving"), "error");
-        }
+        } catch(e) { showToast(t("Erro ao salvar", "Error saving"), "error"); }
         setLoading(false);
     };
 
     const financeCategories = Array.from(new Set(incomingOrders.map(o => (o.kalenborn_group || o.category || o.product || '').trim()).filter(Boolean))).sort();
-    
     const pcpYtd = computedData.filter(v => v.indicator_id === 24).reduce((a,c) => a + parseFloat(c.value||0), 0);
     const pcpProfit = (pcpYtd * (parseFloat(pcpMargin)||0)) / 100;
 
@@ -1334,95 +1328,68 @@ export default function App() {
         if (i.id >= 101 && i.id <= 130) return true;
         if (!i.name) return false;
         const cleanName = i.name.toUpperCase().replace(/[^A-Z]/g, '');
-        return ['EBT', 'EBTBUDGET', 'EBITDA', 'EBITDABUDGET', 'EBTREALIZADO', 'EBITDAREALIZADO'].includes(cleanName);
+        return ['EBT','EBTBUDGET','EBITDA','EBITDABUDGET'].includes(cleanName);
     }).sort((a,b) => a.id - b.id);
 
     const handleSaveFinanceKPIs = async (e) => {
-        e.preventDefault();
-        setLoading(true);
+        e.preventDefault(); setLoading(true);
         const payload = [];
         financeIndicators.forEach(ind => {
             const val = formValues[ind.id];
-            if (val !== undefined && val !== '') {
-                payload.push({ indicator_id: ind.id, owner_id: 9, period: kpiEditPeriod, value: parseFloat(val) });
-            }
+            if (val !== undefined && val !== '') payload.push({ indicator_id: ind.id, owner_id: 9, period: kpiEditPeriod, value: parseFloat(val) });
         });
-
-        if(payload.length === 0) {
-            showToast(t('Preencha ao menos um valor.', 'Fill in at least one value.'), 'error');
-            setLoading(false);
-            return;
-        }
-
+        if(payload.length === 0) { showToast(t('Preencha ao menos um valor.', 'Fill in at least one value.'), 'error'); setLoading(false); return; }
         try {
             const indIds = payload.map(p => p.indicator_id);
             await supabaseClient.from('indicator_values').delete().eq('owner_id', 9).eq('period', kpiEditPeriod).in('indicator_id', indIds);
             await supabaseClient.from('indicator_values').insert(payload);
             showToast(t(`Valores de ${kpiEditPeriod} salvos!`, `Data for ${kpiEditPeriod} saved!`));
             loadData();
-        } catch (err) {
-            showToast(t('Erro ao salvar no banco.', 'Error saving to DB.'), 'error');
-        }
+        } catch (err) { showToast(t('Erro ao salvar no banco.', 'Error saving to DB.'), 'error'); }
         setLoading(false);
     };
 
-    const financeiroCorpData = months.filter(m => kpiViewPeriod === 'ALL' || monthOrder[m] <= monthOrder[kpiViewPeriod]).map(m => {
-        const getV = (id) => parseFloat(computedData.find(v => v.indicator_id === id && v.period === m)?.value || 0);
-        
-        const getVByFuzzyName = (keywords, excludeKeywords = []) => {
-            const matchingIndicators = dbIndicators.filter(i => {
-                if (!i.name) return false;
-                const n = i.name.toUpperCase();
-                const hasKeywords = keywords.every(kw => n.includes(kw));
-                const hasExclude = excludeKeywords.some(kw => n.includes(kw));
-                return hasKeywords && !hasExclude;
-            });
-            for (let ind of matchingIndicators) {
-                const val = getV(ind.id);
-                if (val !== 0) return val;
-            }
-            return 0;
-        };
+    // Helper
+    const getFinV = (id, m) => parseFloat(dbValues.find(v => v.indicator_id === id && v.owner_id === 9 && v.period === m)?.value || 0);
+    const filteredMonths = months.filter(m => kpiViewPeriod === 'ALL' || monthOrder[m] <= monthOrder[kpiViewPeriod]);
+    const filledMonths = filteredMonths.filter(m => dbValues.some(v => v.owner_id === 9 && v.period === m));
 
-        const v1 = getV(101), v2 = getV(102), v3 = getV(103), v4 = getV(104), v5 = getV(105);
-        const v10 = getV(110), v11 = getV(111), v12 = getV(112), v13 = getV(113), v14 = getV(114), v15 = getV(115);
-        const v16 = getV(116), v17 = getV(117);
-        
-        const ebitVal = getV(106) || getVByFuzzyName(['EBIT'], ['BUDGET', 'META', 'PREVISTO', 'EBITDA', 'EBT']) || 0;
-        const ebitBudgetVal = getV(107) || getVByFuzzyName(['EBIT', 'BUDGET'], ['EBITDA', 'EBT']) || 0;
-        // EBT usa os valores do EBITDA (valores corretos conforme solicitado)
-        const ebtVal = getV(108) || getVByFuzzyName(['EBITDA'], ['BUDGET', 'META', 'PREVISTO']) || 0;
-        const ebtBudgetVal = getV(109) || getVByFuzzyName(['EBITDA', 'BUDGET']) || getVByFuzzyName(['EBITDA', 'META']) || 0;
-        // Novos indicadores: NOPAT (118), Dividas Bancarias (119), Emprestimos IC (120)
-        const nopatVal = getV(118) || getVByFuzzyName(['NOPAT'], ['BUDGET']) || 0;
-        const dividasVal = getV(119) || getVByFuzzyName(['DÍVIDA', 'BANCARIA'], ['BUDGET']) || getVByFuzzyName(['DIVIDA', 'BANCARIA'], ['BUDGET']) || 0;
-        const emprestimosVal = getV(120) || getVByFuzzyName(['EMPRESTIMO'], ['BUDGET']) || getVByFuzzyName(['IC'], ['BUDGET']) || 0;
-        const capitalInvestido = dividasVal + emprestimosVal + v12; // PL = v12
-        const roicVal = capitalInvestido > 0 ? (nopatVal / capitalInvestido) * 100 : 0;
+    // Acumulados
+    const acc = { v1:0, v2:0, v3:0, v4:0, v5:0, v10:0, v16:0, v17:0, ebit:0, ebitBudget:0, ebt:0, ebtBudget:0, nopat:0, sumV11:0, sumV12:0, sumDividas:0, sumEmprestimos:0, sumCaixa:0, countFilled:0 };
+    filledMonths.forEach(m => {
+        acc.v1 += getFinV(101,m); acc.v2 += getFinV(102,m); acc.v3 += getFinV(103,m); acc.v4 += getFinV(104,m); acc.v5 += getFinV(105,m);
+        acc.v10 += getFinV(110,m); acc.v16 += getFinV(116,m); acc.v17 += getFinV(117,m);
+        acc.ebit += getFinV(106,m); acc.ebitBudget += getFinV(107,m); acc.ebt += getFinV(108,m); acc.ebtBudget += getFinV(109,m); acc.nopat += getFinV(118,m);
+        acc.sumV11 += getFinV(111,m); acc.sumV12 += getFinV(112,m); acc.sumDividas += getFinV(119,m); acc.sumEmprestimos += getFinV(120,m); acc.sumCaixa += getFinV(123,m);
+        acc.countFilled++;
+    });
+    const n = acc.countFilled || 1;
+    const avgV11 = acc.sumV11/n, avgV12 = acc.sumV12/n, avgDividas = acc.sumDividas/n, avgEmprestimos = acc.sumEmprestimos/n, avgCaixa = acc.sumCaixa/n;
+    const ytdMargBruta = acc.v1 > 0 ? ((acc.v1 - acc.v3) / acc.v1) * 100 : 0;
+    const ytdROE = avgV12 > 0 ? (acc.v10 / avgV12) * 100 : 0;
+    const ytdMargLiquida = acc.v1 > 0 ? (acc.v10 / acc.v1) * 100 : 0;
+    const ytdGiroAtivo = avgV11 > 0 ? (acc.v1 / avgV11) * 100 : 0;
+    const ytdAlavancagem = avgV12 > 0 ? (avgV11 / avgV12) * 100 : 0;
+    const ytdCapital = avgDividas + avgEmprestimos + avgV12 - avgCaixa;
+    const ytdROIC = ytdCapital > 0 ? (acc.nopat / ytdCapital) * 100 : 0;
 
+    const financeiroCorpData = filteredMonths.map(m => {
+        const v1=getFinV(101,m),v2=getFinV(102,m),v3=getFinV(103,m),v4=getFinV(104,m),v5=getFinV(105,m);
+        const v10=getFinV(110,m),v11=getFinV(111,m),v12=getFinV(112,m),v13=getFinV(113,m),v14=getFinV(114,m),v15=getFinV(115,m);
+        const v16=getFinV(116,m),v17=getFinV(117,m);
+        const ebitVal=getFinV(106,m),ebitBudgetVal=getFinV(107,m),ebtVal=getFinV(108,m),ebtBudgetVal=getFinV(109,m);
+        const nopatVal=getFinV(118,m),dividasVal=getFinV(119,m),emprestimosVal=getFinV(120,m),caixaVal=getFinV(123,m);
+        const cap = dividasVal+emprestimosVal+v12-caixaVal;
         return {
             name: m,
-            'Receita Liquida': v1,
-            'Receita Budget': v2,
-            'Margem Bruta %': v1 > 0 ? ((v1 - v3) / v1) * 100 : 0,
-            'SG&A': v4,
-            'SG&A Budget': v5,
-            'ROE %': v12 > 0 ? (v10 / v12) * 100 : 0,
-            'Margem Liquida %': v1 > 0 ? (v10 / v1) * 100 : 0,
-            'Giro Ativo': v11 > 0 ? (v1 / v11) * 100 : 0,
-            'Alavancagem': v12 > 0 ? (v11 / v12) * 100 : 0,
-            'Liq Imediata': v13 * 100,
-            'Liq Seca': v14 * 100,
-            'Liq Corrente': v15 * 100,
-            'Var Nao Realizada': v16,
-            'Var Realizada': v17,
-            'Var Total': v16 + v17,
-            'EBIT': ebitVal,
-            'EBIT Budget': ebitBudgetVal,
-            'EBT': ebtVal,
-            'EBT Budget': ebtBudgetVal,
-            'NOPAT': nopatVal,
-            'ROIC %': roicVal
+            'Receita Liquida': v1, 'Receita Budget': v2, 'Margem Bruta %': v1>0?((v1-v3)/v1)*100:0,
+            'SG&A': v4, 'SG&A Budget': v5,
+            'ROE %': v12>0?(v10/v12)*100:0, 'Margem Liquida %': v1>0?(v10/v1)*100:0,
+            'Giro Ativo': v11>0?(v1/v11)*100:0, 'Alavancagem': v12>0?(v11/v12)*100:0,
+            'Liq Imediata': v13*100, 'Liq Seca': v14*100, 'Liq Corrente': v15*100,
+            'Var Nao Realizada': v16, 'Var Realizada': v17, 'Var Total': v16+v17,
+            'EBIT': ebitVal, 'EBIT Budget': ebitBudgetVal, 'EBT': ebtVal, 'EBT Budget': ebtBudgetVal,
+            'NOPAT': nopatVal, 'ROIC %': cap>0?(nopatVal/cap)*100:0
         };
     });
 
@@ -1440,6 +1407,91 @@ export default function App() {
                       {months.map(m => <option key={m} value={m}>{m}</option>)}
                   </select>
               </div>
+           </div>
+
+           <div className="bg-zinc-950 rounded-3xl p-6 border border-zinc-800 shadow-2xl">
+               <div className="flex items-center gap-3 mb-5">
+                   <div className="p-2 bg-yellow-500 rounded-lg"><BarChart3 size={18} className="text-black" /></div>
+                   <div>
+                       <h3 className="text-sm font-black text-white uppercase tracking-widest">Dashboard Acumulado (YTD)</h3>
+                       <p className="text-[10px] text-zinc-400 font-bold mt-0.5">Todos os indicadores com regras de acumulação corretas</p>
+                   </div>
+               </div>
+               <div className="mb-4">
+                   <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-2 flex items-center gap-2"><span className="w-2 h-2 bg-blue-500 rounded-full inline-block"></span>Resultados — Soma dos Meses</p>
+                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
+                       {[
+                           { label: 'Receita Líquida', value: formatCurrency(acc.v1), color: 'text-blue-400', bar: '#3b82f6' },
+                           { label: 'SG&A', value: formatCurrency(acc.v4), color: 'text-red-400', bar: '#ef4444' },
+                           { label: 'EBIT', value: formatCurrency(acc.ebit), color: 'text-amber-400', bar: '#f59e0b' },
+                           { label: 'EBT', value: formatCurrency(acc.ebt), color: 'text-indigo-400', bar: '#6366f1' },
+                           { label: 'Lucro Líquido', value: formatCurrency(acc.v10), color: 'text-emerald-400', bar: '#10b981' },
+                           { label: 'Var Cambial', value: formatCurrency(acc.v16 + acc.v17), color: 'text-violet-400', bar: '#8b5cf6' },
+                       ].map((card, i) => (
+                           <div key={i} className="bg-zinc-900 p-3 rounded-xl border border-zinc-800 relative overflow-hidden">
+                               <div className="absolute bottom-0 left-0 h-0.5 w-full opacity-60" style={{background: card.bar}}></div>
+                               <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">{card.label}</p>
+                               <p className={`text-xs font-black ${card.color} truncate`}>{card.value}</p>
+                           </div>
+                       ))}
+                   </div>
+               </div>
+               <div className="mb-4">
+                   <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-2 flex items-center gap-2"><span className="w-2 h-2 bg-yellow-500 rounded-full inline-block"></span>Margens & Rentabilidade — Fórmulas Ponderadas</p>
+                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
+                       {[
+                           { label: 'Margem Bruta', value: ytdMargBruta.toFixed(1)+'%', sub: 'ΣReceita-ΣCusto/ΣReceita', color: ytdMargBruta>=0?'text-yellow-400':'text-red-400', bar: '#eab308' },
+                           { label: 'Margem Líquida', value: ytdMargLiquida.toFixed(1)+'%', sub: 'ΣLL/ΣReceita', color: ytdMargLiquida>=0?'text-pink-400':'text-red-400', bar: '#ec4899' },
+                           { label: 'ROE', value: ytdROE.toFixed(1)+'%', sub: 'ΣLL/Média PL', color: ytdROE>=0?'text-purple-400':'text-red-400', bar: '#8b5cf6' },
+                           { label: 'Giro Ativo', value: ytdGiroAtivo.toFixed(1)+'%', sub: 'ΣReceita/Média Ativo', color: 'text-teal-400', bar: '#14b8a6' },
+                           { label: 'Alavancagem', value: ytdAlavancagem.toFixed(1)+'%', sub: 'Média Ativo/Média PL', color: 'text-orange-400', bar: '#f97316' },
+                           { label: 'ROIC', value: ytdROIC.toFixed(1)+'%', sub: 'ΣNOPAT/(Média Cap-Caixa)', color: ytdROIC>=0?'text-emerald-400':'text-red-400', bar: '#10b981' },
+                       ].map((card, i) => (
+                           <div key={i} className="bg-zinc-900 p-3 rounded-xl border border-zinc-800 relative overflow-hidden">
+                               <div className="absolute bottom-0 left-0 h-0.5 w-full opacity-60" style={{background: card.bar}}></div>
+                               <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-0.5">{card.label}</p>
+                               <p className={`text-sm font-black ${card.color}`}>{card.value}</p>
+                               <p className="text-[8px] text-zinc-600 font-bold mt-0.5 truncate">{card.sub}</p>
+                           </div>
+                       ))}
+                   </div>
+               </div>
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
+                   <div className="bg-zinc-900 p-4 rounded-xl border border-zinc-800">
+                       <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-3">Evolução Receita vs EBIT vs EBT</p>
+                       <ResponsiveContainer width="100%" height={100}>
+                           <LineChart data={financeiroCorpData} margin={{top:5, right:5, left:-30, bottom:0}}>
+                               <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 8, fill: '#52525b'}} />
+                               <Tooltip content={<CustomTooltipFinanceiro2 />} />
+                               <Line type="monotone" dataKey="Receita Liquida" stroke="#3b82f6" strokeWidth={2} dot={false} />
+                               <Line type="monotone" dataKey="EBIT" stroke="#f59e0b" strokeWidth={2} dot={false} />
+                               <Line type="monotone" dataKey="EBT" stroke="#6366f1" strokeWidth={2} dot={false} />
+                           </LineChart>
+                       </ResponsiveContainer>
+                       <div className="flex gap-3 mt-1">
+                           {[['#3b82f6','Receita'],['#f59e0b','EBIT'],['#6366f1','EBT']].map(([col,lbl]) => (
+                               <span key={lbl} className="flex items-center gap-1 text-[8px] font-bold text-zinc-500"><span className="w-2 h-0.5 inline-block rounded" style={{background:col}}></span>{lbl}</span>
+                           ))}
+                       </div>
+                   </div>
+                   <div className="bg-zinc-900 p-4 rounded-xl border border-zinc-800">
+                       <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-3">Evolução ROE % | Margem Líquida % | ROIC %</p>
+                       <ResponsiveContainer width="100%" height={100}>
+                           <LineChart data={financeiroCorpData} margin={{top:5, right:5, left:-30, bottom:0}}>
+                               <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 8, fill: '#52525b'}} />
+                               <Tooltip content={<CustomTooltipFinanceiro2 />} />
+                               <Line type="monotone" dataKey="ROE %" stroke="#8b5cf6" strokeWidth={2} dot={false} />
+                               <Line type="monotone" dataKey="Margem Liquida %" stroke="#ec4899" strokeWidth={2} dot={false} />
+                               <Line type="monotone" dataKey="ROIC %" stroke="#10b981" strokeWidth={2} dot={false} />
+                           </LineChart>
+                       </ResponsiveContainer>
+                       <div className="flex gap-3 mt-1">
+                           {[['#8b5cf6','ROE'],['#ec4899','M.Líquida'],['#10b981','ROIC']].map(([col,lbl]) => (
+                               <span key={lbl} className="flex items-center gap-1 text-[8px] font-bold text-zinc-500"><span className="w-2 h-0.5 inline-block rounded" style={{background:col}}></span>{lbl}</span>
+                           ))}
+                       </div>
+                   </div>
+               </div>
            </div>
 
            <div className="pt-8 mt-8 border-t border-zinc-200">
@@ -1461,7 +1513,7 @@ export default function App() {
                             <YAxis yAxisId="right" width={50} orientation="right" axisLine={false} tickLine={false} tickFormatter={(val) => val.toFixed(0)+'%'} tick={{fontSize: 10, fill: '#71717a', fontWeight: 'bold'}} dx={10} domain={[0, 100]} />
                             <Tooltip content={<CustomTooltipFinanceiro2 />} cursor={{fill: '#f4f4f5'}} />
                             <Legend wrapperStyle={{fontSize: '11px', fontWeight: 'bold', paddingTop: '20px'}} />
-                            <Line yAxisId="left" type="monotone" dataKey="Receita Budget" stroke="#94a3b8" strokeWidth={2} strokeDasharray="5 5" dot={{r: 3}} />
+                            <Line yAxisId="left" type="monotone" dataKey="Receita Budget" stroke="#94a3b8" strokeWidth={2} strokeDasharray="5 5" dot={{r: 3}} name="Receita Budget" />
                             <Bar yAxisId="left" dataKey="Receita Liquida" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={45}>
                                 <LabelList dataKey="Receita Liquida" position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={(val) => val !== 0 ? formatCurrencyShort3(val) : ''} />
                             </Bar>
@@ -1470,12 +1522,7 @@ export default function App() {
                                     const { x, y, value } = props;
                                     if (!value) return null;
                                     const valStr = value.toFixed(1) + '%';
-                                    return (
-                                        <g>
-                                            <text x={x} y={y - 12} stroke="white" strokeWidth={5} strokeLinejoin="round" fill="white" fontSize={11} fontWeight="900" textAnchor="middle">{valStr}</text>
-                                            <text x={x} y={y - 12} fill="#eab308" fontSize={11} fontWeight="900" textAnchor="middle">{valStr}</text>
-                                        </g>
-                                    );
+                                    return (<g><text x={x} y={y - 12} stroke="white" strokeWidth={5} strokeLinejoin="round" fill="white" fontSize={11} fontWeight="900" textAnchor="middle">{valStr}</text><text x={x} y={y - 12} fill="#eab308" fontSize={11} fontWeight="900" textAnchor="middle">{valStr}</text></g>);
                                 }} />
                             </Line>
                         </ComposedChart>
@@ -1491,7 +1538,7 @@ export default function App() {
                             <YAxis axisLine={false} tickLine={false} tickFormatter={(val) => formatCurrencyShort(val)} tick={{fontSize: 10, fill: '#71717a', fontWeight: 'bold'}} dx={-10} />
                             <Tooltip content={<CustomTooltipFinanceiro2 />} cursor={{fill: '#f4f4f5'}} />
                             <Legend wrapperStyle={{fontSize: '11px', fontWeight: 'bold', paddingTop: '20px'}} />
-                            <Line type="monotone" dataKey="SG&A Budget" stroke="#fca5a5" strokeWidth={2} strokeDasharray="5 5" dot={{r: 3}} />
+                            <Line type="monotone" dataKey="SG&A Budget" stroke="#fca5a5" strokeWidth={2} strokeDasharray="5 5" dot={{r: 3}} name="SG&A Budget" />
                             <Bar dataKey="SG&A" fill="#ef4444" radius={[4, 4, 0, 0]} maxBarSize={60}>
                                 <LabelList dataKey="SG&A" position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={(val) => val !== 0 ? formatCurrencyShort(val) : ''} />
                             </Bar>
@@ -1499,7 +1546,7 @@ export default function App() {
                     </ResponsiveContainer>
                 </div>
 
-                <div className="bg-white p-6 rounded-3xl shadow-sm border border-zinc-200 mt-6 mb-4">
+                <div className="bg-white p-6 rounded-3xl shadow-sm border border-zinc-200 mt-4 mb-4">
                     <h3 className="text-sm font-bold text-zinc-800 uppercase tracking-widest mb-4">EBIT</h3>
                     <ResponsiveContainer width="100%" height={400}>
                         <ComposedChart data={financeiroCorpData} margin={{top:30, right:0, left:-10, bottom:0}} barGap={8}>
@@ -1515,6 +1562,7 @@ export default function App() {
                         </ComposedChart>
                     </ResponsiveContainer>
                 </div>
+
                 <div className="bg-white p-6 rounded-3xl shadow-sm border border-zinc-200 mt-4 mb-6">
                     <h3 className="text-sm font-bold text-zinc-800 uppercase tracking-widest mb-4">EBT</h3>
                     <ResponsiveContainer width="100%" height={400}>
@@ -1531,6 +1579,7 @@ export default function App() {
                         </ComposedChart>
                     </ResponsiveContainer>
                 </div>
+
                 <div className="bg-white p-6 rounded-3xl shadow-sm border border-zinc-200 mt-6 mb-8">
                     <h3 className="text-sm font-bold text-zinc-800 uppercase tracking-widest mb-4">Variação Cambial</h3>
                     <ResponsiveContainer width="100%" height={500}>
@@ -1552,21 +1601,47 @@ export default function App() {
                         </LineChart>
                     </ResponsiveContainer>
                 </div>
+
+                <div className="bg-white p-6 rounded-3xl shadow-sm border border-zinc-200 mt-6 mb-6">
+                    <div className="flex justify-between items-start mb-4">
+                        <div>
+                            <h3 className="text-sm font-bold text-zinc-800 uppercase tracking-widest">ROIC (%)</h3>
+                            <p className="text-[10px] text-zinc-400 font-bold mt-1 uppercase">NOPAT / (Dívidas Bancárias + Empréstimos IC + PL − Caixa e Equivalentes)</p>
+                        </div>
+                        <div className="bg-emerald-50 px-4 py-2 rounded-xl border border-emerald-100 text-right">
+                            <p className="text-[9px] font-black text-zinc-400 uppercase">ROIC Acumulado YTD</p>
+                            <p className="text-lg font-black text-emerald-600">{ytdROIC.toFixed(1)}%</p>
+                        </div>
+                    </div>
+                    <ResponsiveContainer width="100%" height={350}>
+                        <LineChart data={financeiroCorpData} margin={{top:20, right:20, left:-20, bottom:0}}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e4e4e7" />
+                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 'bold', fill: '#71717a'}} dy={10} />
+                            <YAxis axisLine={false} tickLine={false} tickFormatter={v => v.toFixed(1) + '%'} tick={{fontSize: 10, fill: '#71717a', fontWeight: 'bold'}} dx={-5} />
+                            <Tooltip content={<CustomTooltipFinanceiro2 />} cursor={{fill: '#f4f4f5'}} />
+                            <Line type="monotone" dataKey="ROIC %" stroke="#10b981" strokeWidth={5} dot={{r: 6, strokeWidth: 2, fill: 'white'}} activeDot={{r: 8}}>
+                                <LabelList dataKey="ROIC %" content={(props) => {
+                                    const { x, y, value } = props;
+                                    if (!value && value !== 0) return null;
+                                    const valStr = value.toFixed(1) + '%';
+                                    return (<g><text x={x} y={value >= 0 ? y - 15 : y + 22} stroke="white" strokeWidth={5} strokeLinejoin="round" fill="white" fontSize={12} fontWeight="900" textAnchor="middle">{valStr}</text><text x={x} y={value >= 0 ? y - 15 : y + 22} fill="#10b981" fontSize={12} fontWeight="900" textAnchor="middle">{valStr}</text></g>);
+                                }} />
+                            </Line>
+                        </LineChart>
+                    </ResponsiveContainer>
+                </div>
+
                 <div className="bg-white p-6 rounded-3xl shadow-sm border border-zinc-200 mb-6">
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 border-b border-zinc-100 pb-4">
                         <div>
                             <h3 className="text-lg font-black text-zinc-900 uppercase tracking-widest flex items-center gap-2"><Crown className="text-purple-500" size={20}/> Análise DuPont: ROE (%)</h3>
                             <p className="text-xs text-zinc-500 font-bold mt-1">Retorno sobre o Patrimônio Líquido</p>
                         </div>
-                        <button 
-                            onClick={() => setIsDuPontExpanded(!isDuPontExpanded)} 
-                            className={`flex items-center gap-2 text-xs font-black uppercase tracking-wider px-5 py-2.5 rounded-xl transition-all shadow-md ${isDuPontExpanded ? 'bg-purple-600 text-white shadow-purple-500/30' : 'bg-purple-100 text-purple-700 hover:bg-purple-200'}`}
-                        >
+                        <button onClick={() => setIsDuPontExpanded(!isDuPontExpanded)} className={`flex items-center gap-2 text-xs font-black uppercase tracking-wider px-5 py-2.5 rounded-xl transition-all shadow-md ${isDuPontExpanded ? 'bg-purple-600 text-white shadow-purple-500/30' : 'bg-purple-100 text-purple-700 hover:bg-purple-200'}`}>
                             <GitBranch size={16} />
                             {isDuPontExpanded ? t('Ocultar Justificativas', 'Hide Justifications') : t('Ver Justificativas (Árvore de Valor)', 'View Justifications')}
                         </button>
                     </div>
-
                     <ResponsiveContainer width="100%" height={350}>
                         <LineChart data={financeiroCorpData} margin={{top:20, right:20, left:-20, bottom:0}}>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e4e4e7" />
@@ -1578,17 +1653,11 @@ export default function App() {
                                     const { x, y, value } = props;
                                     if (!value) return null;
                                     const valStr = value.toFixed(1) + '%';
-                                    return (
-                                        <g>
-                                            <text x={x} y={value >= 0 ? y - 15 : y + 22} stroke="white" strokeWidth={5} strokeLinejoin="round" fill="white" fontSize={12} fontWeight="900" textAnchor="middle">{valStr}</text>
-                                            <text x={x} y={value >= 0 ? y - 15 : y + 22} fill="#8b5cf6" fontSize={12} fontWeight="900" textAnchor="middle">{valStr}</text>
-                                        </g>
-                                    );
+                                    return (<g><text x={x} y={value >= 0 ? y - 15 : y + 22} stroke="white" strokeWidth={5} strokeLinejoin="round" fill="white" fontSize={12} fontWeight="900" textAnchor="middle">{valStr}</text><text x={x} y={value >= 0 ? y - 15 : y + 22} fill="#8b5cf6" fontSize={12} fontWeight="900" textAnchor="middle">{valStr}</text></g>);
                                 }} />
                             </Line>
                         </LineChart>
                     </ResponsiveContainer>
-
                     {isDuPontExpanded && (
                         <div className="mt-8 pt-8 border-t-2 border-dashed border-zinc-200 animate-in slide-in-from-top-4 fade-in duration-300">
                             <div className="bg-zinc-50 p-6 md:p-8 rounded-3xl border border-zinc-200 relative overflow-hidden">
@@ -1598,7 +1667,7 @@ export default function App() {
                                     </button>
                                     <div className="text-center flex-1 px-4">
                                         <h4 className="text-base md:text-lg font-black text-zinc-800 uppercase tracking-widest flex items-center justify-center gap-2">
-                                            <ArrowRightCircle size={20} className="text-purple-500"/> 
+                                            <ArrowRightCircle size={20} className="text-purple-500"/>
                                             {duPontActiveIndex === 0 && 'Margem Líquida %'}
                                             {duPontActiveIndex === 1 && 'Giro Ativo'}
                                             {duPontActiveIndex === 2 && 'Alavancagem'}
@@ -1613,48 +1682,19 @@ export default function App() {
                                         <ChevronRight size={24} className="text-zinc-700" />
                                     </button>
                                 </div>
-
                                 <ResponsiveContainer width="100%" height={280}>
                                     <LineChart data={financeiroCorpData} margin={{top:20, right:20, left:-20, bottom:0}}>
                                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e4e4e7" />
                                         <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 'bold', fill: '#71717a'}} dy={10} />
                                         <YAxis axisLine={false} tickLine={false} tickFormatter={v => v.toFixed(1) + '%'} tick={{fontSize: 10, fill: '#71717a', fontWeight: 'bold'}} dx={-5} />
                                         <Tooltip content={<CustomTooltipFinanceiro2 />} cursor={{fill: '#f4f4f5'}} />
-                                        {duPontActiveIndex === 0 && (
-                                            <Line type="monotone" dataKey="Margem Liquida %" stroke="#ec4899" strokeWidth={4} dot={{r: 5, strokeWidth: 2, fill: 'white'}} activeDot={{r: 7}} animationDuration={500}>
-                                                <LabelList dataKey="Margem Liquida %" content={(props) => {
-                                                    const { x, y, value } = props;
-                                                    if (!value) return null;
-                                                    const valStr = value.toFixed(1) + '%';
-                                                    return (<g><text x={x} y={value >= 0 ? y - 12 : y + 20} stroke="white" strokeWidth={5} strokeLinejoin="round" fill="white" fontSize={11} fontWeight="900" textAnchor="middle">{valStr}</text><text x={x} y={value >= 0 ? y - 12 : y + 20} fill="#ec4899" fontSize={11} fontWeight="900" textAnchor="middle">{valStr}</text></g>);
-                                                }} />
-                                            </Line>
-                                        )}
-                                        {duPontActiveIndex === 1 && (
-                                            <Line type="monotone" dataKey="Giro Ativo" stroke="#14b8a6" strokeWidth={4} dot={{r: 5, strokeWidth: 2, fill: 'white'}} activeDot={{r: 7}} animationDuration={500}>
-                                                <LabelList dataKey="Giro Ativo" content={(props) => {
-                                                    const { x, y, value } = props;
-                                                    if (!value) return null;
-                                                    const valStr = value.toFixed(1) + '%';
-                                                    return (<g><text x={x} y={value >= 0 ? y - 12 : y + 20} stroke="white" strokeWidth={5} strokeLinejoin="round" fill="white" fontSize={11} fontWeight="900" textAnchor="middle">{valStr}</text><text x={x} y={value >= 0 ? y - 12 : y + 20} fill="#14b8a6" fontSize={11} fontWeight="900" textAnchor="middle">{valStr}</text></g>);
-                                                }} />
-                                            </Line>
-                                        )}
-                                        {duPontActiveIndex === 2 && (
-                                            <Line type="monotone" dataKey="Alavancagem" stroke="#f59e0b" strokeWidth={4} dot={{r: 5, strokeWidth: 2, fill: 'white'}} activeDot={{r: 7}} animationDuration={500}>
-                                                <LabelList dataKey="Alavancagem" content={(props) => {
-                                                    const { x, y, value } = props;
-                                                    if (!value) return null;
-                                                    const valStr = value.toFixed(1) + '%';
-                                                    return (<g><text x={x} y={value >= 0 ? y - 12 : y + 20} stroke="white" strokeWidth={5} strokeLinejoin="round" fill="white" fontSize={11} fontWeight="900" textAnchor="middle">{valStr}</text><text x={x} y={value >= 0 ? y - 12 : y + 20} fill="#f59e0b" fontSize={11} fontWeight="900" textAnchor="middle">{valStr}</text></g>);
-                                                }} />
-                                            </Line>
-                                        )}
+                                        {duPontActiveIndex === 0 && <Line type="monotone" dataKey="Margem Liquida %" stroke="#ec4899" strokeWidth={4} dot={{r: 5, strokeWidth: 2, fill: 'white'}} activeDot={{r: 7}} animationDuration={500}><LabelList dataKey="Margem Liquida %" content={(props) => { const {x,y,value}=props; if(!value)return null; const v=value.toFixed(1)+'%'; return(<g><text x={x} y={value>=0?y-12:y+20} stroke="white" strokeWidth={5} strokeLinejoin="round" fill="white" fontSize={11} fontWeight="900" textAnchor="middle">{v}</text><text x={x} y={value>=0?y-12:y+20} fill="#ec4899" fontSize={11} fontWeight="900" textAnchor="middle">{v}</text></g>); }} /></Line>}
+                                        {duPontActiveIndex === 1 && <Line type="monotone" dataKey="Giro Ativo" stroke="#14b8a6" strokeWidth={4} dot={{r: 5, strokeWidth: 2, fill: 'white'}} activeDot={{r: 7}} animationDuration={500}><LabelList dataKey="Giro Ativo" content={(props) => { const {x,y,value}=props; if(!value)return null; const v=value.toFixed(1)+'%'; return(<g><text x={x} y={value>=0?y-12:y+20} stroke="white" strokeWidth={5} strokeLinejoin="round" fill="white" fontSize={11} fontWeight="900" textAnchor="middle">{v}</text><text x={x} y={value>=0?y-12:y+20} fill="#14b8a6" fontSize={11} fontWeight="900" textAnchor="middle">{v}</text></g>); }} /></Line>}
+                                        {duPontActiveIndex === 2 && <Line type="monotone" dataKey="Alavancagem" stroke="#f59e0b" strokeWidth={4} dot={{r: 5, strokeWidth: 2, fill: 'white'}} activeDot={{r: 7}} animationDuration={500}><LabelList dataKey="Alavancagem" content={(props) => { const {x,y,value}=props; if(!value)return null; const v=value.toFixed(1)+'%'; return(<g><text x={x} y={value>=0?y-12:y+20} stroke="white" strokeWidth={5} strokeLinejoin="round" fill="white" fontSize={11} fontWeight="900" textAnchor="middle">{v}</text><text x={x} y={value>=0?y-12:y+20} fill="#f59e0b" fontSize={11} fontWeight="900" textAnchor="middle">{v}</text></g>); }} /></Line>}
                                     </LineChart>
                                 </ResponsiveContainer>
-
                                 <div className="flex justify-center gap-3 mt-6">
-                                    {[0, 1, 2].map((idx) => (
+                                    {[0,1,2].map((idx) => (
                                         <button key={idx} onClick={() => setDuPontActiveIndex(idx)} className={`h-2.5 rounded-full transition-all duration-300 ${idx === duPontActiveIndex ? 'w-8 bg-purple-500' : 'w-2.5 bg-zinc-300 hover:bg-zinc-400'}`} title={`Ver Gráfico ${idx + 1}`} />
                                     ))}
                                 </div>
@@ -1694,31 +1734,6 @@ export default function App() {
                     ))}
                 </div>
 
-                <div className="bg-white p-6 rounded-3xl shadow-sm border border-zinc-200 mt-6 mb-8">
-                    <h3 className="text-sm font-bold text-zinc-800 uppercase tracking-widest mb-2">ROIC (%)</h3>
-                    <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest mb-4">Fórmula: NOPAT / (Dívidas Bancárias + Empréstimos IC + PL)</p>
-                    <ResponsiveContainer width="100%" height={350}>
-                        <LineChart data={financeiroCorpData} margin={{top:20, right:20, left:-20, bottom:0}}>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e4e4e7" />
-                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 'bold', fill: '#71717a'}} dy={10} />
-                            <YAxis axisLine={false} tickLine={false} tickFormatter={v => v.toFixed(1) + '%'} tick={{fontSize: 10, fill: '#71717a', fontWeight: 'bold'}} dx={-5} />
-                            <Tooltip content={<CustomTooltipFinanceiro2 />} cursor={{fill: '#f4f4f5'}} />
-                            <Line type="monotone" dataKey="ROIC %" stroke="#10b981" strokeWidth={5} dot={{r: 6, strokeWidth: 2, fill: 'white'}} activeDot={{r: 8}}>
-                                <LabelList dataKey="ROIC %" content={(props) => {
-                                    const { x, y, value } = props;
-                                    if (!value) return null;
-                                    const valStr = value.toFixed(1) + '%';
-                                    return (
-                                        <g>
-                                            <text x={x} y={value >= 0 ? y - 15 : y + 22} stroke="white" strokeWidth={5} strokeLinejoin="round" fill="white" fontSize={12} fontWeight="900" textAnchor="middle">{valStr}</text>
-                                            <text x={x} y={value >= 0 ? y - 15 : y + 22} fill="#10b981" fontSize={12} fontWeight="900" textAnchor="middle">{valStr}</text>
-                                        </g>
-                                    );
-                                }} />
-                            </Line>
-                        </LineChart>
-                    </ResponsiveContainer>
-                </div>
            </div>
 
            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-8">
@@ -1742,7 +1757,6 @@ export default function App() {
                    </div>
                    <button onClick={handleSaveFinance} disabled={loading} className="w-full mt-4 bg-black text-yellow-500 py-4 rounded-xl font-black shadow-lg active:scale-95 flex justify-center items-center gap-2"><Save size={18}/> {t('Gravar Margens', 'Save Margins')}</button>
                </div>
-
                <div className="lg:col-span-2 flex flex-col gap-6">
                    <div className="bg-zinc-950 p-6 rounded-3xl shadow-xl border border-zinc-800 flex items-center justify-between">
                        <div>
@@ -1754,7 +1768,6 @@ export default function App() {
                            <h3 className="text-xl font-bold text-zinc-300">{formatCurrency(pcpYtd)}</h3>
                        </div>
                    </div>
-
                    <div className="bg-white p-6 rounded-3xl shadow-sm border border-zinc-200 flex-1 flex flex-col min-h-0">
                       <h3 className="text-sm font-bold text-zinc-800 uppercase tracking-widest mb-4">{t('Lucro por Categoria (Vendas Realizadas)', 'Profit by Category (Actual Sales)')}</h3>
                       <div className="flex-1 min-h-[300px]">
@@ -1774,8 +1787,7 @@ export default function App() {
                </div>
            </div>
 
-
-           <div className="bg-white rounded-3xl shadow-sm border border-zinc-200 overflow-hidden mb-6">
+           <div className="bg-white rounded-3xl shadow-sm border border-zinc-200 overflow-hidden mt-8">
                <div className="p-6 border-b border-zinc-100 bg-zinc-50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                    <div>
                        <h3 className="text-xl font-extrabold text-zinc-900 flex items-center gap-3">
@@ -1796,13 +1808,7 @@ export default function App() {
                            <div key={ind.id} className="bg-zinc-50 p-3 rounded-xl border border-zinc-200 flex flex-col justify-between gap-2">
                                <label className="text-[10px] font-bold text-zinc-700 leading-tight h-8 line-clamp-2" title={tInd(ind.name)}>{tInd(ind.name).replace(/^\d+\.\s*/, '')}</label>
                                <div className="flex items-center gap-2">
-                                   <input 
-                                       type="number" step="any"
-                                       value={formValues[ind.id] !== undefined ? formValues[ind.id] : ''}
-                                       onChange={(e) => handleValueChange(ind.id, e.target.value)}
-                                       className="w-full text-right bg-white border border-zinc-300 focus:border-yellow-500 rounded-lg p-2 font-black text-sm outline-none transition-colors"
-                                       placeholder="0"
-                                   />
+                                   <input type="number" step="any" value={formValues[ind.id] !== undefined ? formValues[ind.id] : ''} onChange={(e) => handleValueChange(ind.id, e.target.value)} className="w-full text-right bg-white border border-zinc-300 focus:border-yellow-500 rounded-lg p-2 font-black text-sm outline-none transition-colors" placeholder="0" />
                                    <span className="text-[9px] font-black text-zinc-400 w-5">{ind.unit}</span>
                                </div>
                            </div>
@@ -2680,7 +2686,6 @@ export default function App() {
 
     let CustomBars = null;
     let modifiedGraphData = baseGraphData;
-    // Mapeamento Supply por ID (evita conflito por nome parcial)
     const supplyIdNames = {
         45: 'Solicitações de compras recebidas',
         46: 'Ordens de compra emitidas',
@@ -2692,8 +2697,8 @@ export default function App() {
         52: 'Ordens de compra emitidas sem solicitação',
     };
     let displayName = tInd(item.name);
-    if (kpiOwnerId === 5 && supplyIdNames[item.id]) {
-        displayName = lang === 'PT' ? supplyIdNames[item.id] : tInd(item.name);
+    if (kpiOwnerId === 5 && supplyIdNames[item.id] && lang === 'PT') {
+        displayName = supplyIdNames[item.id];
     }
 
     if (kpiOwnerId === 4 && item.id === 41) { 
@@ -2898,15 +2903,11 @@ export default function App() {
         if (i.id === 56 || i.name.toLowerCase().includes('estoque')) {
             return kpiOwnerId === 8;
         }
-        // Novos indicadores Daniela (owner 8): id 121 e 122
-        // Aparecem SEMPRE para owner 8, mesmo sem valores ainda no banco
+        // Daniela: ids 121 e 122 sempre visíveis
         if (kpiOwnerId === 8 && (i.id === 121 || i.id === 122)) return true;
-
-        // Estoque (56) também sempre visível para owner 8
         if (i.category === 'ESFORCO' && kpiOwnerId === 8) {
             return ownerIndicatorIds.includes(i.id) || i.id === 121 || i.id === 122;
         }
-
         if (i.category === 'ESFORCO') return ownerIndicatorIds.includes(i.id);
         if (kpiOwnerId === 1 && i.id >= 74 && i.id <= 78) return true;
         if (kpiOwnerId === 2 && i.id >= 79 && i.id <= 80) return true;
@@ -3102,12 +3103,11 @@ export default function App() {
                             {visibleEsforcoList.map(ind => {
                                 const isAuto = isAutoCalculatedEsforco.includes(ind.id);
                                 let displayName = tInd(ind.name);
-                                if (ind.name === "Não conformidade (%)") displayName = t("Nº de Não Conformidades (Qtd)", "Number of Non-Conformities (Qty)");
-                                // Supply: mapear por ID para evitar conflito de nomes parciais
                                 if (kpiOwnerId === 5 && lang === 'PT') {
                                     const sMap = {45:'Solicitações de compras recebidas',46:'Ordens de compra emitidas',47:'Solicitações de compra urgentes',48:'Solicitações de industrializações',49:'Solicitações de industrializações urgentes',50:'Solicitações de compra atendidas fora do prazo',51:'Solicitações de compras recebidas sem especificação',52:'Ordens de compra emitidas sem solicitação'};
                                     if (sMap[ind.id]) displayName = sMap[ind.id];
                                 }
+                                if (ind.name === "Não conformidade (%)") displayName = t("Nº de Não Conformidades (Qtd)", "Number of Non-Conformities (Qty)");
                                 
                                 const currentVal = formValues[ind.id] !== undefined ? formValues[ind.id] : '';
                                 const currentComment = formComments[ind.id] || '';
@@ -3828,21 +3828,21 @@ export default function App() {
                 <input type="file" id="logo-upload-input" accept="image/*" onChange={handleLogoUpload} className="hidden" />
                 
                 {(user.role === 'admin' || user.role === 'dev') && (
-                    <button type="button" onClick={triggerLogoUpload} className="hidden sm:block p-3 text-zinc-500 hover:bg-zinc-800 hover:text-yellow-500 rounded-xl transition-colors" title={t('Alterar Logo da Empresa', 'Change Company Logo')}>
+                    <button onClick={triggerLogoUpload} className="hidden sm:block p-3 text-zinc-500 hover:bg-zinc-800 hover:text-yellow-500 rounded-xl transition-colors" title={t('Alterar Logo da Empresa', 'Change Company Logo')}>
                         <ImageIcon size={20} />
                     </button>
                 )}
 
                 <div className="hidden sm:flex items-center gap-1 bg-zinc-900 p-1 rounded-xl border border-zinc-800 mr-2">
-                    <button type="button" onClick={() => setLang('PT')} className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${lang === 'PT' ? 'bg-yellow-500 text-black shadow-sm' : 'text-zinc-500 hover:text-white hover:bg-zinc-800'}`}>PT</button>
-                    <button type="button" onClick={() => setLang('EN')} className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${lang === 'EN' ? 'bg-yellow-500 text-black shadow-sm' : 'text-zinc-500 hover:text-white hover:bg-zinc-800'}`}>EN</button>
+                    <button onClick={() => setLang('PT')} className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${lang === 'PT' ? 'bg-yellow-500 text-black shadow-sm' : 'text-zinc-500 hover:text-white hover:bg-zinc-800'}`}>PT</button>
+                    <button onClick={() => setLang('EN')} className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${lang === 'EN' ? 'bg-yellow-500 text-black shadow-sm' : 'text-zinc-500 hover:text-white hover:bg-zinc-800'}`}>EN</button>
                 </div>
 
                 <div className="flex items-center gap-3 bg-zinc-900 px-4 py-2 rounded-full border border-zinc-800 shadow-sm">
                     <div className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse shadow-sm shadow-green-500/50"></div>
                     <span className="text-xs font-black text-white uppercase tracking-wider">{user.username}</span>
                 </div>
-                <button type="button" onClick={() => window.location.reload()} className="hidden xl:block p-3 text-zinc-500 hover:bg-red-500/10 hover:text-red-500 rounded-xl transition-colors" title={t('Sair com Segurança', 'Logout Safely')}>
+                <button onClick={() => window.location.reload()} className="hidden xl:block p-3 text-zinc-500 hover:bg-red-500/10 hover:text-red-500 rounded-xl transition-colors" title={t('Sair com Segurança', 'Logout Safely')}>
                     <LogOut size={20} />
                 </button>
                 <button 
@@ -3883,7 +3883,7 @@ export default function App() {
                     </button>
                 )}
                 <div className="h-px w-full bg-zinc-800 my-2"></div>
-                <button type="button" onClick={() => window.location.reload()} className="px-5 py-4 rounded-xl font-black uppercase tracking-wider text-sm text-red-500 hover:bg-red-500/10 transition-all flex items-center gap-3">
+                <button onClick={() => window.location.reload()} className="px-5 py-4 rounded-xl font-black uppercase tracking-wider text-sm text-red-500 hover:bg-red-500/10 transition-all flex items-center gap-3">
                     <LogOut size={20} /> {t('Sair com Segurança', 'Logout Safely')}
                 </button>
             </div>
