@@ -420,7 +420,11 @@ export default function App() {
           "faturamento": "Revenue",
           "prazo médio": "Average Lead Time",
           "prazo medio": "Average Lead Time",
-          "estoque": "Inventory"
+          "estoque": "Inventory",
+          "divergência no projeto": "Project Divergence",
+          "divergencia no projeto": "Project Divergence",
+          "perda no processo produtivo": "Production Process Loss",
+          "perca no processo produtivo": "Production Process Loss"
       };
       
       for (const [pt, en] of Object.entries(map)) {
@@ -1197,9 +1201,14 @@ export default function App() {
           }
       });
       
-      if (kpiOwnerId === 8 && newVals[56] === undefined) {
-          const checkExists = computedData.find(v => v.indicator_id === 56 && v.period === kpiEditPeriod);
-          if (checkExists) newVals[56] = checkExists.value;
+      if (kpiOwnerId === 8) {
+          // Buscar estoque (56) e novos indicadores Daniela (121, 122) diretamente de dbValues
+          [56, 121, 122].forEach(indId => {
+              if (newVals[indId] === undefined) {
+                  const rec = dbValues.find(v => v.owner_id === 8 && v.indicator_id === indId && v.period === kpiEditPeriod);
+                  if (rec) newVals[indId] = rec.value;
+              }
+          });
       }
 
       setFormValues(newVals);
@@ -1212,6 +1221,7 @@ export default function App() {
     if (isNaN(numVal) || numVal <= 0) return false;
     if (ownerId === 6) return true; 
     if (ownerId === 7) return true; 
+    if (ownerId === 8 && (id === 121 || id === 122)) return true; // Daniela - comentário obrigatório
     const specificIds = [13, 20, 21, 22, 28, 30, 32, 40, 41, 42, 44, 47, 49, 50, 51, 52, 54, 55];
     return specificIds.includes(id);
   };
@@ -2576,7 +2586,7 @@ export default function App() {
     displayHist = Array.from(uniqueMap.values());
     
     const isMonthFilled = (period) => {
-        if (kpiOwnerId === 8) return dbValues.some(v => v.indicator_id === 56 && v.period === period);
+        if (kpiOwnerId === 8) return dbValues.some(v => (v.indicator_id === 56 || v.indicator_id === 121 || v.indicator_id === 122) && v.owner_id === 8 && v.period === period);
         return dbValues.some(v => v.owner_id === kpiOwnerId && v.period === period);
     };
 
@@ -2892,6 +2902,14 @@ export default function App() {
     const finalIndicators = dbIndicators.filter(i => {
         if (i.id === 56 || i.name.toLowerCase().includes('estoque')) {
             return kpiOwnerId === 8;
+        }
+        // Novos indicadores Daniela (owner 8): id 121 e 122
+        // Aparecem SEMPRE para owner 8, mesmo sem valores ainda no banco
+        if (kpiOwnerId === 8 && (i.id === 121 || i.id === 122)) return true;
+
+        // Estoque (56) também sempre visível para owner 8
+        if (i.category === 'ESFORCO' && kpiOwnerId === 8) {
+            return ownerIndicatorIds.includes(i.id) || i.id === 121 || i.id === 122;
         }
 
         if (i.category === 'ESFORCO') return ownerIndicatorIds.includes(i.id);
