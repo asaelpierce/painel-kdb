@@ -2680,25 +2680,20 @@ export default function App() {
 
     let CustomBars = null;
     let modifiedGraphData = baseGraphData;
-    const supplyPtNames = {
-        'solicitações compras': 'Solicitações de compras recebidas',
-        'solicitacoes compras': 'Solicitações de compras recebidas',
-        'ordens de compra': 'Ordens de compra emitidas',
-        'compras urgentes': 'Solicitações de compra urgentes',
-        'industrializações': 'Solicitações de industrializações',
-        'industrializacoes': 'Solicitações de industrializações urgentes',
-        'compras fora do prazo': 'Solicitações de compra atendidas fora do prazo',
-        'compras sem especificação': 'Solicitações de compras recebidas sem especificação',
-        'compras sem especificacao': 'Solicitações de compras recebidas sem especificação',
-        'oc sem solicitação': 'Ordens de compra emitidas sem solicitação',
-        'oc sem solicitacao': 'Ordens de compra emitidas sem solicitação',
+    // Mapeamento Supply por ID (evita conflito por nome parcial)
+    const supplyIdNames = {
+        45: 'Solicitações de compras recebidas',
+        46: 'Ordens de compra emitidas',
+        47: 'Solicitações de compra urgentes',
+        48: 'Solicitações de industrializações',
+        49: 'Solicitações de industrializações urgentes',
+        50: 'Solicitações de compra atendidas fora do prazo',
+        51: 'Solicitações de compras recebidas sem especificação',
+        52: 'Ordens de compra emitidas sem solicitação',
     };
     let displayName = tInd(item.name);
-    if (kpiOwnerId === 5) {
-        const lk = item.name.toLowerCase().trim();
-        for (const [k, v] of Object.entries(supplyPtNames)) {
-            if (lk === k || lk.includes(k)) { displayName = v; break; }
-        }
+    if (kpiOwnerId === 5 && supplyIdNames[item.id]) {
+        displayName = lang === 'PT' ? supplyIdNames[item.id] : tInd(item.name);
     }
 
     if (kpiOwnerId === 4 && item.id === 41) { 
@@ -3108,6 +3103,11 @@ export default function App() {
                                 const isAuto = isAutoCalculatedEsforco.includes(ind.id);
                                 let displayName = tInd(ind.name);
                                 if (ind.name === "Não conformidade (%)") displayName = t("Nº de Não Conformidades (Qtd)", "Number of Non-Conformities (Qty)");
+                                // Supply: mapear por ID para evitar conflito de nomes parciais
+                                if (kpiOwnerId === 5 && lang === 'PT') {
+                                    const sMap = {45:'Solicitações de compras recebidas',46:'Ordens de compra emitidas',47:'Solicitações de compra urgentes',48:'Solicitações de industrializações',49:'Solicitações de industrializações urgentes',50:'Solicitações de compra atendidas fora do prazo',51:'Solicitações de compras recebidas sem especificação',52:'Ordens de compra emitidas sem solicitação'};
+                                    if (sMap[ind.id]) displayName = sMap[ind.id];
+                                }
                                 
                                 const currentVal = formValues[ind.id] !== undefined ? formValues[ind.id] : '';
                                 const currentComment = formComments[ind.id] || '';
