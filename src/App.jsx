@@ -1186,7 +1186,8 @@ export default function App() {
       });
       
       dbComments.forEach(c => {
-          if (c.period === kpiEditPeriod) {
+          // Filtra por período E owner (comentários isolados por setor)
+          if (c.period === kpiEditPeriod && (c.owner_id === kpiOwnerId || c.owner_id === undefined || c.owner_id === null)) {
               newComms[c.indicator_id] = c.comment;
           }
       });
@@ -1313,8 +1314,8 @@ export default function App() {
         setLoading(true);
         const payload = JSON.stringify({ margins: financeMargins, pcp: pcpMargin });
         try {
-            await supabaseClient.from('indicator_comments').delete().eq('indicator_id', 9999).eq('period', 'FINANCE_MARGINS');
-            await supabaseClient.from('indicator_comments').insert([{ indicator_id: 9999, period: 'FINANCE_MARGINS', comment: payload }]);
+            await supabaseClient.from('indicator_comments').delete().eq('indicator_id', 9999).eq('period', 'FINANCE_MARGINS').eq('owner_id', 9);
+            await supabaseClient.from('indicator_comments').insert([{ indicator_id: 9999, owner_id: 9, period: 'FINANCE_MARGINS', comment: payload }]);
             showToast(t("Margens salvas com sucesso!", "Margins saved successfully!"));
             loadData();
         } catch(e) { showToast(t("Erro ao salvar", "Error saving"), "error"); }
@@ -2693,7 +2694,7 @@ export default function App() {
     }
 
     const baseGraphData = displayHist.map(h => {
-        const commentObj = dbComments.find(c => c.indicator_id === item.id && c.period === h.period);
+        const commentObj = dbComments.find(c => c.indicator_id === item.id && c.period === h.period && (c.owner_id === kpiOwnerId || c.owner_id === undefined || c.owner_id === null));
         return { name: h.period, value: parseFloat(h.value), originalValue: h.originalValue, comment: commentObj ? commentObj.comment : null };
     });
 
@@ -2969,7 +2970,7 @@ export default function App() {
             }
 
             if (comment && comment.trim() !== '') {
-                commentsPayload.push({ indicator_id: ind.id, period: kpiEditPeriod, comment });
+                commentsPayload.push({ indicator_id: ind.id, owner_id: kpiOwnerId, period: kpiEditPeriod, comment });
             }
         });
 
@@ -2990,12 +2991,11 @@ export default function App() {
             await supabaseClient.from('indicator_values').delete().eq('owner_id', kpiOwnerId).eq('period', kpiEditPeriod).in('indicator_id', indIds);
             await supabaseClient.from('indicator_values').insert(payload);
             
+            // Sempre limpar APENAS os comentários deste owner+período antes de regravar
+            // (isolado por owner_id - nunca afeta comentários de outros setores)
+            await supabaseClient.from('indicator_comments').delete().eq('period', kpiEditPeriod).eq('owner_id', kpiOwnerId);
             if (commentsPayload.length > 0) {
-                const cIndIds = commentsPayload.map(c => c.indicator_id);
-                await supabaseClient.from('indicator_comments').delete().eq('period', kpiEditPeriod).in('indicator_id', cIndIds);
                 await supabaseClient.from('indicator_comments').insert(commentsPayload);
-            } else {
-                 await supabaseClient.from('indicator_comments').delete().eq('period', kpiEditPeriod);
             }
 
             showToast(t(`Dados de ${kpiEditPeriod} guardados com sucesso!`, `${kpiEditPeriod} data saved successfully!`));
