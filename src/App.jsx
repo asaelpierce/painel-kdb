@@ -2953,32 +2953,18 @@ export default function App() {
         setLoading(true);
         const payload = [];
         const commentsPayload = [];
-        let hasError = false;
-        
         esforcoList.forEach(ind => {
             const val = formValues[ind.id];
             if (val !== undefined && val !== '') {
                 payload.push({ indicator_id: ind.id, owner_id: kpiOwnerId, period: kpiEditPeriod, value: parseFloat(val) });
             }
             
-            const isMandatory = needsComment(ind.id, kpiOwnerId, val);
             const comment = formComments[ind.id];
-            
-            if (isMandatory && (!comment || comment.trim() === '')) {
-                hasError = true;
-                setExpandedCommentId(ind.id);
-            }
 
             if (comment && comment.trim() !== '') {
                 commentsPayload.push({ indicator_id: ind.id, owner_id: kpiOwnerId, period: kpiEditPeriod, comment });
             }
         });
-
-        if (hasError) {
-            showToast(t('Preencha as observações obrigatórias (sinalizadas a vermelho).', 'Fill in the mandatory observations (highlighted in red).'), 'error');
-            setLoading(false);
-            return;
-        }
 
         if(payload.length === 0) {
             showToast(t('Preencha ao menos um valor.', 'Fill in at least one value.'), 'error');
@@ -3135,13 +3121,9 @@ export default function App() {
                                 const currentVal = formValues[ind.id] !== undefined ? formValues[ind.id] : '';
                                 const currentComment = formComments[ind.id] || '';
                                 const hasComment = currentComment.trim() !== '';
-                                const isMandatory = needsComment(ind.id, kpiOwnerId, currentVal);
-
                                 let iconColorClass = 'text-zinc-400 bg-zinc-50 hover:bg-zinc-100 border border-zinc-200';
                                 if (hasComment) {
                                     iconColorClass = 'text-yellow-700 bg-yellow-100 hover:bg-yellow-200 border border-yellow-300 shadow-sm';
-                                } else if (isMandatory) {
-                                    iconColorClass = 'text-red-500 bg-red-50 hover:bg-red-100 border border-red-200 shadow-sm animate-pulse';
                                 }
 
                                 return (
@@ -3153,7 +3135,7 @@ export default function App() {
                                                     type="button" 
                                                     onClick={() => setExpandedCommentId(expandedCommentId === ind.id ? null : ind.id)}
                                                     className={`p-2 rounded-xl transition-all ${iconColorClass}`}
-                                                    title={hasComment ? t("Ver/Editar Observação", "View/Edit Comment") : (isMandatory ? t("Observação Obrigatória!", "Mandatory Comment Required!") : t("Adicionar Observação opcional", "Add Optional Comment"))}
+                                                    title={hasComment ? t("Ver/Editar Observação", "View/Edit Comment") : t("Adicionar Observação opcional", "Add Optional Comment")}
                                                 >
                                                     <MessageSquareText size={18} />
                                                 </button>
@@ -3176,7 +3158,7 @@ export default function App() {
                                                     placeholder={kpiOwnerId === 5 ? t("Justificativa de Supply (Ex: Matéria prima em falta)", "Supply Justification (e.g., Raw material shortage)") : t("Observação (Qual o BR? Cliente? Detalhes...)", "Notes (e.g., BR code, Client, Details...)")} 
                                                     value={formComments[ind.id] || ''}
                                                     onChange={(e) => handleCommentChange(ind.id, e.target.value)}
-                                                    className={`w-full ${isMandatory && !hasComment ? 'bg-red-50 border-red-200 focus:border-red-400 placeholder:text-red-300' : 'bg-yellow-50/50 border-yellow-200 focus:border-yellow-400 placeholder:text-yellow-600/50'} text-zinc-800 text-sm p-3 rounded-xl outline-none shadow-inner resize-none min-h-[60px] transition-colors`}
+                                                    className="w-full bg-yellow-50/50 border-yellow-200 focus:border-yellow-400 placeholder:text-yellow-600/50 text-zinc-800 text-sm p-3 rounded-xl outline-none shadow-inner resize-none min-h-[60px] transition-colors"
                                                 />
                                             </div>
                                         )}
