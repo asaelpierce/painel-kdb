@@ -2988,21 +2988,31 @@ export default function App() {
 
         try {
             const indIds = payload.map(p => p.indicator_id);
-            await supabaseClient.from('indicator_values').delete().eq('owner_id', kpiOwnerId).eq('period', kpiEditPeriod).in('indicator_id', indIds);
-            await supabaseClient.from('indicator_values').insert(payload);
-            
+            const { error: delValErr } = await supabaseClient.from('indicator_values').delete().eq('owner_id', kpiOwnerId).eq('period', kpiEditPeriod).in('indicator_id', indIds);
+            if (delValErr) console.error('Erro DELETE indicator_values:', delValErr);
+            const { error: insValErr } = await supabaseClient.from('indicator_values').insert(payload);
+            if (insValErr) console.error('Erro INSERT indicator_values:', insValErr);
+
             // Sempre limpar APENAS os comentários deste owner+período antes de regravar
             // (isolado por owner_id - nunca afeta comentários de outros setores)
-            await supabaseClient.from('indicator_comments').delete().eq('period', kpiEditPeriod).eq('owner_id', kpiOwnerId);
+            const { error: delComErr } = await supabaseClient.from('indicator_comments').delete().eq('period', kpiEditPeriod).eq('owner_id', kpiOwnerId);
+            if (delComErr) console.error('Erro DELETE indicator_comments:', delComErr);
             if (commentsPayload.length > 0) {
-                await supabaseClient.from('indicator_comments').insert(commentsPayload);
+                const { error: insComErr } = await supabaseClient.from('indicator_comments').insert(commentsPayload);
+                if (insComErr) {
+                    console.error('Erro INSERT indicator_comments:', insComErr);
+                    showToast(t('Erro ao salvar observações: ', 'Error saving comments: ') + insComErr.message, 'error');
+                    setLoading(false);
+                    return;
+                }
             }
 
             showToast(t(`Dados de ${kpiEditPeriod} guardados com sucesso!`, `${kpiEditPeriod} data saved successfully!`));
             setExpandedCommentId(null);
             loadData();
         } catch (err) {
-            showToast(t('Erro ao salvar no banco de dados.', 'Error saving to database.'), 'error');
+            console.error('Erro geral handleSaveKPIs:', err);
+            showToast(t('Erro ao salvar no banco de dados: ', 'Error saving to database: ') + (err.message || ''), 'error');
         }
         setLoading(false);
     };
