@@ -279,7 +279,10 @@ const ObsoletosChart = ({ data }) => {
 
     const chartDataLinha = anos.map(a => ({
         name:a,
-        ...Object.fromEntries([...top4,'ABRESIST','PASTILHA KLC'].map(g=>[g,getVal(g,a)]))
+        ...Object.fromEntries([...top4,'ABRESIST','PASTILHA KLC'].map(g=>{
+            const v = getVal(g,a);
+            return [g, v > 0 ? v : null];
+        }))
     }));
 
     return (
