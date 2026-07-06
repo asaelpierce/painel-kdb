@@ -239,6 +239,138 @@ const CustomTooltipSparkline = ({ active, payload, label, unit, lang }) => {
     return null;
 };
 
+
+const ObsoletosChart = ({ data }) => {
+    const anos = ['2021','2022','2023','2024','2025','2026'];
+    const gruposList = ['ABRESIST','PLACA ABT','FLANGES','CHAPA','BORRACHA','ELEM. FIXAÇÃO','COLA','KALCRET','KALCOR','KALEN','KALFIX','KALOCER','PLACA KLC','PASTILHA KLC','TUBO','METALLIC WEAR','TINTAS E DILUENTES','KALPOXY','ALMOXARIFADO','PLACA KALSICA','KALDETECT'];
+    const coresMap = {'PLACA KLC':'#e34948','KALOCER':'#2a78d6','METALLIC WEAR':'#4a3aa7','ELEM. FIXAÇÃO':'#1baf7a'};
+    const getCor = g => coresMap[g] || '#94a3b8';
+    const top4 = ['PLACA KLC','KALOCER','METALLIC WEAR','ELEM. FIXAÇÃO'];
+
+    const getVal = (grupo, ano) => {
+        const row = data.find(d => d.grupo === grupo && d.ano === parseInt(ano));
+        return row ? parseFloat(row.custo) || 0 : 0;
+    };
+
+    const totByAno = anos.map(a => gruposList.reduce((s,g) => s + getVal(g,a), 0));
+    const acumulado = totByAno.reduce((acc,v,i) => { acc.push((acc[i-1]||0)+v); return acc; },[]);
+
+    const fmt = v => {
+        if(v>=1000000) return 'R$ '+(v/1000000).toFixed(2).replace('.',',')+'M';
+        if(v>=1000)    return 'R$ '+Math.round(v/1000).toLocaleString('pt-BR')+'K';
+        return v>0?'R$ '+Math.round(v).toLocaleString('pt-BR'):'-';
+    };
+
+    const tot26 = gruposList.reduce((s,g)=>s+getVal(g,'2026'),0);
+    const tot25 = totByAno[4];
+    const crescPct = tot25>0?(((tot26-tot25)/tot25)*100).toFixed(0):null;
+    const placa26 = getVal('PLACA KLC','2026');
+    const pctPlaca = tot26>0?((placa26/tot26)*100).toFixed(1):'0';
+    const grupos26 = gruposList.map(g=>({label:g,val:getVal(g,'2026')})).filter(g=>g.val>0).sort((a,b)=>b.val-a.val);
+    const seg = grupos26[1];
+    const ter = grupos26[2];
+
+    const chartDataEvol = anos.map((a,i) => {
+        const row = {name:a, acumulado:acumulado[i]};
+        top4.forEach(g => { row[g] = getVal(g,a); });
+        row['Demais'] = gruposList.filter(g=>!top4.includes(g)).reduce((s,g)=>s+getVal(g,a),0);
+        return row;
+    });
+
+    const chartDataLinha = anos.map(a => ({
+        name:a,
+        ...Object.fromEntries([...top4,'ABRESIST','PASTILHA KLC'].map(g=>[g,getVal(g,a)]))
+    }));
+
+    return (
+        <div className="space-y-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {[
+                    {lbl:'Total Jun/2026',val:fmt(tot26),sub:'Custo acumulado',cls:'border-l-4 border-red-400'},
+                    {lbl:'PLACA KLC',val:fmt(placa26),sub:`${pctPlaca}% do total`,cls:'border-l-4 border-red-300'},
+                    {lbl:'Crescimento vs 2025',val:crescPct?(crescPct>0?'+':'')+crescPct+'%':'—',sub:`2025: ${fmt(tot25)}`,cls:'border-l-4 border-amber-400'},
+                    {lbl:'Acumulado histórico',val:fmt(acumulado[5]),sub:'2021 → Jun/2026',cls:'border-l-4 border-blue-400'},
+                ].map((k,i)=>(
+                    <div key={i} className={`bg-zinc-50 rounded-xl p-4 ${k.cls}`}>
+                        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">{k.lbl}</p>
+                        <p className="text-lg font-black text-zinc-900">{k.val}</p>
+                        <p className="text-[11px] text-zinc-400 mt-0.5">{k.sub}</p>
+                    </div>
+                ))}
+            </div>
+
+            <div className="bg-white rounded-2xl border border-zinc-200 p-5">
+                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-4">Evolução do custo por ano + acumulado</p>
+                <ResponsiveContainer width="100%" height={280}>
+                    <ComposedChart data={chartDataEvol} margin={{top:20,right:60,left:10,bottom:0}} barGap={4}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e4e4e7" />
+                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize:11,fill:'#71717a',fontWeight:'bold'}} />
+                        <YAxis yAxisId="left" axisLine={false} tickLine={false} tickFormatter={fmt} tick={{fontSize:10,fill:'#71717a'}} dx={-5} />
+                        <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} tickFormatter={fmt} tick={{fontSize:10,fill:'#18181b',fontWeight:'bold'}} dx={5} />
+                        <Tooltip formatter={(v,n)=>[v>0?fmt(v):null,n]} itemFilter={item=>item.value>0} />
+                        <Bar yAxisId="left" dataKey="PLACA KLC" stackId="s" fill="#e34948" maxBarSize={50} />
+                        <Bar yAxisId="left" dataKey="KALOCER" stackId="s" fill="#2a78d6" maxBarSize={50} />
+                        <Bar yAxisId="left" dataKey="METALLIC WEAR" stackId="s" fill="#4a3aa7" maxBarSize={50} />
+                        <Bar yAxisId="left" dataKey="ELEM. FIXAÇÃO" stackId="s" fill="#1baf7a" maxBarSize={50} />
+                        <Bar yAxisId="left" dataKey="Demais" stackId="s" fill="#eda100" maxBarSize={50} radius={[4,4,0,0]} />
+                        <Line yAxisId="right" type="monotone" dataKey="acumulado" stroke="#18181b" strokeWidth={2.5} dot={{r:4,fill:'#18181b',strokeWidth:2,stroke:'#fff'}} name="Acumulado" />
+                    </ComposedChart>
+                </ResponsiveContainer>
+                <div className="flex flex-wrap gap-3 mt-3">
+                    {[['#e34948','PLACA KLC'],['#2a78d6','KALOCER'],['#4a3aa7','METALLIC WEAR'],['#1baf7a','ELEM. FIXAÇÃO'],['#eda100','Demais'],['#18181b','Acumulado']].map(([cor,nome])=>(
+                        <span key={nome} className="flex items-center gap-1.5 text-[11px] text-zinc-500">
+                            <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{background:cor}}></span>{nome}
+                        </span>
+                    ))}
+                </div>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-zinc-200 p-5">
+                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-4">Ranking por grupo — Jun/2026 (passe o mouse para detalhes)</p>
+                <ResponsiveContainer width="100%" height={Math.max(240,grupos26.length*34+60)}>
+                    <BarChart data={grupos26} layout="vertical" margin={{top:0,right:90,left:10,bottom:0}}>
+                        <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e4e4e7" />
+                        <XAxis type="number" axisLine={false} tickLine={false} tickFormatter={fmt} tick={{fontSize:10,fill:'#71717a'}} />
+                        <YAxis type="category" dataKey="label" axisLine={false} tickLine={false} tick={{fontSize:11,fill:'#52525b'}} width={130} />
+                        <Tooltip formatter={(v)=>[fmt(v)+' ('+((v/tot26)*100).toFixed(1)+'% do total)','Custo']} />
+                        <Bar dataKey="val" maxBarSize={22} radius={[0,4,4,0]} name="Custo Jun/2026">
+                            {grupos26.map((entry,i)=>(
+                                <Cell key={i} fill={getCor(entry.label)} />
+                            ))}
+                            <LabelList dataKey="val" position="right" formatter={fmt} style={{fontSize:10,fontWeight:'bold',fill:'#52525b'}} />
+                        </Bar>
+                    </BarChart>
+                </ResponsiveContainer>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-zinc-200 p-5">
+                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-4">Top 6 grupos — evolução histórica</p>
+                <ResponsiveContainer width="100%" height={280}>
+                    <LineChart data={chartDataLinha} margin={{top:10,right:20,left:10,bottom:30}}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e4e4e7" />
+                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize:11,fill:'#71717a',fontWeight:'bold'}} />
+                        <YAxis axisLine={false} tickLine={false} tickFormatter={fmt} tick={{fontSize:10,fill:'#71717a'}} dx={-5} />
+                        <Tooltip formatter={(v,n)=>[v>0?fmt(v):null,n]} itemFilter={i=>i.value>0} />
+                        <Legend verticalAlign="bottom" height={36} formatter={v=><span style={{fontSize:'11px',color:'#52525b'}}>{v}</span>} />
+                        {[['PLACA KLC','#e34948',[]],['KALOCER','#2a78d6',[6,3]],['METALLIC WEAR','#4a3aa7',[4,4]],['ELEM. FIXAÇÃO','#1baf7a',[8,3]],['ABRESIST','#eda100',[2,2]],['PASTILHA KLC','#eb6834',[6,2]]].map(([name,color,dash])=>(
+                            <Line key={name} type="monotone" dataKey={name} stroke={color} strokeWidth={2.5} strokeDasharray={dash.join(' ')} dot={{r:5,fill:color,strokeWidth:2,stroke:'#fff'}} activeDot={{r:8}} connectNulls={false} />
+                        ))}
+                    </LineChart>
+                </ResponsiveContainer>
+            </div>
+
+            {tot26 > 0 && (
+                <div className="bg-zinc-50 border border-zinc-200 rounded-2xl p-5 text-sm text-zinc-600 leading-relaxed">
+                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-3">Análise automática</p>
+                    <p className="mb-2">O custo total de obsoletos em <strong className="text-zinc-900">junho de 2026 atingiu {fmt(tot26)}</strong>{crescPct && <>, representando um crescimento de <strong className="text-red-600">{crescPct>0?'+':''}{crescPct}%</strong> em relação a 2025 ({fmt(tot25)})</>}. O principal responsável é o grupo <strong className="text-zinc-900">PLACA KLC</strong>, que concentra <strong className="text-red-600">{pctPlaca}%</strong> do custo total com {fmt(placa26)}.</p>
+                    {seg && <p className="mb-2">Em segundo lugar aparece <strong className="text-zinc-900">{seg.label}</strong> ({fmt(seg.val)}){ter && <>, seguido de <strong className="text-zinc-900">{ter.label}</strong> ({fmt(ter.val)})</>}. Juntos, os três maiores grupos somam <strong className="text-zinc-900">{(((placa26+(seg?.val||0)+(ter?.val||0))/tot26)*100).toFixed(1)}%</strong> do custo total.</p>}
+                    <p>O acumulado histórico soma <strong className="text-zinc-900">{fmt(acumulado[5])}</strong>, sendo que apenas em 2026 concentrou-se <strong className="text-zinc-900">{((tot26/acumulado[5])*100).toFixed(0)}%</strong> desse montante — indicando aceleração crítica da obsolescência no período recente.</p>
+                </div>
+            )}
+        </div>
+    );
+};
+
 export default function App() {
   // ==========================================
   // ESTADOS GLOBAIS
@@ -252,6 +384,10 @@ export default function App() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isDuPontExpanded, setIsDuPontExpanded] = useState(false);
   const [duPontActiveIndex, setDuPontActiveIndex] = useState(0);
+  const [obsoletosData, setObsoletosData] = useState([]);
+  const [obsoletosEditMode, setObsoletosEditMode] = useState(false);
+  const [obsoletosForm, setObsoletosForm] = useState({});
+  const [obsoletosAnoEdit, setObsoletosAnoEdit] = useState('2026');
   
   const [lang, setLang] = useState('PT');
   const t = (pt, en) => lang === 'PT' ? pt : en;
@@ -807,6 +943,10 @@ export default function App() {
 
       let comRes = { data: [] };
       try { comRes = await supabaseClient.from('indicator_comments').select('*'); } catch (e) {}
+      try {
+          const { data: obsRes } = await supabaseClient.from('obsoletos').select('*').order('grupo');
+          if (obsRes) setObsoletosData(obsRes);
+      } catch (e) {}
 
       setActions(actRes.data || []);
       setDbOwners(ownRes.data || []);
@@ -2689,9 +2829,10 @@ export default function App() {
                 }
             }
         } else {
-            latestVal = '0';
+            latestVal = '—';
         }
     }
+    const isZeroFilled = curr === 0 && latestVal !== '—';
 
     const baseGraphData = displayHist.map(h => {
         const commentObj = dbComments.find(c => c.indicator_id === item.id && c.period === h.period && (c.owner_id === kpiOwnerId || c.owner_id === undefined || c.owner_id === null));
@@ -2865,7 +3006,18 @@ export default function App() {
                     </div>
                 </div>
                 <div className="flex items-center gap-3 mb-4">
-                    <span className={`text-3xl font-black ${valueColorClass}`}>{latestVal}</span>
+                    {latestVal === '—' ? (
+                        <span className="text-3xl font-black text-zinc-300" title={t('Sem lançamento', 'No data entered')}>—</span>
+                    ) : isZeroFilled ? (
+                        <span className="text-3xl font-black text-zinc-900 flex items-center gap-2">
+                            0
+                            <span className="text-[9px] font-black text-zinc-500 bg-zinc-100 border border-zinc-300 px-2 py-0.5 rounded-full uppercase tracking-widest">
+                                {t('zerado', 'zero')}
+                            </span>
+                        </span>
+                    ) : (
+                        <span className={`text-3xl font-black ${valueColorClass}`}>{latestVal}</span>
+                    )}
                     {trendHtml}
                 </div>
             </div>
@@ -3070,6 +3222,85 @@ export default function App() {
                     {visibleEsforcoList.map(ind => renderSparklineCard(ind, false))}
                 </div>
             </div>
+
+
+            {kpiOwnerId === 8 && (
+                <div className="mt-8">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-3">
+                        <h3 className="text-xs font-black text-zinc-400 uppercase tracking-widest ml-2">
+                            📦 Composição de Estoque — Itens Obsoletos (Custo R$)
+                        </h3>
+                        {isAdmin && (
+                            <button type="button" onClick={() => { setObsoletosEditMode(!obsoletosEditMode); setObsoletosForm({}); }}
+                                className={`flex items-center gap-2 text-xs font-black uppercase tracking-wider px-4 py-2 rounded-xl transition-all ${obsoletosEditMode ? 'bg-red-100 text-red-700 border border-red-200' : 'bg-zinc-900 text-yellow-500 border border-zinc-700'}`}>
+                                {obsoletosEditMode ? '✕ Cancelar edição' : '✏️ Atualizar dados'}
+                            </button>
+                        )}
+                    </div>
+
+                    {obsoletosEditMode && isAdmin && (
+                        <div className="bg-zinc-950 rounded-2xl p-5 mb-6 border border-zinc-800">
+                            <div className="flex flex-col md:flex-row gap-4 mb-4 items-end">
+                                <div>
+                                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block mb-1">Ano de referência</label>
+                                    <select className="bg-zinc-800 text-yellow-500 px-4 py-2 rounded-xl text-sm font-bold outline-none border border-zinc-700"
+                                        value={obsoletosAnoEdit} onChange={e => setObsoletosAnoEdit(e.target.value)}>
+                                        {['2021','2022','2023','2024','2025','2026'].map(a => <option key={a} value={a}>{a}</option>)}
+                                    </select>
+                                </div>
+                                <p className="text-xs text-zinc-400">Preencha os valores de custo (R$) para cada grupo no ano selecionado. Deixe em branco para manter o valor atual.</p>
+                            </div>
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 mb-4">
+                                {['ABRESIST','PLACA ABT','FLANGES','CHAPA','BORRACHA','ELEM. FIXAÇÃO','COLA','KALCRET','KALCOR','KALEN','KALFIX','KALOCER','PLACA KLC','PASTILHA KLC','TUBO','METALLIC WEAR','TINTAS E DILUENTES','KALPOXY','ALMOXARIFADO','PLACA KALSICA','KALDETECT'].map(grupo => (
+                                    <div key={grupo} className="flex flex-col gap-1">
+                                        <label className="text-[9px] font-black text-zinc-400 uppercase truncate">{grupo}</label>
+                                        <input type="number" step="0.01" min="0" placeholder="0,00"
+                                            value={obsoletosForm[grupo] !== undefined ? obsoletosForm[grupo] : ''}
+                                            onChange={e => setObsoletosForm(prev => ({...prev, [grupo]: e.target.value}))}
+                                            className="bg-zinc-800 text-white text-sm px-3 py-2 rounded-lg border border-zinc-700 focus:border-yellow-500 outline-none" />
+                                    </div>
+                                ))}
+                            </div>
+                            <button type="button" disabled={loading}
+                                onClick={async () => {
+                                    setLoading(true);
+                                    try {
+                                        const upserts = Object.entries(obsoletosForm)
+                                            .filter(([, v]) => v !== '' && v !== undefined)
+                                            .map(([grupo, valor]) => ({
+                                                grupo,
+                                                ano: parseInt(obsoletosAnoEdit),
+                                                custo: parseFloat(valor) || 0
+                                            }));
+                                        if (upserts.length === 0) { showToast('Nenhum valor preenchido.', 'error'); setLoading(false); return; }
+                                        for (const row of upserts) {
+                                            await supabaseClient.from('obsoletos').upsert(row, { onConflict: 'grupo,ano' });
+                                        }
+                                        showToast(`${upserts.length} grupos atualizados para ${obsoletosAnoEdit}!`);
+                                        setObsoletosForm({});
+                                        setObsoletosEditMode(false);
+                                        loadData();
+                                    } catch(e) {
+                                        console.error('Erro salvar obsoletos:', e);
+                                        showToast('Erro ao salvar: ' + (e.message||''), 'error');
+                                    }
+                                    setLoading(false);
+                                }}
+                                className="bg-yellow-500 text-black px-6 py-2.5 rounded-xl font-black text-sm hover:bg-yellow-400 active:scale-95 transition-all disabled:opacity-50 flex items-center gap-2">
+                                <Save size={16} /> Gravar valores
+                            </button>
+                        </div>
+                    )}
+
+                    {obsoletosData.length > 0 ? (
+                        <ObsoletosChart data={obsoletosData} />
+                    ) : (
+                        <div className="bg-zinc-50 border border-zinc-200 rounded-2xl p-8 text-center text-zinc-400 text-sm">
+                            Nenhum dado de obsoletos encontrado. {isAdmin ? 'Use o botão "Atualizar dados" para inserir.' : 'Aguarde o administrador inserir os dados.'}
+                        </div>
+                    )}
+                </div>
+            )}
 
             <form onSubmit={handleSaveKPIs} className="bg-white rounded-3xl shadow-sm border border-zinc-200 overflow-hidden">
                 <div className="p-6 border-b border-zinc-100 bg-zinc-50">
