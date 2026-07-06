@@ -349,7 +349,7 @@ const ObsoletosChart = ({ data }) => {
             <div className="bg-white rounded-2xl border border-zinc-200 p-5" style={{marginLeft:'-1.5rem',marginRight:'-1.5rem',borderRadius:'0',borderLeft:'none',borderRight:'none',paddingLeft:'1.5rem',paddingRight:'1.5rem'}}>
                 <div className="flex justify-between items-center mb-5">
                     <p className="text-[11px] font-black text-zinc-500 uppercase tracking-widest">Top 6 grupos — evolução histórica</p>
-                    <span className="text-[9px] font-black text-zinc-400 bg-zinc-100 px-2.5 py-1 rounded-full uppercase tracking-widest">PLACA KLC → eixo direito (vermelho)</span>
+                    <span className="text-[9px] font-black text-zinc-400 bg-zinc-100 px-2.5 py-1 rounded-full uppercase tracking-widest">PLACA KLC e METALLIC WEAR → eixo direito</span>
                 </div>
                 <ResponsiveContainer width="100%" height={500}>
                     <LineChart data={chartDataLinha} margin={{top:30,right:100,left:20,bottom:50}}>
@@ -384,11 +384,14 @@ const ObsoletosChart = ({ data }) => {
                             cursor={{strokeDasharray:'4 4',stroke:'#e4e4e7'}}
                         />
                         <Legend verticalAlign="bottom" height={52} iconSize={14} formatter={v=>{
-                            const isPlaca = v==='PLACA KLC';
-                            return <span style={{fontSize:'13px',color:isPlaca?'#dc2626':'#374151',fontWeight:isPlaca?'800':'600',letterSpacing:'0.01em'}}>{v}{isPlaca?' (eixo →)':''}</span>;
+                            const dirAxis = ['PLACA KLC','METALLIC WEAR'];
+                            const isDirAxis = dirAxis.includes(v);
+                            const colors = {'PLACA KLC':'#dc2626','METALLIC WEAR':'#4a3aa7'};
+                            return <span style={{fontSize:'13px',color:isDirAxis?(colors[v]||'#374151'):'#374151',fontWeight:isDirAxis?'800':'600',letterSpacing:'0.01em'}}>{v}{isDirAxis?' (eixo →)':''}</span>;
                         }} />
                         <Line yAxisId="dir" type="monotone" dataKey="PLACA KLC" stroke="#e34948" strokeWidth={4} dot={{r:8,fill:'#e34948',strokeWidth:2.5,stroke:'#fff'}} activeDot={{r:12}} connectNulls />
-                        {[['KALOCER','#2a78d6',[6,3]],['METALLIC WEAR','#4a3aa7',[4,4]],['ELEM. FIXAÇÃO','#1baf7a',[8,3]],['ABRESIST','#eda100',[2,2]],['PASTILHA KLC','#eb6834',[6,2]]].map(([name,color,dash])=>(
+                        <Line yAxisId="dir" type="monotone" dataKey="METALLIC WEAR" stroke="#4a3aa7" strokeWidth={3} strokeDasharray="4 4" dot={{r:7,fill:'#4a3aa7',strokeWidth:2,stroke:'#fff'}} activeDot={{r:10}} connectNulls={false} />
+                        {[['KALOCER','#2a78d6',[6,3]],['ELEM. FIXAÇÃO','#1baf7a',[8,3]],['ABRESIST','#eda100',[2,2]],['PASTILHA KLC','#eb6834',[6,2]]].map(([name,color,dash])=>(
                             <Line key={name} yAxisId="esq" type="monotone" dataKey={name} stroke={color} strokeWidth={3} strokeDasharray={dash.join(' ')} dot={{r:7,fill:color,strokeWidth:2,stroke:'#fff'}} activeDot={{r:10}} connectNulls={false} />
                         ))}
                     </LineChart>
