@@ -344,13 +344,35 @@ const ObsoletosChart = ({ data }) => {
             </div>
 
             <div className="bg-white rounded-2xl border border-zinc-200 p-5 -mx-4 md:-mx-8 px-4 md:px-8" style={{marginLeft:'-1rem',marginRight:'-1rem',borderRadius:'0',borderLeft:'none',borderRight:'none'}}>
-                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-4">Top 6 grupos — evolução histórica</p>
+                <div className="flex justify-between items-center mb-4">
+                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Top 6 grupos — evolução histórica</p>
+                    <span className="text-[9px] font-black text-zinc-300 bg-zinc-100 px-2 py-0.5 rounded-full uppercase tracking-widest">Escala logarítmica — preserva visibilidade de todos os grupos</span>
+                </div>
                 <ResponsiveContainer width="100%" height={380}>
                     <LineChart data={chartDataLinha} margin={{top:20,right:40,left:20,bottom:40}}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e4e4e7" />
                         <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize:13,fill:'#52525b',fontWeight:'bold'}} dy={10} />
-                        <YAxis axisLine={false} tickLine={false} tickFormatter={fmt} tick={{fontSize:11,fill:'#71717a'}} dx={-8} width={80} />
-                        <Tooltip formatter={(v,n)=>[v>0?fmt(v):null,n]} itemFilter={i=>i.value>0} cursor={{strokeDasharray:'4 4',stroke:'#e4e4e7'}} />
+                        <YAxis axisLine={false} tickLine={false} scale="log" domain={['auto','auto']} tickFormatter={fmt} tick={{fontSize:11,fill:'#71717a'}} dx={-8} width={85} allowDataOverflow />
+                        <Tooltip formatter={(v,n)=>[v>0?fmt(v):null,n]} itemFilter={i=>i.value>0} cursor={{strokeDasharray:'4 4',stroke:'#e4e4e7'}}
+                            content={({active,payload,label})=>{
+                                if(!active||!payload||!payload.length) return null;
+                                const fmtV = v => v>=1000000?'R$ '+(v/1000000).toFixed(2).replace('.',',')+'M':v>=1000?'R$ '+Math.round(v/1000).toLocaleString('pt-BR')+'K':v>0?'R$ '+Math.round(v).toLocaleString('pt-BR'):'-';
+                                return (
+                                    <div style={{background:'#18181b',border:'1px solid #3f3f46',borderRadius:'10px',padding:'10px 14px',minWidth:'180px'}}>
+                                        <p style={{color:'#eab308',fontWeight:'900',fontSize:'12px',marginBottom:'8px',textTransform:'uppercase',letterSpacing:'0.05em'}}>{label}</p>
+                                        {payload.filter(p=>p.value>0).sort((a,b)=>b.value-a.value).map((p,i)=>(
+                                            <div key={i} style={{display:'flex',justifyContent:'space-between',gap:'16px',marginBottom:'4px'}}>
+                                                <span style={{color:'#a1a1aa',fontSize:'11px',display:'flex',alignItems:'center',gap:'5px'}}>
+                                                    <span style={{width:'8px',height:'8px',borderRadius:'2px',background:p.color,flexShrink:0,display:'inline-block'}}></span>
+                                                    {p.name}
+                                                </span>
+                                                <span style={{color:'#ffffff',fontSize:'11px',fontWeight:'700'}}>{fmtV(p.value)}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                );
+                            }}
+                        />
                         <Legend verticalAlign="bottom" height={44} iconSize={12} formatter={v=><span style={{fontSize:'12px',color:'#52525b',fontWeight:'500'}}>{v}</span>} />
                         {[['PLACA KLC','#e34948',[]],['KALOCER','#2a78d6',[6,3]],['METALLIC WEAR','#4a3aa7',[4,4]],['ELEM. FIXAÇÃO','#1baf7a',[8,3]],['ABRESIST','#eda100',[2,2]],['PASTILHA KLC','#eb6834',[6,2]]].map(([name,color,dash])=>(
                             <Line key={name} type="monotone" dataKey={name} stroke={color} strokeWidth={3} strokeDasharray={dash.join(' ')} dot={{r:6,fill:color,strokeWidth:2,stroke:'#fff'}} activeDot={{r:9}} connectNulls={false} />
