@@ -343,17 +343,17 @@ const ObsoletosChart = ({ data }) => {
                 </ResponsiveContainer>
             </div>
 
-            <div className="bg-white rounded-2xl border border-zinc-200 p-5">
+            <div className="bg-white rounded-2xl border border-zinc-200 p-5 -mx-4 md:-mx-8 px-4 md:px-8" style={{marginLeft:'-1rem',marginRight:'-1rem',borderRadius:'0',borderLeft:'none',borderRight:'none'}}>
                 <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-4">Top 6 grupos — evolução histórica</p>
-                <ResponsiveContainer width="100%" height={280}>
-                    <LineChart data={chartDataLinha} margin={{top:10,right:20,left:10,bottom:30}}>
+                <ResponsiveContainer width="100%" height={380}>
+                    <LineChart data={chartDataLinha} margin={{top:20,right:40,left:20,bottom:40}}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e4e4e7" />
-                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize:11,fill:'#71717a',fontWeight:'bold'}} />
-                        <YAxis axisLine={false} tickLine={false} tickFormatter={fmt} tick={{fontSize:10,fill:'#71717a'}} dx={-5} />
-                        <Tooltip formatter={(v,n)=>[v>0?fmt(v):null,n]} itemFilter={i=>i.value>0} />
-                        <Legend verticalAlign="bottom" height={36} formatter={v=><span style={{fontSize:'11px',color:'#52525b'}}>{v}</span>} />
+                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize:13,fill:'#52525b',fontWeight:'bold'}} dy={10} />
+                        <YAxis axisLine={false} tickLine={false} tickFormatter={fmt} tick={{fontSize:11,fill:'#71717a'}} dx={-8} width={80} />
+                        <Tooltip formatter={(v,n)=>[v>0?fmt(v):null,n]} itemFilter={i=>i.value>0} cursor={{strokeDasharray:'4 4',stroke:'#e4e4e7'}} />
+                        <Legend verticalAlign="bottom" height={44} iconSize={12} formatter={v=><span style={{fontSize:'12px',color:'#52525b',fontWeight:'500'}}>{v}</span>} />
                         {[['PLACA KLC','#e34948',[]],['KALOCER','#2a78d6',[6,3]],['METALLIC WEAR','#4a3aa7',[4,4]],['ELEM. FIXAÇÃO','#1baf7a',[8,3]],['ABRESIST','#eda100',[2,2]],['PASTILHA KLC','#eb6834',[6,2]]].map(([name,color,dash])=>(
-                            <Line key={name} type="monotone" dataKey={name} stroke={color} strokeWidth={2.5} strokeDasharray={dash.join(' ')} dot={{r:5,fill:color,strokeWidth:2,stroke:'#fff'}} activeDot={{r:8}} connectNulls={false} />
+                            <Line key={name} type="monotone" dataKey={name} stroke={color} strokeWidth={3} strokeDasharray={dash.join(' ')} dot={{r:6,fill:color,strokeWidth:2,stroke:'#fff'}} activeDot={{r:9}} connectNulls={false} />
                         ))}
                     </LineChart>
                 </ResponsiveContainer>
