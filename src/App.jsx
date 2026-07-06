@@ -352,30 +352,41 @@ const ObsoletosChart = ({ data }) => {
                     <LineChart data={chartDataLinha} margin={{top:20,right:40,left:20,bottom:40}}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e4e4e7" />
                         <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize:13,fill:'#52525b',fontWeight:'bold'}} dy={10} />
-                        <YAxis axisLine={false} tickLine={false} scale="log" domain={['auto','auto']} tickFormatter={fmt} tick={{fontSize:11,fill:'#71717a'}} dx={-8} width={85} allowDataOverflow />
-                        <Tooltip formatter={(v,n)=>[v>0?fmt(v):null,n]} itemFilter={i=>i.value>0} cursor={{strokeDasharray:'4 4',stroke:'#e4e4e7'}}
+                        <YAxis yAxisId="esq" axisLine={false} tickLine={false} tickFormatter={fmt} tick={{fontSize:11,fill:'#71717a'}} dx={-8} width={85} />
+                        <YAxis yAxisId="dir" orientation="right" axisLine={false} tickLine={false} tickFormatter={fmt} tick={{fontSize:11,fill:'#e34948',fontWeight:'bold'}} dx={8} width={85} />
+                        <Tooltip
                             content={({active,payload,label})=>{
                                 if(!active||!payload||!payload.length) return null;
-                                const fmtV = v => v>=1000000?'R$ '+(v/1000000).toFixed(2).replace('.',',')+'M':v>=1000?'R$ '+Math.round(v/1000).toLocaleString('pt-BR')+'K':v>0?'R$ '+Math.round(v).toLocaleString('pt-BR'):'-';
+                                const fmtV = v => {
+                                    if(v===null||v===undefined||v===0) return '-';
+                                    if(v>=1000000) return 'R$ '+(v/1000000).toFixed(3).replace('.',',')+'M';
+                                    if(v>=1000) return 'R$ '+(v/1000).toFixed(1).replace('.',',')+'K';
+                                    return 'R$ '+v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+                                };
                                 return (
-                                    <div style={{background:'#18181b',border:'1px solid #3f3f46',borderRadius:'10px',padding:'10px 14px',minWidth:'180px'}}>
+                                    <div style={{background:'#18181b',border:'1px solid #3f3f46',borderRadius:'10px',padding:'10px 14px',minWidth:'200px'}}>
                                         <p style={{color:'#eab308',fontWeight:'900',fontSize:'12px',marginBottom:'8px',textTransform:'uppercase',letterSpacing:'0.05em'}}>{label}</p>
                                         {payload.filter(p=>p.value>0).sort((a,b)=>b.value-a.value).map((p,i)=>(
-                                            <div key={i} style={{display:'flex',justifyContent:'space-between',gap:'16px',marginBottom:'4px'}}>
+                                            <div key={i} style={{display:'flex',justifyContent:'space-between',gap:'20px',marginBottom:'5px'}}>
                                                 <span style={{color:'#a1a1aa',fontSize:'11px',display:'flex',alignItems:'center',gap:'5px'}}>
                                                     <span style={{width:'8px',height:'8px',borderRadius:'2px',background:p.color,flexShrink:0,display:'inline-block'}}></span>
                                                     {p.name}
                                                 </span>
-                                                <span style={{color:'#ffffff',fontSize:'11px',fontWeight:'700'}}>{fmtV(p.value)}</span>
+                                                <span style={{color:'#ffffff',fontSize:'12px',fontWeight:'700'}}>{fmtV(p.value)}</span>
                                             </div>
                                         ))}
                                     </div>
                                 );
                             }}
+                            cursor={{strokeDasharray:'4 4',stroke:'#e4e4e7'}}
                         />
-                        <Legend verticalAlign="bottom" height={44} iconSize={12} formatter={v=><span style={{fontSize:'12px',color:'#52525b',fontWeight:'500'}}>{v}</span>} />
-                        {[['PLACA KLC','#e34948',[]],['KALOCER','#2a78d6',[6,3]],['METALLIC WEAR','#4a3aa7',[4,4]],['ELEM. FIXAÇÃO','#1baf7a',[8,3]],['ABRESIST','#eda100',[2,2]],['PASTILHA KLC','#eb6834',[6,2]]].map(([name,color,dash])=>(
-                            <Line key={name} type="monotone" dataKey={name} stroke={color} strokeWidth={3} strokeDasharray={dash.join(' ')} dot={{r:6,fill:color,strokeWidth:2,stroke:'#fff'}} activeDot={{r:9}} connectNulls={false} />
+                        <Legend verticalAlign="bottom" height={44} iconSize={12} formatter={v=>{
+                            const isPlaca = v==='PLACA KLC';
+                            return <span style={{fontSize:'12px',color:isPlaca?'#e34948':'#52525b',fontWeight:isPlaca?'700':'500'}}>{v}{isPlaca?' (eixo dir.)':''}</span>;
+                        }} />
+                        <Line yAxisId="dir" type="monotone" dataKey="PLACA KLC" stroke="#e34948" strokeWidth={3} dot={{r:6,fill:'#e34948',strokeWidth:2,stroke:'#fff'}} activeDot={{r:9}} connectNulls />
+                        {[['KALOCER','#2a78d6',[6,3]],['METALLIC WEAR','#4a3aa7',[4,4]],['ELEM. FIXAÇÃO','#1baf7a',[8,3]],['ABRESIST','#eda100',[2,2]],['PASTILHA KLC','#eb6834',[6,2]]].map(([name,color,dash])=>(
+                            <Line key={name} yAxisId="esq" type="monotone" dataKey={name} stroke={color} strokeWidth={2.5} strokeDasharray={dash.join(' ')} dot={{r:5,fill:color,strokeWidth:2,stroke:'#fff'}} activeDot={{r:8}} connectNulls={false} />
                         ))}
                     </LineChart>
                 </ResponsiveContainer>
