@@ -863,7 +863,7 @@ export default function App() {
           else if(upper.includes('EDSON')) setKpiOwnerId(2);
           else if(upper.includes('PCP')) setKpiOwnerId(3);
           else if((upper.includes('DANIEL') && !upper.includes('DANIELA')) || upper.includes('JOSE')) setKpiOwnerId(4);
-          else if(upper.includes('DANILO') || upper.includes('SUPPLY')) setKpiOwnerId(5);
+          else if(upper.includes('DANILO') || upper.includes('SUPPLY') || upper.includes('LEONARDO')) setKpiOwnerId(5);
           else if(upper.includes('LUCIENE')) setKpiOwnerId(6);
           else if(upper.includes('MARIELE')) setKpiOwnerId(7);
           else if(upper.includes('DANIELA')) setKpiOwnerId(8);
