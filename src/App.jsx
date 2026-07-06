@@ -3230,7 +3230,7 @@ export default function App() {
                         <h3 className="text-xs font-black text-zinc-400 uppercase tracking-widest ml-2">
                             📦 Composição de Estoque — Itens Obsoletos (Custo R$)
                         </h3>
-                        {isAdmin && (
+                        {(user.role === 'admin' || user.role === 'dev') && (
                             <button type="button" onClick={() => { setObsoletosEditMode(!obsoletosEditMode); setObsoletosForm({}); }}
                                 className={`flex items-center gap-2 text-xs font-black uppercase tracking-wider px-4 py-2 rounded-xl transition-all ${obsoletosEditMode ? 'bg-red-100 text-red-700 border border-red-200' : 'bg-zinc-900 text-yellow-500 border border-zinc-700'}`}>
                                 {obsoletosEditMode ? '✕ Cancelar edição' : '✏️ Atualizar dados'}
@@ -3238,7 +3238,7 @@ export default function App() {
                         )}
                     </div>
 
-                    {obsoletosEditMode && isAdmin && (
+                    {obsoletosEditMode && (user.role === 'admin' || user.role === 'dev') && (
                         <div className="bg-zinc-950 rounded-2xl p-5 mb-6 border border-zinc-800">
                             <div className="flex flex-col md:flex-row gap-4 mb-4 items-end">
                                 <div>
@@ -3296,7 +3296,7 @@ export default function App() {
                         <ObsoletosChart data={obsoletosData} />
                     ) : (
                         <div className="bg-zinc-50 border border-zinc-200 rounded-2xl p-8 text-center text-zinc-400 text-sm">
-                            Nenhum dado de obsoletos encontrado. {isAdmin ? 'Use o botão "Atualizar dados" para inserir.' : 'Aguarde o administrador inserir os dados.'}
+                            Nenhum dado de obsoletos encontrado. {(user.role === 'admin' || user.role === 'dev') ? 'Use o botão "Atualizar dados" para inserir.' : 'Aguarde o administrador inserir os dados.'}
                         </div>
                     )}
                 </div>
