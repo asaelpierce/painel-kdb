@@ -2273,25 +2273,31 @@ export default function App() {
                                 <thead>
                                     <tr>
                                         <th className="text-left text-[10px] font-black text-zinc-400 uppercase tracking-widest pb-3 pr-4 min-w-[160px]">Vendedor</th>
-                                        <th className="text-center text-[10px] font-black text-zinc-400 uppercase tracking-widest pb-3 px-3 min-w-[120px]">Nº Proj. Abertos</th>
-                                        <th className="text-center text-[10px] font-black text-zinc-400 uppercase tracking-widest pb-3 px-3 min-w-[150px]">Valor Proj. Abertos (R$)</th>
-                                        <th className="text-center text-[10px] font-black text-zinc-400 uppercase tracking-widest pb-3 px-3 min-w-[120px]">Nº Proj. Fechados</th>
+                                        <th className="text-center text-[10px] font-black text-yellow-500 uppercase tracking-widest pb-3 px-2 min-w-[110px]">Nº Abertos</th>
+                                        <th className="text-center text-[10px] font-black text-yellow-500 uppercase tracking-widest pb-3 px-2 min-w-[150px]">Valor Abertos (R$)</th>
+                                        <th className="text-center text-[10px] font-black text-emerald-400 uppercase tracking-widest pb-3 px-2 min-w-[110px]">Nº Fechados</th>
+                                        <th className="text-center text-[10px] font-black text-emerald-400 uppercase tracking-widest pb-3 px-2 min-w-[150px]">Valor Fechados (R$)</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {['ALINE DEL PUPPO','CESAR MATOS','GIVALDO NONATO','GIVANILDO SILVA','HYGOR TOMAZ','KALBRAS','WILLIAM SCHRECK'].map(v => (
                                         <tr key={v} className="border-t border-zinc-800">
                                             <td className="py-2 pr-4 text-white text-xs font-bold">{v}</td>
-                                            {['qtd_abertos','valor_abertos','qtd_fechados'].map(campo => (
-                                                <td key={campo} className="py-2 px-3">
-                                                    <input type="number" step={campo === 'valor_abertos' ? '0.01' : '1'} min="0"
+                                            {[
+                                                {campo:'qtd_abertos', step:'1', border:'border-yellow-800'},
+                                                {campo:'valor_abertos', step:'0.01', border:'border-yellow-800'},
+                                                {campo:'qtd_fechados', step:'1', border:'border-emerald-800'},
+                                                {campo:'valor_fechados', step:'0.01', border:'border-emerald-800'},
+                                            ].map(({campo, step, border}) => (
+                                                <td key={campo} className="py-2 px-2">
+                                                    <input type="number" step={step} min="0"
                                                         placeholder="0"
                                                         value={projetosForm[v]?.[campo] ?? ''}
                                                         onChange={e => setProjetosForm(prev => ({
                                                             ...prev,
                                                             [v]: { ...prev[v], [campo]: e.target.value }
                                                         }))}
-                                                        className="w-full bg-zinc-800 text-white text-sm px-3 py-1.5 rounded-lg border border-zinc-700 focus:border-yellow-500 outline-none text-center" />
+                                                        className={`w-full bg-zinc-800 text-white text-sm px-3 py-1.5 rounded-lg border ${border} focus:border-yellow-500 outline-none text-center`} />
                                                 </td>
                                             ))}
                                         </tr>
@@ -2307,13 +2313,14 @@ export default function App() {
                                     try {
                                         await supabaseClient.from('projetos_vendedor').delete().eq('period', projetosPeriodo);
                                         const rows = Object.entries(projetosForm)
-                                            .filter(([,v]) => v && (v.qtd_abertos || v.valor_abertos || v.qtd_fechados))
+                                            .filter(([,v]) => v && (v.qtd_abertos || v.valor_abertos || v.qtd_fechados || v.valor_fechados))
                                             .map(([vendedor, v]) => ({
                                                 period: projetosPeriodo,
                                                 vendedor,
                                                 qtd_abertos: parseInt(v.qtd_abertos) || 0,
                                                 valor_abertos: parseFloat(v.valor_abertos) || 0,
                                                 qtd_fechados: parseInt(v.qtd_fechados) || 0,
+                                                valor_fechados: parseFloat(v.valor_fechados) || 0,
                                             }));
                                         if (rows.length > 0) await supabaseClient.from('projetos_vendedor').insert(rows);
                                         showToast(`Projetos de ${projetosPeriodo} salvos!`);
@@ -2339,8 +2346,8 @@ export default function App() {
                     const totalAbertos = dadosPeriodo.reduce((s,p) => s + (p.qtd_abertos||0), 0);
                     const totalFechados = dadosPeriodo.reduce((s,p) => s + (p.qtd_fechados||0), 0);
                     const totalValor = dadosPeriodo.reduce((s,p) => s + (parseFloat(p.valor_abertos)||0), 0);
-                    // KPI numero projetos abertos (do banco de KPIs - id conforme mapeamento)
-                    const kpiProjAbertos = computedData.find(v => v.indicator_id === 90 && v.period === periodoFiltro)?.value;
+                    const totalValorFechados = dadosPeriodo.reduce((s,p) => s + (parseFloat(p.valor_fechados)||0), 0);
+                    const taxaConversao = totalAbertos > 0 ? ((totalFechados/totalAbertos)*100).toFixed(1) : '—';
 
                     if (dadosPeriodo.length === 0 && !projetosPeriodo) return (
                         <div className="bg-zinc-50 border border-zinc-200 rounded-2xl p-8 text-center text-zinc-400 text-sm">
@@ -2350,52 +2357,99 @@ export default function App() {
 
                     return (
                         <div className="space-y-6">
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            {/* KPI Cards */}
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
                                 {[
-                                    {lbl:'Total proj. abertos', val: totalAbertos, sub: periodoFiltro, cls:'border-l-4 border-yellow-400'},
-                                    {lbl:'Valor total abertos', val: formatCurrency(totalValor), sub: periodoFiltro, cls:'border-l-4 border-blue-400'},
-                                    {lbl:'Total proj. fechados', val: totalFechados, sub: periodoFiltro, cls:'border-l-4 border-emerald-400'},
-                                    {lbl:'Ticket médio aberto', val: totalAbertos > 0 ? formatCurrency(totalValor/totalAbertos) : '—', sub:'por projeto', cls:'border-l-4 border-purple-400'},
+                                    {lbl:'Proj. Abertos', val: totalAbertos, sub: periodoFiltro, cls:'border-l-4 border-yellow-400', txt:'text-yellow-600'},
+                                    {lbl:'Valor Abertos', val: formatCurrency(totalValor), sub: periodoFiltro, cls:'border-l-4 border-yellow-300', txt:'text-yellow-700'},
+                                    {lbl:'Proj. Fechados', val: totalFechados, sub: periodoFiltro, cls:'border-l-4 border-emerald-400', txt:'text-emerald-600'},
+                                    {lbl:'Valor Fechados', val: formatCurrency(totalValorFechados), sub: periodoFiltro, cls:'border-l-4 border-emerald-300', txt:'text-emerald-700'},
+                                    {lbl:'Taxa Conversão', val: taxaConversao !== '—' ? taxaConversao+'%' : '—', sub:'fechados/abertos', cls:'border-l-4 border-blue-400', txt:'text-blue-600'},
+                                    {lbl:'Ticket Médio', val: totalAbertos > 0 ? formatCurrency(totalValor/totalAbertos) : '—', sub:'por proj. aberto', cls:'border-l-4 border-purple-400', txt:'text-purple-600'},
                                 ].map((k,i) => (
                                     <div key={i} className={`bg-zinc-50 rounded-xl p-4 ${k.cls}`}>
                                         <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">{k.lbl}</p>
-                                        <p className="text-lg font-black text-zinc-900">{k.val}</p>
+                                        <p className={`text-base font-black ${k.txt}`}>{k.val}</p>
                                         <p className="text-[11px] text-zinc-400 mt-0.5">{k.sub}</p>
                                     </div>
                                 ))}
                             </div>
 
                             {dadosPeriodo.length > 0 && (
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-4">
+                                    {/* Gráfico 1: Quantidade por vendedor */}
                                     <div className="bg-white rounded-2xl border border-zinc-200 p-5">
                                         <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-4">Nº de projetos por vendedor — {periodoFiltro}</p>
-                                        <ResponsiveContainer width="100%" height={220}>
+                                        <ResponsiveContainer width="100%" height={Math.max(200, dadosPeriodo.length*52+60)}>
                                             <BarChart data={dadosPeriodo} layout="vertical" margin={{top:0,right:50,left:10,bottom:0}}>
+                                                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f4f4f5" />
                                                 <XAxis type="number" axisLine={false} tickLine={false} tick={{fontSize:10,fill:'#71717a'}} allowDecimals={false} />
-                                                <YAxis type="category" dataKey="vendedor" axisLine={false} tickLine={false} tick={{fontSize:11,fill:'#374151'}} width={140} />
-                                                <Tooltip formatter={(v,n) => [v, n === 'qtd_abertos' ? 'Proj. Abertos' : 'Proj. Fechados']} />
-                                                <Bar dataKey="qtd_abertos" name="Proj. Abertos" fill="#eab308" maxBarSize={18} radius={[0,4,4,0]}>
-                                                    <LabelList dataKey="qtd_abertos" position="right" style={{fontSize:11,fontWeight:'bold',fill:'#52525b'}} />
+                                                <YAxis type="category" dataKey="vendedor" axisLine={false} tickLine={false} tick={{fontSize:11,fill:'#374151',fontWeight:'600'}} width={150} />
+                                                <Tooltip formatter={(v,n) => [v, n === 'qtd_abertos' ? '📂 Proj. Abertos' : '✅ Proj. Fechados']} />
+                                                <Legend verticalAlign="top" height={32} formatter={v=><span style={{fontSize:'11px',fontWeight:'600',color:'#374151'}}>{v}</span>} />
+                                                <Bar dataKey="qtd_abertos" name="Proj. Abertos" fill="#eab308" maxBarSize={20} radius={[0,4,4,0]}>
+                                                    <LabelList dataKey="qtd_abertos" position="right" style={{fontSize:11,fontWeight:'bold',fill:'#374151'}} />
                                                 </Bar>
-                                                <Bar dataKey="qtd_fechados" name="Proj. Fechados" fill="#10b981" maxBarSize={18} radius={[0,4,4,0]}>
-                                                    <LabelList dataKey="qtd_fechados" position="right" style={{fontSize:11,fontWeight:'bold',fill:'#52525b'}} />
+                                                <Bar dataKey="qtd_fechados" name="Proj. Fechados" fill="#10b981" maxBarSize={20} radius={[0,4,4,0]}>
+                                                    <LabelList dataKey="qtd_fechados" position="right" style={{fontSize:11,fontWeight:'bold',fill:'#374151'}} />
                                                 </Bar>
                                             </BarChart>
                                         </ResponsiveContainer>
                                     </div>
+
+                                    {/* Gráfico 2: Valor por vendedor */}
                                     <div className="bg-white rounded-2xl border border-zinc-200 p-5">
-                                        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-4">Valor de projetos abertos por vendedor — {periodoFiltro}</p>
-                                        <ResponsiveContainer width="100%" height={220}>
-                                            <BarChart data={dadosPeriodo.filter(p=>p.valor_abertos>0)} layout="vertical" margin={{top:0,right:80,left:10,bottom:0}}>
+                                        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-4">Valor de projetos por vendedor — {periodoFiltro}</p>
+                                        <ResponsiveContainer width="100%" height={Math.max(200, dadosPeriodo.length*52+60)}>
+                                            <BarChart data={dadosPeriodo} layout="vertical" margin={{top:0,right:90,left:10,bottom:0}}>
+                                                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f4f4f5" />
                                                 <XAxis type="number" axisLine={false} tickLine={false} tickFormatter={v=>formatCurrencyShort(v)} tick={{fontSize:10,fill:'#71717a'}} />
-                                                <YAxis type="category" dataKey="vendedor" axisLine={false} tickLine={false} tick={{fontSize:11,fill:'#374151'}} width={140} />
-                                                <Tooltip formatter={(v) => [formatCurrency(v), 'Valor Abertos']} />
-                                                <Bar dataKey="valor_abertos" fill="#3b82f6" maxBarSize={18} radius={[0,4,4,0]}>
-                                                    <LabelList dataKey="valor_abertos" position="right" formatter={v=>formatCurrencyShort(v)} style={{fontSize:10,fontWeight:'bold',fill:'#52525b'}} />
+                                                <YAxis type="category" dataKey="vendedor" axisLine={false} tickLine={false} tick={{fontSize:11,fill:'#374151',fontWeight:'600'}} width={150} />
+                                                <Tooltip formatter={(v,n) => [formatCurrency(v), n === 'valor_abertos' ? '📂 Valor Abertos' : '✅ Valor Fechados']} />
+                                                <Legend verticalAlign="top" height={32} formatter={v=><span style={{fontSize:'11px',fontWeight:'600',color:'#374151'}}>{v}</span>} />
+                                                <Bar dataKey="valor_abertos" name="Valor Abertos" fill="#3b82f6" maxBarSize={20} radius={[0,4,4,0]}>
+                                                    <LabelList dataKey="valor_abertos" position="right" formatter={v=>v>0?formatCurrencyShort(v):''} style={{fontSize:10,fontWeight:'bold',fill:'#374151'}} />
+                                                </Bar>
+                                                <Bar dataKey="valor_fechados" name="Valor Fechados" fill="#10b981" maxBarSize={20} radius={[0,4,4,0]}>
+                                                    <LabelList dataKey="valor_fechados" position="right" formatter={v=>v>0?formatCurrencyShort(v):''} style={{fontSize:10,fontWeight:'bold',fill:'#374151'}} />
                                                 </Bar>
                                             </BarChart>
                                         </ResponsiveContainer>
                                     </div>
+
+                                    {/* Gráfico 3: Taxa de conversão por vendedor */}
+                                    {dadosPeriodo.some(p=>p.qtd_abertos>0) && (
+                                        <div className="bg-white rounded-2xl border border-zinc-200 p-5">
+                                            <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-4">Taxa de conversão por vendedor — {periodoFiltro} <span className="text-zinc-300 font-normal">(fechados ÷ abertos)</span></p>
+                                            <ResponsiveContainer width="100%" height={Math.max(200, dadosPeriodo.length*52+60)}>
+                                                <BarChart
+                                                    data={dadosPeriodo.filter(p=>p.qtd_abertos>0).map(p=>({
+                                                        ...p,
+                                                        taxa: parseFloat(((p.qtd_fechados/p.qtd_abertos)*100).toFixed(1))
+                                                    }))}
+                                                    layout="vertical" margin={{top:0,right:70,left:10,bottom:0}}>
+                                                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f4f4f5" />
+                                                    <XAxis type="number" axisLine={false} tickLine={false} tickFormatter={v=>v+'%'} tick={{fontSize:10,fill:'#71717a'}} domain={[0,100]} />
+                                                    <YAxis type="category" dataKey="vendedor" axisLine={false} tickLine={false} tick={{fontSize:11,fill:'#374151',fontWeight:'600'}} width={150} />
+                                                    <Tooltip formatter={(v) => [v+'%', 'Taxa de Conversão']} />
+                                                    <Bar dataKey="taxa" maxBarSize={20} radius={[0,4,4,0]}>
+                                                        {dadosPeriodo.filter(p=>p.qtd_abertos>0).map((entry,i)=>{
+                                                            const taxa = (entry.qtd_fechados/entry.qtd_abertos)*100;
+                                                            return <Cell key={i} fill={taxa >= 50 ? '#10b981' : taxa >= 25 ? '#eab308' : '#ef4444'} />;
+                                                        })}
+                                                        <LabelList dataKey="taxa" position="right" formatter={v=>v+'%'} style={{fontSize:11,fontWeight:'bold',fill:'#374151'}} />
+                                                    </Bar>
+                                                </BarChart>
+                                            </ResponsiveContainer>
+                                            <div className="flex gap-4 mt-3">
+                                                {[['#10b981','≥ 50% — Ótimo'],['#eab308','25–49% — Regular'],['#ef4444','< 25% — Atenção']].map(([c,l])=>(
+                                                    <span key={l} className="flex items-center gap-1.5 text-[10px] font-bold text-zinc-500">
+                                                        <span className="w-2.5 h-2.5 rounded-sm" style={{background:c}}></span>{l}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>
