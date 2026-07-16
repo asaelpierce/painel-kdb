@@ -3,7 +3,7 @@ import {
   LayoutDashboard, ListChecks, LineChart as LineChartIcon, FileSpreadsheet, 
   Crown, TrendingUp, TrendingDown, CheckCircle2, AlertTriangle,
   LogOut, Save, Filter, X, MessageSquareText, HelpCircle, ArrowRightCircle, Target,
-  PieChart as PieChartIcon, BarChart3, Edit2, Trash2, GitBranch, Calendar, User, PlusCircle, History, Info, ChevronRight, ChevronLeft, Download, DollarSign, Image as ImageIcon, Briefcase, Globe, Menu
+  PieChart as PieChartIcon, BarChart3, Edit2, Trash2, GitBranch, Calendar, User, PlusCircle, History, Info, ChevronRight, ChevronLeft, Download, DollarSign, Image as ImageIcon, Briefcase, Globe, Menu, Upload, MapPin
 } from 'lucide-react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, 
@@ -642,6 +642,11 @@ export default function App() {
   const [comercialViewPeriod, setComercialViewPeriod] = useState('ALL'); 
   const [comercialViewMode, setComercialViewMode] = useState('YTD'); 
   const [finViewMode, setFinViewMode] = useState('MONTHLY'); 
+  const [projetosData, setProjetosData] = useState([]);
+  const [projetosPeriodo, setProjetosPeriodo] = useState('');
+  const [projetosForm, setProjetosForm] = useState({});
+  const [visitasData, setVisitasData] = useState([]);
+  const [visitasUploadMsg, setVisitasUploadMsg] = useState('');
   
   const [financeMargins, setFinanceMargins] = useState({});
   const [pcpMargin, setPcpMargin] = useState(0);
@@ -982,6 +987,14 @@ export default function App() {
 
       let comRes = { data: [] };
       try { comRes = await supabaseClient.from('indicator_comments').select('*'); } catch (e) {}
+      try {
+          const { data: projRes } = await supabaseClient.from('projetos_vendedor').select('*').order('period').order('vendedor');
+          if (projRes) setProjetosData(projRes);
+      } catch(e) {}
+      try {
+          const { data: visitRes } = await supabaseClient.from('visitas_vendedor').select('*').order('mes').order('vendedor');
+          if (visitRes) setVisitasData(visitRes);
+      } catch(e) {}
       try {
           const { data: obsRes } = await supabaseClient.from('obsoletos').select('*').order('grupo');
           if (obsRes) setObsoletosData(obsRes);
@@ -1709,7 +1722,10 @@ export default function App() {
                             <Tooltip content={<CustomTooltipFinanceiro2 />} cursor={{fill: '#f4f4f5'}} />
                             <Legend wrapperStyle={{fontSize: '11px', fontWeight: 'bold', paddingTop: '20px'}} />
                             <Line type="monotone" dataKey="EBIT Budget" stroke="#fde047" strokeWidth={2} strokeDasharray="5 5" dot={{r: 3}} name="EBIT Budget" />
-                            <Bar dataKey="EBIT" fill="#f59e0b" radius={[4, 4, 0, 0]} maxBarSize={45}>
+                            <Bar dataKey="EBIT" radius={[4, 4, 0, 0]} maxBarSize={45}>
+                                {financeiroCorpData.map((entry, index) => (
+                                    <Cell key={index} fill={entry['EBIT'] < 0 ? '#ef4444' : '#f59e0b'} />
+                                ))}
                                 <LabelList dataKey="EBIT" position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={(val) => val !== 0 ? formatCurrencyShort(val) : ''} />
                             </Bar>
                         </ComposedChart>
@@ -1734,7 +1750,10 @@ export default function App() {
                             <Tooltip content={<CustomTooltipFinanceiro2 />} cursor={{fill: '#f4f4f5'}} />
                             <Legend wrapperStyle={{fontSize: '11px', fontWeight: 'bold', paddingTop: '20px'}} />
                             <Line type="monotone" dataKey="EBT Budget" stroke="#a1a1aa" strokeWidth={2} strokeDasharray="5 5" dot={{r: 3}} name="EBT Budget" />
-                            <Bar dataKey="EBT" fill="#6366f1" radius={[4, 4, 0, 0]} maxBarSize={45}>
+                            <Bar dataKey="EBT" radius={[4, 4, 0, 0]} maxBarSize={45}>
+                                {financeiroCorpData.map((entry, index) => (
+                                    <Cell key={index} fill={entry['EBT'] < 0 ? '#ef4444' : '#6366f1'} />
+                                ))}
                                 <LabelList dataKey="EBT" position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={(val) => val !== 0 ? formatCurrencyShort(val) : ''} />
                             </Bar>
                         </ComposedChart>
@@ -1970,7 +1989,10 @@ export default function App() {
                                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 9, fontWeight: 'bold', fill: '#71717a'}} dy={10} interval={0} angle={-30} textAnchor="end" height={60} tickFormatter={(val) => truncateText(val, 15)} />
                                   <YAxis axisLine={false} tickLine={false} tickFormatter={(val) => formatCurrencyShort(val)} tick={{fontSize: 10, fill: '#71717a', fontWeight: 'bold'}} dx={-10} />
                                   <Tooltip content={<CustomTooltipGeral />} cursor={{fill: '#f4f4f5'}} />
-                                  <Bar dataKey="Lucro" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={50}>
+                                  <Bar dataKey="Lucro" radius={[4, 4, 0, 0]} maxBarSize={50}>
+                                      {profitDataFinanceiro.map((entry, index) => (
+                                          <Cell key={index} fill={entry['Lucro'] < 0 ? '#ef4444' : '#10b981'} />
+                                      ))}
                                       <LabelList dataKey="Lucro" position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={(val) => formatCurrencyShort(val)} />
                                   </Bar>
                               </BarChart>
@@ -2221,6 +2243,295 @@ export default function App() {
                       </div>
                   </div>
 
+
+            {/* ===================== SEÇÃO: PROJETOS POR VENDEDOR ===================== */}
+            <div className="mt-10">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-3">
+                    <div>
+                        <h2 className="text-xl font-black text-zinc-900 flex items-center gap-3">
+                            <div className="p-2 bg-zinc-900 text-yellow-500 rounded-xl"><BarChart3 size={20} /></div>
+                            Projetos por Vendedor
+                        </h2>
+                        <p className="text-xs text-zinc-400 mt-1 font-medium ml-11">Número e valor de projetos abertos e fechados no mês</p>
+                    </div>
+                    <div className="flex items-center gap-3 bg-zinc-50 p-2 rounded-2xl border border-zinc-200">
+                        <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest px-2">Mês</label>
+                        <select className="border-none bg-white text-zinc-900 px-4 py-2 rounded-xl text-sm font-bold outline-none cursor-pointer shadow-sm"
+                            value={projetosPeriodo} onChange={e => setProjetosPeriodo(e.target.value)}>
+                            <option value="">Selecione o mês</option>
+                            {months.map(m => <option key={m} value={m}>{m}</option>)}
+                        </select>
+                    </div>
+                </div>
+
+                {/* FORMULÁRIO DE LANÇAMENTO */}
+                {(user.role === 'admin' || user.role === 'dev' || user.username?.toUpperCase().includes('RICARDO') || user.username?.toUpperCase().includes('PRISCILA')) && projetosPeriodo && (
+                    <div className="bg-zinc-950 rounded-2xl p-6 mb-6 border border-zinc-800">
+                        <p className="text-[10px] font-black text-yellow-500 uppercase tracking-widest mb-5">✏️ Lançamento — {projetosPeriodo}</p>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                                <thead>
+                                    <tr>
+                                        <th className="text-left text-[10px] font-black text-zinc-400 uppercase tracking-widest pb-3 pr-4 min-w-[160px]">Vendedor</th>
+                                        <th className="text-center text-[10px] font-black text-zinc-400 uppercase tracking-widest pb-3 px-3 min-w-[120px]">Nº Proj. Abertos</th>
+                                        <th className="text-center text-[10px] font-black text-zinc-400 uppercase tracking-widest pb-3 px-3 min-w-[150px]">Valor Proj. Abertos (R$)</th>
+                                        <th className="text-center text-[10px] font-black text-zinc-400 uppercase tracking-widest pb-3 px-3 min-w-[120px]">Nº Proj. Fechados</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {['ALINE DEL PUPPO','CESAR MATOS','GIVALDO NONATO','GIVANILDO SILVA','HYGOR TOMAZ','KALBRAS','WILLIAM SCHRECK'].map(v => (
+                                        <tr key={v} className="border-t border-zinc-800">
+                                            <td className="py-2 pr-4 text-white text-xs font-bold">{v}</td>
+                                            {['qtd_abertos','valor_abertos','qtd_fechados'].map(campo => (
+                                                <td key={campo} className="py-2 px-3">
+                                                    <input type="number" step={campo === 'valor_abertos' ? '0.01' : '1'} min="0"
+                                                        placeholder="0"
+                                                        value={projetosForm[v]?.[campo] ?? ''}
+                                                        onChange={e => setProjetosForm(prev => ({
+                                                            ...prev,
+                                                            [v]: { ...prev[v], [campo]: e.target.value }
+                                                        }))}
+                                                        className="w-full bg-zinc-800 text-white text-sm px-3 py-1.5 rounded-lg border border-zinc-700 focus:border-yellow-500 outline-none text-center" />
+                                                </td>
+                                            ))}
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div className="mt-5 flex justify-end">
+                            <button type="button" disabled={loading}
+                                onClick={async () => {
+                                    if (!projetosPeriodo) { showToast('Selecione o mês.', 'error'); return; }
+                                    setLoading(true);
+                                    try {
+                                        await supabaseClient.from('projetos_vendedor').delete().eq('period', projetosPeriodo);
+                                        const rows = Object.entries(projetosForm)
+                                            .filter(([,v]) => v && (v.qtd_abertos || v.valor_abertos || v.qtd_fechados))
+                                            .map(([vendedor, v]) => ({
+                                                period: projetosPeriodo,
+                                                vendedor,
+                                                qtd_abertos: parseInt(v.qtd_abertos) || 0,
+                                                valor_abertos: parseFloat(v.valor_abertos) || 0,
+                                                qtd_fechados: parseInt(v.qtd_fechados) || 0,
+                                            }));
+                                        if (rows.length > 0) await supabaseClient.from('projetos_vendedor').insert(rows);
+                                        showToast(`Projetos de ${projetosPeriodo} salvos!`);
+                                        setProjetosForm({});
+                                        loadData();
+                                    } catch(e) {
+                                        console.error(e);
+                                        showToast('Erro ao salvar: ' + (e.message || ''), 'error');
+                                    }
+                                    setLoading(false);
+                                }}
+                                className="bg-yellow-500 text-black px-6 py-2.5 rounded-xl font-black text-sm hover:bg-yellow-400 active:scale-95 transition-all disabled:opacity-50 flex items-center gap-2">
+                                <Save size={16} /> Gravar projetos
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* DASHBOARD DE PROJETOS */}
+                {(() => {
+                    const periodoFiltro = projetosPeriodo || months[new Date().getMonth()] || months[0];
+                    const dadosPeriodo = projetosData.filter(p => p.period === periodoFiltro);
+                    const totalAbertos = dadosPeriodo.reduce((s,p) => s + (p.qtd_abertos||0), 0);
+                    const totalFechados = dadosPeriodo.reduce((s,p) => s + (p.qtd_fechados||0), 0);
+                    const totalValor = dadosPeriodo.reduce((s,p) => s + (parseFloat(p.valor_abertos)||0), 0);
+                    // KPI numero projetos abertos (do banco de KPIs - id conforme mapeamento)
+                    const kpiProjAbertos = computedData.find(v => v.indicator_id === 90 && v.period === periodoFiltro)?.value;
+
+                    if (dadosPeriodo.length === 0 && !projetosPeriodo) return (
+                        <div className="bg-zinc-50 border border-zinc-200 rounded-2xl p-8 text-center text-zinc-400 text-sm">
+                            Selecione um mês para ver os dados de projetos.
+                        </div>
+                    );
+
+                    return (
+                        <div className="space-y-6">
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                {[
+                                    {lbl:'Total proj. abertos', val: totalAbertos, sub: periodoFiltro, cls:'border-l-4 border-yellow-400'},
+                                    {lbl:'Valor total abertos', val: formatCurrency(totalValor), sub: periodoFiltro, cls:'border-l-4 border-blue-400'},
+                                    {lbl:'Total proj. fechados', val: totalFechados, sub: periodoFiltro, cls:'border-l-4 border-emerald-400'},
+                                    {lbl:'Ticket médio aberto', val: totalAbertos > 0 ? formatCurrency(totalValor/totalAbertos) : '—', sub:'por projeto', cls:'border-l-4 border-purple-400'},
+                                ].map((k,i) => (
+                                    <div key={i} className={`bg-zinc-50 rounded-xl p-4 ${k.cls}`}>
+                                        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">{k.lbl}</p>
+                                        <p className="text-lg font-black text-zinc-900">{k.val}</p>
+                                        <p className="text-[11px] text-zinc-400 mt-0.5">{k.sub}</p>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {dadosPeriodo.length > 0 && (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="bg-white rounded-2xl border border-zinc-200 p-5">
+                                        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-4">Nº de projetos por vendedor — {periodoFiltro}</p>
+                                        <ResponsiveContainer width="100%" height={220}>
+                                            <BarChart data={dadosPeriodo} layout="vertical" margin={{top:0,right:50,left:10,bottom:0}}>
+                                                <XAxis type="number" axisLine={false} tickLine={false} tick={{fontSize:10,fill:'#71717a'}} allowDecimals={false} />
+                                                <YAxis type="category" dataKey="vendedor" axisLine={false} tickLine={false} tick={{fontSize:11,fill:'#374151'}} width={140} />
+                                                <Tooltip formatter={(v,n) => [v, n === 'qtd_abertos' ? 'Proj. Abertos' : 'Proj. Fechados']} />
+                                                <Bar dataKey="qtd_abertos" name="Proj. Abertos" fill="#eab308" maxBarSize={18} radius={[0,4,4,0]}>
+                                                    <LabelList dataKey="qtd_abertos" position="right" style={{fontSize:11,fontWeight:'bold',fill:'#52525b'}} />
+                                                </Bar>
+                                                <Bar dataKey="qtd_fechados" name="Proj. Fechados" fill="#10b981" maxBarSize={18} radius={[0,4,4,0]}>
+                                                    <LabelList dataKey="qtd_fechados" position="right" style={{fontSize:11,fontWeight:'bold',fill:'#52525b'}} />
+                                                </Bar>
+                                            </BarChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                    <div className="bg-white rounded-2xl border border-zinc-200 p-5">
+                                        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-4">Valor de projetos abertos por vendedor — {periodoFiltro}</p>
+                                        <ResponsiveContainer width="100%" height={220}>
+                                            <BarChart data={dadosPeriodo.filter(p=>p.valor_abertos>0)} layout="vertical" margin={{top:0,right:80,left:10,bottom:0}}>
+                                                <XAxis type="number" axisLine={false} tickLine={false} tickFormatter={v=>formatCurrencyShort(v)} tick={{fontSize:10,fill:'#71717a'}} />
+                                                <YAxis type="category" dataKey="vendedor" axisLine={false} tickLine={false} tick={{fontSize:11,fill:'#374151'}} width={140} />
+                                                <Tooltip formatter={(v) => [formatCurrency(v), 'Valor Abertos']} />
+                                                <Bar dataKey="valor_abertos" fill="#3b82f6" maxBarSize={18} radius={[0,4,4,0]}>
+                                                    <LabelList dataKey="valor_abertos" position="right" formatter={v=>formatCurrencyShort(v)} style={{fontSize:10,fontWeight:'bold',fill:'#52525b'}} />
+                                                </Bar>
+                                            </BarChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    );
+                })()}
+            </div>
+
+            {/* ===================== SEÇÃO: VISITAS ===================== */}
+            <div className="mt-10 mb-6">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-3">
+                    <div>
+                        <h2 className="text-xl font-black text-zinc-900 flex items-center gap-3">
+                            <div className="p-2 bg-zinc-900 text-yellow-500 rounded-xl"><MapPin size={20} /></div>
+                            Visitas por Vendedor
+                        </h2>
+                        <p className="text-xs text-zinc-400 mt-1 font-medium ml-11">Importe a planilha .xlsx para atualizar os dados de visitas</p>
+                    </div>
+                </div>
+
+                {/* IMPORTAÇÃO DE PLANILHA */}
+                {(user.role === 'admin' || user.role === 'dev' || user.username?.toUpperCase().includes('RICARDO') || user.username?.toUpperCase().includes('PRISCILA')) && (
+                    <div className="bg-zinc-50 border-2 border-dashed border-zinc-300 rounded-2xl p-6 mb-6 hover:border-yellow-400 transition-colors">
+                        <div className="flex flex-col md:flex-row items-center gap-4">
+                            <div className="text-center md:text-left">
+                                <p className="font-black text-zinc-700 text-sm mb-1">📂 Importar planilha de visitas (.xlsx)</p>
+                                <p className="text-xs text-zinc-400">Colunas esperadas: <strong>vendedor | quantidade | local | mes</strong></p>
+                                {visitasUploadMsg && <p className={`text-xs mt-2 font-bold ${visitasUploadMsg.includes('Erro') ? 'text-red-500' : 'text-emerald-600'}`}>{visitasUploadMsg}</p>}
+                            </div>
+                            <label className="cursor-pointer bg-zinc-900 text-yellow-500 px-5 py-2.5 rounded-xl font-black text-sm hover:bg-zinc-800 transition-all flex items-center gap-2 shrink-0">
+                                <Upload size={16} /> Selecionar arquivo
+                                <input type="file" accept=".xlsx,.xls" className="hidden"
+                                    onChange={async (e) => {
+                                        const file = e.target.files[0];
+                                        if (!file) return;
+                                        setLoading(true);
+                                        setVisitasUploadMsg('Processando...');
+                                        try {
+                                            const XLSX = await import('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.mjs');
+                                            const ab = await file.arrayBuffer();
+                                            const wb = XLSX.read(ab, {type:'array'});
+                                            const ws = wb.Sheets[wb.SheetNames[0]];
+                                            const rows = XLSX.utils.sheet_to_json(ws, {defval:''});
+                                            const normalized = rows.map(r => ({
+                                                vendedor: String(r['vendedor'] || r['Vendedor'] || r['VENDEDOR'] || '').trim().toUpperCase(),
+                                                quantidade: parseInt(r['quantidade'] || r['Quantidade'] || r['qtd'] || 0) || 0,
+                                                local: String(r['local'] || r['Local'] || r['LOCAL'] || '').trim(),
+                                                mes: String(r['mes'] || r['Mes'] || r['mês'] || r['MES'] || '').trim().toUpperCase(),
+                                            })).filter(r => r.vendedor && r.mes);
+                                            if (normalized.length === 0) { setVisitasUploadMsg('Erro: nenhuma linha válida encontrada.'); setLoading(false); return; }
+                                            const meses = [...new Set(normalized.map(r=>r.mes))];
+                                            for (const mes of meses) {
+                                                await supabaseClient.from('visitas_vendedor').delete().eq('mes', mes);
+                                            }
+                                            await supabaseClient.from('visitas_vendedor').insert(normalized);
+                                            setVisitasUploadMsg(`✅ ${normalized.length} registros importados (${meses.join(', ')})`);
+                                            loadData();
+                                        } catch(err) {
+                                            console.error(err);
+                                            setVisitasUploadMsg('Erro ao processar: ' + (err.message||''));
+                                        }
+                                        setLoading(false);
+                                        e.target.value = '';
+                                    }}
+                                />
+                            </label>
+                        </div>
+                    </div>
+                )}
+
+                {/* DASHBOARD VISITAS */}
+                {visitasData.length > 0 && (() => {
+                    const mesesVisitas = [...new Set(visitasData.map(v=>v.mes))].sort();
+                    const mesVisitaAtual = projetosPeriodo || mesesVisitas[mesesVisitas.length-1] || '';
+                    const visitasFiltradas = visitasData.filter(v => v.mes === mesVisitaAtual);
+                    const totalVisitas = visitasFiltradas.reduce((s,v)=>s+(v.quantidade||0),0);
+                    const byVendedor = Object.values(visitasFiltradas.reduce((acc,v)=>{
+                        const k = v.vendedor;
+                        if(!acc[k]) acc[k]={vendedor:k,quantidade:0,locais:[]};
+                        acc[k].quantidade += v.quantidade||0;
+                        if(v.local) acc[k].locais.push(v.local);
+                        return acc;
+                    },{})).sort((a,b)=>b.quantidade-a.quantidade);
+
+                    return (
+                        <div className="space-y-4">
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                <div className="bg-zinc-50 rounded-xl p-4 border-l-4 border-yellow-400">
+                                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">Total de visitas</p>
+                                    <p className="text-2xl font-black text-zinc-900">{totalVisitas}</p>
+                                    <p className="text-[11px] text-zinc-400 mt-0.5">{mesVisitaAtual}</p>
+                                </div>
+                                <div className="bg-zinc-50 rounded-xl p-4 border-l-4 border-blue-400">
+                                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">Vendedores ativos</p>
+                                    <p className="text-2xl font-black text-zinc-900">{byVendedor.length}</p>
+                                    <p className="text-[11px] text-zinc-400 mt-0.5">com visitas no período</p>
+                                </div>
+                                <div className="bg-zinc-50 rounded-xl p-4 border-l-4 border-emerald-400">
+                                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">Média por vendedor</p>
+                                    <p className="text-2xl font-black text-zinc-900">{byVendedor.length > 0 ? (totalVisitas/byVendedor.length).toFixed(1) : '—'}</p>
+                                    <p className="text-[11px] text-zinc-400 mt-0.5">visitas/vendedor</p>
+                                </div>
+                            </div>
+                            <div className="bg-white rounded-2xl border border-zinc-200 p-5">
+                                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-4">Visitas por vendedor — {mesVisitaAtual}</p>
+                                <ResponsiveContainer width="100%" height={Math.max(180, byVendedor.length*40+60)}>
+                                    <BarChart data={byVendedor} layout="vertical" margin={{top:0,right:60,left:10,bottom:0}}>
+                                        <XAxis type="number" axisLine={false} tickLine={false} tick={{fontSize:10,fill:'#71717a'}} allowDecimals={false} />
+                                        <YAxis type="category" dataKey="vendedor" axisLine={false} tickLine={false} tick={{fontSize:11,fill:'#374151'}} width={150} />
+                                        <Tooltip formatter={(v) => [v, 'Visitas']} />
+                                        <Bar dataKey="quantidade" fill="#eab308" maxBarSize={22} radius={[0,4,4,0]}>
+                                            <LabelList dataKey="quantidade" position="right" style={{fontSize:12,fontWeight:'bold',fill:'#374151'}} />
+                                        </Bar>
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </div>
+                            {visitasFiltradas.some(v=>v.local) && (
+                                <div className="bg-white rounded-2xl border border-zinc-200 p-5">
+                                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-4">Locais visitados — {mesVisitaAtual}</p>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                        {byVendedor.filter(v=>v.locais.length>0).map(v=>(
+                                            <div key={v.vendedor} className="bg-zinc-50 rounded-xl p-3 border border-zinc-200">
+                                                <p className="text-[10px] font-black text-zinc-500 uppercase mb-2">{v.vendedor}</p>
+                                                <div className="flex flex-wrap gap-1">
+                                                    {v.locais.map((l,i)=>(
+                                                        <span key={i} className="text-[10px] bg-white border border-zinc-200 rounded-full px-2 py-0.5 text-zinc-600 font-medium">{l}</span>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    );
+                })()}
+            </div>
               </div>
           </div>
       );
