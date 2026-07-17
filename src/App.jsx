@@ -2246,21 +2246,33 @@ export default function App() {
 
             {/* ===================== SEÇÃO: PROJETOS POR VENDEDOR ===================== */}
             <div className="mt-10">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-3">
-                    <div>
-                        <h2 className="text-xl font-black text-zinc-900 flex items-center gap-3">
-                            <div className="p-2 bg-zinc-900 text-yellow-500 rounded-xl"><BarChart3 size={20} /></div>
-                            Projetos por Vendedor
-                        </h2>
-                        <p className="text-xs text-zinc-400 mt-1 font-medium ml-11">Número e valor de projetos abertos e fechados no mês</p>
+                {/* Header igual ao padrão do portal */}
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-4 rounded-3xl shadow-sm border border-zinc-200 mb-6">
+                    <div className="flex items-center gap-3 ml-2">
+                        <div className="p-2 bg-zinc-900 text-yellow-500 rounded-xl"><BarChart3 size={20} /></div>
+                        <div>
+                            <h2 className="text-xl font-black text-zinc-900 tracking-tight leading-none">Projetos por Vendedor</h2>
+                            <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mt-1">Número e valor de projetos abertos e fechados no mês</p>
+                        </div>
                     </div>
-                    <div className="flex items-center gap-3 bg-zinc-50 p-2 rounded-2xl border border-zinc-200">
-                        <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest px-2">Mês</label>
-                        <select className="border-none bg-white text-zinc-900 px-4 py-2 rounded-xl text-sm font-bold outline-none cursor-pointer shadow-sm"
-                            value={projetosPeriodo} onChange={e => setProjetosPeriodo(e.target.value)}>
-                            <option value="">Selecione o mês</option>
-                            {months.map(m => <option key={m} value={m}>{m}</option>)}
-                        </select>
+                    <div className="flex flex-wrap items-center gap-3">
+                        <div className="flex items-center gap-2 bg-zinc-50 p-2 rounded-2xl border border-zinc-200">
+                            <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest px-2">Mês Visualização</label>
+                            <div className="flex gap-1">
+                                {months.map(m => (
+                                    <button key={m} type="button"
+                                        onClick={() => setProjetosPeriodo(m)}
+                                        className={`px-3 py-1.5 rounded-lg text-[11px] font-black uppercase transition-all ${projetosPeriodo === m ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100'}`}>
+                                        {m}
+                                    </button>
+                                ))}
+                                <button type="button"
+                                    onClick={() => setProjetosPeriodo('')}
+                                    className={`px-3 py-1.5 rounded-lg text-[11px] font-black uppercase transition-all ${!projetosPeriodo ? 'bg-zinc-900 text-yellow-500 shadow-md' : 'text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100'}`}>
+                                    TODOS
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -2377,77 +2389,104 @@ export default function App() {
 
                             {dadosPeriodo.length > 0 && (
                                 <div className="space-y-4">
-                                    {/* Gráfico 1: Quantidade por vendedor */}
-                                    <div className="bg-white rounded-2xl border border-zinc-200 p-5">
-                                        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-4">Nº de projetos por vendedor — {periodoFiltro}</p>
-                                        <ResponsiveContainer width="100%" height={Math.max(200, dadosPeriodo.length*52+60)}>
-                                            <BarChart data={dadosPeriodo} layout="vertical" margin={{top:0,right:50,left:10,bottom:0}}>
+                                    {/* Gráfico 1: Quantidade por vendedor — FULL WIDTH */}
+                                    <div className="bg-white rounded-3xl border border-zinc-200 p-6 shadow-sm">
+                                        <div className="flex justify-between items-center mb-5">
+                                            <div>
+                                                <p className="text-sm font-black text-zinc-800 uppercase tracking-widest">Nº de Projetos por Vendedor</p>
+                                                <p className="text-[10px] text-zinc-400 font-medium mt-0.5">{periodoFiltro} — abertos vs fechados</p>
+                                            </div>
+                                            <div className="flex gap-3">
+                                                {[['#eab308','Abertos'],['#10b981','Fechados']].map(([cor,lbl])=>(
+                                                    <span key={lbl} className="flex items-center gap-1.5 text-[11px] font-bold text-zinc-500">
+                                                        <span className="w-3 h-3 rounded-sm" style={{background:cor}}></span>{lbl}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <ResponsiveContainer width="100%" height={Math.max(280, dadosPeriodo.length*64+80)}>
+                                            <BarChart data={dadosPeriodo} layout="vertical" margin={{top:0,right:60,left:20,bottom:0}} barGap={6}>
                                                 <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f4f4f5" />
-                                                <XAxis type="number" axisLine={false} tickLine={false} tick={{fontSize:10,fill:'#71717a'}} allowDecimals={false} />
-                                                <YAxis type="category" dataKey="vendedor" axisLine={false} tickLine={false} tick={{fontSize:11,fill:'#374151',fontWeight:'600'}} width={150} />
-                                                <Tooltip formatter={(v,n) => [v, n === 'qtd_abertos' ? '📂 Proj. Abertos' : '✅ Proj. Fechados']} />
-                                                <Legend verticalAlign="top" height={32} formatter={v=><span style={{fontSize:'11px',fontWeight:'600',color:'#374151'}}>{v}</span>} />
-                                                <Bar dataKey="qtd_abertos" name="Proj. Abertos" fill="#eab308" maxBarSize={20} radius={[0,4,4,0]}>
-                                                    <LabelList dataKey="qtd_abertos" position="right" style={{fontSize:11,fontWeight:'bold',fill:'#374151'}} />
+                                                <XAxis type="number" axisLine={false} tickLine={false} tick={{fontSize:11,fill:'#71717a'}} allowDecimals={false} />
+                                                <YAxis type="category" dataKey="vendedor" axisLine={false} tickLine={false} tick={{fontSize:13,fill:'#374151',fontWeight:'700'}} width={170} />
+                                                <Tooltip formatter={(v,n) => [v + ' projetos', n === 'qtd_abertos' ? '📂 Abertos' : '✅ Fechados']} cursor={{fill:'#f9fafb'}} />
+                                                <Bar dataKey="qtd_abertos" name="qtd_abertos" fill="#eab308" maxBarSize={26} radius={[0,6,6,0]}>
+                                                    <LabelList dataKey="qtd_abertos" position="right" style={{fontSize:13,fontWeight:'900',fill:'#374151'}} />
                                                 </Bar>
-                                                <Bar dataKey="qtd_fechados" name="Proj. Fechados" fill="#10b981" maxBarSize={20} radius={[0,4,4,0]}>
-                                                    <LabelList dataKey="qtd_fechados" position="right" style={{fontSize:11,fontWeight:'bold',fill:'#374151'}} />
+                                                <Bar dataKey="qtd_fechados" name="qtd_fechados" fill="#10b981" maxBarSize={26} radius={[0,6,6,0]}>
+                                                    <LabelList dataKey="qtd_fechados" position="right" style={{fontSize:13,fontWeight:'900',fill:'#374151'}} />
                                                 </Bar>
                                             </BarChart>
                                         </ResponsiveContainer>
                                     </div>
 
-                                    {/* Gráfico 2: Valor por vendedor */}
-                                    <div className="bg-white rounded-2xl border border-zinc-200 p-5">
-                                        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-4">Valor de projetos por vendedor — {periodoFiltro}</p>
-                                        <ResponsiveContainer width="100%" height={Math.max(200, dadosPeriodo.length*52+60)}>
-                                            <BarChart data={dadosPeriodo} layout="vertical" margin={{top:0,right:90,left:10,bottom:0}}>
+                                    {/* Gráfico 2: Valor por vendedor — FULL WIDTH */}
+                                    <div className="bg-white rounded-3xl border border-zinc-200 p-6 shadow-sm">
+                                        <div className="flex justify-between items-center mb-5">
+                                            <div>
+                                                <p className="text-sm font-black text-zinc-800 uppercase tracking-widest">Valor de Projetos por Vendedor</p>
+                                                <p className="text-[10px] text-zinc-400 font-medium mt-0.5">{periodoFiltro} — valor abertos vs valor fechados</p>
+                                            </div>
+                                            <div className="flex gap-3">
+                                                {[['#3b82f6','Valor Abertos'],['#10b981','Valor Fechados']].map(([cor,lbl])=>(
+                                                    <span key={lbl} className="flex items-center gap-1.5 text-[11px] font-bold text-zinc-500">
+                                                        <span className="w-3 h-3 rounded-sm" style={{background:cor}}></span>{lbl}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <ResponsiveContainer width="100%" height={Math.max(280, dadosPeriodo.length*64+80)}>
+                                            <BarChart data={dadosPeriodo} layout="vertical" margin={{top:0,right:100,left:20,bottom:0}} barGap={6}>
                                                 <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f4f4f5" />
-                                                <XAxis type="number" axisLine={false} tickLine={false} tickFormatter={v=>formatCurrencyShort(v)} tick={{fontSize:10,fill:'#71717a'}} />
-                                                <YAxis type="category" dataKey="vendedor" axisLine={false} tickLine={false} tick={{fontSize:11,fill:'#374151',fontWeight:'600'}} width={150} />
-                                                <Tooltip formatter={(v,n) => [formatCurrency(v), n === 'valor_abertos' ? '📂 Valor Abertos' : '✅ Valor Fechados']} />
-                                                <Legend verticalAlign="top" height={32} formatter={v=><span style={{fontSize:'11px',fontWeight:'600',color:'#374151'}}>{v}</span>} />
-                                                <Bar dataKey="valor_abertos" name="Valor Abertos" fill="#3b82f6" maxBarSize={20} radius={[0,4,4,0]}>
-                                                    <LabelList dataKey="valor_abertos" position="right" formatter={v=>v>0?formatCurrencyShort(v):''} style={{fontSize:10,fontWeight:'bold',fill:'#374151'}} />
+                                                <XAxis type="number" axisLine={false} tickLine={false} tickFormatter={v=>formatCurrencyShort(v)} tick={{fontSize:11,fill:'#71717a'}} />
+                                                <YAxis type="category" dataKey="vendedor" axisLine={false} tickLine={false} tick={{fontSize:13,fill:'#374151',fontWeight:'700'}} width={170} />
+                                                <Tooltip formatter={(v,n) => [formatCurrency(v), n === 'valor_abertos' ? '📂 Valor Abertos' : '✅ Valor Fechados']} cursor={{fill:'#f9fafb'}} />
+                                                <Bar dataKey="valor_abertos" name="valor_abertos" fill="#3b82f6" maxBarSize={26} radius={[0,6,6,0]}>
+                                                    <LabelList dataKey="valor_abertos" position="right" formatter={v=>v>0?formatCurrencyShort(v):''} style={{fontSize:12,fontWeight:'900',fill:'#374151'}} />
                                                 </Bar>
-                                                <Bar dataKey="valor_fechados" name="Valor Fechados" fill="#10b981" maxBarSize={20} radius={[0,4,4,0]}>
-                                                    <LabelList dataKey="valor_fechados" position="right" formatter={v=>v>0?formatCurrencyShort(v):''} style={{fontSize:10,fontWeight:'bold',fill:'#374151'}} />
+                                                <Bar dataKey="valor_fechados" name="valor_fechados" fill="#10b981" maxBarSize={26} radius={[0,6,6,0]}>
+                                                    <LabelList dataKey="valor_fechados" position="right" formatter={v=>v>0?formatCurrencyShort(v):''} style={{fontSize:12,fontWeight:'900',fill:'#374151'}} />
                                                 </Bar>
                                             </BarChart>
                                         </ResponsiveContainer>
                                     </div>
 
-                                    {/* Gráfico 3: Taxa de conversão por vendedor */}
+                                    {/* Gráfico 3: Taxa de conversão — FULL WIDTH */}
                                     {dadosPeriodo.some(p=>p.qtd_abertos>0) && (
-                                        <div className="bg-white rounded-2xl border border-zinc-200 p-5">
-                                            <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-4">Taxa de conversão por vendedor — {periodoFiltro} <span className="text-zinc-300 font-normal">(fechados ÷ abertos)</span></p>
-                                            <ResponsiveContainer width="100%" height={Math.max(200, dadosPeriodo.length*52+60)}>
+                                        <div className="bg-white rounded-3xl border border-zinc-200 p-6 shadow-sm">
+                                            <div className="flex justify-between items-center mb-5">
+                                                <div>
+                                                    <p className="text-sm font-black text-zinc-800 uppercase tracking-widest">Taxa de Conversão por Vendedor</p>
+                                                    <p className="text-[10px] text-zinc-400 font-medium mt-0.5">Projetos fechados ÷ projetos abertos × 100</p>
+                                                </div>
+                                                <div className="flex gap-3">
+                                                    {[['#10b981','≥ 50% Ótimo'],['#eab308','25–49% Regular'],['#ef4444','< 25% Atenção']].map(([cor,lbl])=>(
+                                                        <span key={lbl} className="flex items-center gap-1.5 text-[10px] font-bold text-zinc-500">
+                                                            <span className="w-3 h-3 rounded-sm" style={{background:cor}}></span>{lbl}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                            <ResponsiveContainer width="100%" height={Math.max(280, dadosPeriodo.filter(p=>p.qtd_abertos>0).length*64+80)}>
                                                 <BarChart
                                                     data={dadosPeriodo.filter(p=>p.qtd_abertos>0).map(p=>({
                                                         ...p,
                                                         taxa: parseFloat(((p.qtd_fechados/p.qtd_abertos)*100).toFixed(1))
                                                     }))}
-                                                    layout="vertical" margin={{top:0,right:70,left:10,bottom:0}}>
+                                                    layout="vertical" margin={{top:0,right:80,left:20,bottom:0}}>
                                                     <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f4f4f5" />
-                                                    <XAxis type="number" axisLine={false} tickLine={false} tickFormatter={v=>v+'%'} tick={{fontSize:10,fill:'#71717a'}} domain={[0,100]} />
-                                                    <YAxis type="category" dataKey="vendedor" axisLine={false} tickLine={false} tick={{fontSize:11,fill:'#374151',fontWeight:'600'}} width={150} />
-                                                    <Tooltip formatter={(v) => [v+'%', 'Taxa de Conversão']} />
-                                                    <Bar dataKey="taxa" maxBarSize={20} radius={[0,4,4,0]}>
+                                                    <XAxis type="number" axisLine={false} tickLine={false} tickFormatter={v=>v+'%'} tick={{fontSize:11,fill:'#71717a'}} domain={[0,100]} />
+                                                    <YAxis type="category" dataKey="vendedor" axisLine={false} tickLine={false} tick={{fontSize:13,fill:'#374151',fontWeight:'700'}} width={170} />
+                                                    <Tooltip formatter={(v) => [v+'%', 'Taxa de Conversão']} cursor={{fill:'#f9fafb'}} />
+                                                    <Bar dataKey="taxa" maxBarSize={30} radius={[0,6,6,0]}>
                                                         {dadosPeriodo.filter(p=>p.qtd_abertos>0).map((entry,i)=>{
                                                             const taxa = (entry.qtd_fechados/entry.qtd_abertos)*100;
                                                             return <Cell key={i} fill={taxa >= 50 ? '#10b981' : taxa >= 25 ? '#eab308' : '#ef4444'} />;
                                                         })}
-                                                        <LabelList dataKey="taxa" position="right" formatter={v=>v+'%'} style={{fontSize:11,fontWeight:'bold',fill:'#374151'}} />
+                                                        <LabelList dataKey="taxa" position="right" formatter={v=>v+'%'} style={{fontSize:13,fontWeight:'900',fill:'#374151'}} />
                                                     </Bar>
                                                 </BarChart>
                                             </ResponsiveContainer>
-                                            <div className="flex gap-4 mt-3">
-                                                {[['#10b981','≥ 50% — Ótimo'],['#eab308','25–49% — Regular'],['#ef4444','< 25% — Atenção']].map(([c,l])=>(
-                                                    <span key={l} className="flex items-center gap-1.5 text-[10px] font-bold text-zinc-500">
-                                                        <span className="w-2.5 h-2.5 rounded-sm" style={{background:c}}></span>{l}
-                                                    </span>
-                                                ))}
-                                            </div>
                                         </div>
                                     )}
                                 </div>
