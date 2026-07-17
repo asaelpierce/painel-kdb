@@ -1407,6 +1407,23 @@ export default function App() {
       setExpandedCommentId(null);
   }, [kpiOwnerId, kpiEditPeriod, computedData, dbComments, dbValues, activeTab]); 
 
+  // Carregar projetosForm quando muda o mês selecionado
+  useEffect(() => {
+      if (!projetosPeriodo) { setProjetosForm({}); return; }
+      const dadosMes = projetosData.filter(p => p.period === projetosPeriodo);
+      if (dadosMes.length === 0) { setProjetosForm({}); return; }
+      const form = {};
+      dadosMes.forEach(p => {
+          form[p.vendedor] = {
+              qtd_abertos: p.qtd_abertos ?? '',
+              valor_abertos: p.valor_abertos ?? '',
+              qtd_fechados: p.qtd_fechados ?? '',
+              valor_fechados: p.valor_fechados ?? '',
+          };
+      });
+      setProjetosForm(form);
+  }, [projetosPeriodo, projetosData]);
+
   const needsComment = (id, ownerId, val) => {
     const numVal = parseFloat(val);
     if (isNaN(numVal) || numVal <= 0) return false;
@@ -2245,250 +2262,259 @@ export default function App() {
 
 
             {/* ===================== SEÇÃO: PROJETOS POR VENDEDOR ===================== */}
-            <div className="mt-10">
-                {/* Header igual ao padrão do portal */}
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-4 rounded-3xl shadow-sm border border-zinc-200 mb-6">
-                    <div className="flex items-center gap-3 ml-2">
-                        <div className="p-2 bg-zinc-900 text-yellow-500 rounded-xl"><BarChart3 size={20} /></div>
-                        <div>
-                            <h2 className="text-xl font-black text-zinc-900 tracking-tight leading-none">Projetos por Vendedor</h2>
-                            <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mt-1">Número e valor de projetos abertos e fechados no mês</p>
-                        </div>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-3">
-                        <div className="flex items-center gap-2 bg-zinc-50 p-2 rounded-2xl border border-zinc-200">
-                            <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest px-2">Mês Visualização</label>
-                            <div className="flex gap-1">
-                                {months.map(m => (
-                                    <button key={m} type="button"
-                                        onClick={() => setProjetosPeriodo(m)}
-                                        className={`px-3 py-1.5 rounded-lg text-[11px] font-black uppercase transition-all ${projetosPeriodo === m ? 'bg-yellow-500 text-black shadow-md' : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100'}`}>
-                                        {m}
-                                    </button>
-                                ))}
-                                <button type="button"
-                                    onClick={() => setProjetosPeriodo('')}
-                                    className={`px-3 py-1.5 rounded-lg text-[11px] font-black uppercase transition-all ${!projetosPeriodo ? 'bg-zinc-900 text-yellow-500 shadow-md' : 'text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100'}`}>
-                                    TODOS
-                                </button>
-                            </div>
-                        </div>
+            <div className="mt-10 space-y-6">
+
+                {/* Título da seção */}
+                <div className="flex items-center gap-3">
+                    <div className="p-2.5 bg-zinc-900 text-yellow-500 rounded-xl"><BarChart3 size={20} /></div>
+                    <div>
+                        <h2 className="text-xl font-black text-zinc-900 tracking-tight">Projetos por Vendedor</h2>
+                        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mt-0.5">Número e valor de projetos abertos e fechados por mês</p>
                     </div>
                 </div>
 
-                {/* FORMULÁRIO DE LANÇAMENTO */}
-                {(user.role === 'admin' || user.role === 'dev' || user.username?.toUpperCase().includes('RICARDO') || user.username?.toUpperCase().includes('PRISCILA')) && projetosPeriodo && (
-                    <div className="bg-zinc-950 rounded-2xl p-6 mb-6 border border-zinc-800">
-                        <p className="text-[10px] font-black text-yellow-500 uppercase tracking-widest mb-5">✏️ Lançamento — {projetosPeriodo}</p>
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-sm">
-                                <thead>
-                                    <tr>
-                                        <th className="text-left text-[10px] font-black text-zinc-400 uppercase tracking-widest pb-3 pr-4 min-w-[160px]">Vendedor</th>
-                                        <th className="text-center text-[10px] font-black text-yellow-500 uppercase tracking-widest pb-3 px-2 min-w-[110px]">Nº Abertos</th>
-                                        <th className="text-center text-[10px] font-black text-yellow-500 uppercase tracking-widest pb-3 px-2 min-w-[150px]">Valor Abertos (R$)</th>
-                                        <th className="text-center text-[10px] font-black text-emerald-400 uppercase tracking-widest pb-3 px-2 min-w-[110px]">Nº Fechados</th>
-                                        <th className="text-center text-[10px] font-black text-emerald-400 uppercase tracking-widest pb-3 px-2 min-w-[150px]">Valor Fechados (R$)</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {['ALINE DEL PUPPO','CESAR MATOS','GIVALDO NONATO','GIVANILDO SILVA','HYGOR TOMAZ','KALBRAS','WILLIAM SCHRECK'].map(v => (
-                                        <tr key={v} className="border-t border-zinc-800">
-                                            <td className="py-2 pr-4 text-white text-xs font-bold">{v}</td>
-                                            {[
-                                                {campo:'qtd_abertos', step:'1', border:'border-yellow-800'},
-                                                {campo:'valor_abertos', step:'0.01', border:'border-yellow-800'},
-                                                {campo:'qtd_fechados', step:'1', border:'border-emerald-800'},
-                                                {campo:'valor_fechados', step:'0.01', border:'border-emerald-800'},
-                                            ].map(({campo, step, border}) => (
-                                                <td key={campo} className="py-2 px-2">
-                                                    <input type="number" step={step} min="0"
-                                                        placeholder="0"
-                                                        value={projetosForm[v]?.[campo] ?? ''}
-                                                        onChange={e => setProjetosForm(prev => ({
-                                                            ...prev,
-                                                            [v]: { ...prev[v], [campo]: e.target.value }
-                                                        }))}
-                                                        className={`w-full bg-zinc-800 text-white text-sm px-3 py-1.5 rounded-lg border ${border} focus:border-yellow-500 outline-none text-center`} />
-                                                </td>
+                {/* ── FORMULÁRIO DE EDIÇÃO (padrão KPI) ── */}
+                {(user.role === 'admin' || user.role === 'dev' ||
+                  user.username?.toUpperCase().includes('RICARDO') ||
+                  user.username?.toUpperCase().includes('PRISCILA')) && (
+                    <div className="bg-white rounded-3xl shadow-sm border border-zinc-200 overflow-hidden">
+                        {/* Header do formulário */}
+                        <div className="p-5 border-b border-zinc-100 bg-zinc-50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                            <div>
+                                <h3 className="text-base font-extrabold text-zinc-900 flex items-center gap-2">
+                                    <Save size={18} className="text-yellow-600" /> Lançamento de Projetos
+                                </h3>
+                                <p className="text-xs text-zinc-400 mt-0.5">Preencha os dados do mês selecionado. Os valores já preenchidos aparecem automaticamente.</p>
+                            </div>
+                            <div className="flex items-center gap-3 bg-zinc-900 p-2 rounded-2xl border border-zinc-800 shrink-0">
+                                <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest px-3">Mês de Edição</label>
+                                <select className="border-none bg-zinc-800 text-yellow-500 px-5 py-2 rounded-xl text-sm font-bold outline-none cursor-pointer shadow-sm"
+                                    value={projetosPeriodo}
+                                    onChange={e => setProjetosPeriodo(e.target.value)}>
+                                    <option value="">— selecione —</option>
+                                    {months.map(m => <option key={m} value={m}>{m}</option>)}
+                                </select>
+                            </div>
+                        </div>
+
+                        {/* Tabela de lançamento */}
+                        {projetosPeriodo ? (
+                            <div className="p-5">
+                                <div className="overflow-x-auto">
+                                    <table className="w-full">
+                                        <thead>
+                                            <tr className="border-b-2 border-zinc-100">
+                                                <th className="text-left text-[10px] font-black text-zinc-400 uppercase tracking-widest pb-3 pl-2 min-w-[170px]">Vendedor</th>
+                                                <th className="text-center text-[10px] font-black text-yellow-600 uppercase tracking-widest pb-3 px-3 min-w-[110px]">Nº Abertos</th>
+                                                <th className="text-center text-[10px] font-black text-yellow-600 uppercase tracking-widest pb-3 px-3 min-w-[160px]">Valor Abertos (R$)</th>
+                                                <th className="w-6"></th>
+                                                <th className="text-center text-[10px] font-black text-emerald-600 uppercase tracking-widest pb-3 px-3 min-w-[110px]">Nº Fechados</th>
+                                                <th className="text-center text-[10px] font-black text-emerald-600 uppercase tracking-widest pb-3 px-3 min-w-[160px]">Valor Fechados (R$)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {['ALINE DEL PUPPO','CESAR MATOS','GIVALDO NONATO','GIVANILDO SILVA','HYGOR TOMAZ','KALBRAS','WILLIAM SCHRECK'].map((vend,i) => (
+                                                <tr key={vend} className={`${i%2===0?'bg-zinc-50/50':'bg-white'} border-b border-zinc-100`}>
+                                                    <td className="py-2.5 pl-2 pr-4">
+                                                        <span className="text-sm font-bold text-zinc-800">{vend}</span>
+                                                    </td>
+                                                    {[
+                                                        {campo:'qtd_abertos',   step:'1',    color:'yellow'},
+                                                        {campo:'valor_abertos', step:'0.01', color:'yellow'},
+                                                    ].map(({campo,step,color}) => (
+                                                        <td key={campo} className="py-2 px-2">
+                                                            <input type="number" step={step} min="0" placeholder="0"
+                                                                value={projetosForm[vend]?.[campo] ?? ''}
+                                                                onChange={e => setProjetosForm(prev => ({...prev, [vend]: {...(prev[vend]||{}), [campo]: e.target.value}}))}
+                                                                className="w-full text-right bg-white border border-yellow-200 focus:border-yellow-500 rounded-lg p-2 font-black text-sm outline-none transition-colors" />
+                                                        </td>
+                                                    ))}
+                                                    <td className="px-1 text-zinc-300 text-center">│</td>
+                                                    {[
+                                                        {campo:'qtd_fechados',   step:'1',    color:'emerald'},
+                                                        {campo:'valor_fechados', step:'0.01', color:'emerald'},
+                                                    ].map(({campo,step,color}) => (
+                                                        <td key={campo} className="py-2 px-2">
+                                                            <input type="number" step={step} min="0" placeholder="0"
+                                                                value={projetosForm[vend]?.[campo] ?? ''}
+                                                                onChange={e => setProjetosForm(prev => ({...prev, [vend]: {...(prev[vend]||{}), [campo]: e.target.value}}))}
+                                                                className="w-full text-right bg-white border border-emerald-200 focus:border-emerald-500 rounded-lg p-2 font-black text-sm outline-none transition-colors" />
+                                                        </td>
+                                                    ))}
+                                                </tr>
                                             ))}
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                        <div className="mt-5 flex justify-end">
-                            <button type="button" disabled={loading}
-                                onClick={async () => {
-                                    if (!projetosPeriodo) { showToast('Selecione o mês.', 'error'); return; }
-                                    setLoading(true);
-                                    try {
-                                        await supabaseClient.from('projetos_vendedor').delete().eq('period', projetosPeriodo);
-                                        const rows = Object.entries(projetosForm)
-                                            .filter(([,v]) => v && (v.qtd_abertos || v.valor_abertos || v.qtd_fechados || v.valor_fechados))
-                                            .map(([vendedor, v]) => ({
-                                                period: projetosPeriodo,
-                                                vendedor,
-                                                qtd_abertos: parseInt(v.qtd_abertos) || 0,
-                                                valor_abertos: parseFloat(v.valor_abertos) || 0,
-                                                qtd_fechados: parseInt(v.qtd_fechados) || 0,
-                                                valor_fechados: parseFloat(v.valor_fechados) || 0,
-                                            }));
-                                        if (rows.length > 0) await supabaseClient.from('projetos_vendedor').insert(rows);
-                                        showToast(`Projetos de ${projetosPeriodo} salvos!`);
-                                        setProjetosForm({});
-                                        loadData();
-                                    } catch(e) {
-                                        console.error(e);
-                                        showToast('Erro ao salvar: ' + (e.message || ''), 'error');
-                                    }
-                                    setLoading(false);
-                                }}
-                                className="bg-yellow-500 text-black px-6 py-2.5 rounded-xl font-black text-sm hover:bg-yellow-400 active:scale-95 transition-all disabled:opacity-50 flex items-center gap-2">
-                                <Save size={16} /> Gravar projetos
-                            </button>
-                        </div>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div className="mt-5 flex justify-end pt-4 border-t border-zinc-100">
+                                    <button type="button" disabled={loading}
+                                        onClick={async () => {
+                                            setLoading(true);
+                                            try {
+                                                await supabaseClient.from('projetos_vendedor').delete().eq('period', projetosPeriodo);
+                                                const rows = Object.entries(projetosForm)
+                                                    .filter(([,v]) => v && Object.values(v).some(x => x !== '' && parseFloat(x) > 0))
+                                                    .map(([vendedor, v]) => ({
+                                                        period: projetosPeriodo, vendedor,
+                                                        qtd_abertos: parseInt(v.qtd_abertos)||0,
+                                                        valor_abertos: parseFloat(v.valor_abertos)||0,
+                                                        qtd_fechados: parseInt(v.qtd_fechados)||0,
+                                                        valor_fechados: parseFloat(v.valor_fechados)||0,
+                                                    }));
+                                                if (rows.length > 0) await supabaseClient.from('projetos_vendedor').insert(rows);
+                                                showToast(`Projetos de ${projetosPeriodo} salvos com sucesso!`);
+                                                loadData();
+                                            } catch(e) {
+                                                console.error(e);
+                                                showToast('Erro: ' + (e.message||''), 'error');
+                                            }
+                                            setLoading(false);
+                                        }}
+                                        className="bg-black text-yellow-500 px-8 py-3 rounded-xl font-bold hover:bg-zinc-800 shadow-lg active:scale-95 flex items-center gap-2 transition-all disabled:opacity-50">
+                                        <Save size={18} /> Gravar Projetos de {projetosPeriodo}
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="p-8 text-center text-zinc-400 text-sm">
+                                Selecione o mês de edição acima para lançar ou editar os dados.
+                            </div>
+                        )}
                     </div>
                 )}
 
-                {/* DASHBOARD DE PROJETOS */}
+                {/* ── GRÁFICOS DE VISUALIZAÇÃO ── */}
                 {(() => {
-                    const periodoFiltro = projetosPeriodo || months[new Date().getMonth()] || months[0];
-                    const dadosPeriodo = projetosData.filter(p => p.period === periodoFiltro);
-                    const totalAbertos = dadosPeriodo.reduce((s,p) => s + (p.qtd_abertos||0), 0);
-                    const totalFechados = dadosPeriodo.reduce((s,p) => s + (p.qtd_fechados||0), 0);
-                    const totalValor = dadosPeriodo.reduce((s,p) => s + (parseFloat(p.valor_abertos)||0), 0);
-                    const totalValorFechados = dadosPeriodo.reduce((s,p) => s + (parseFloat(p.valor_fechados)||0), 0);
-                    const taxaConversao = totalAbertos > 0 ? ((totalFechados/totalAbertos)*100).toFixed(1) : '—';
+                    const periodoFiltro = projetosPeriodo || months.find(m => projetosData.some(p => p.period === m)) || '';
+                    const dadosPeriodo = periodoFiltro
+                        ? projetosData.filter(p => p.period === periodoFiltro)
+                        : [];
+                    if (dadosPeriodo.length === 0) return null;
 
-                    if (dadosPeriodo.length === 0 && !projetosPeriodo) return (
-                        <div className="bg-zinc-50 border border-zinc-200 rounded-2xl p-8 text-center text-zinc-400 text-sm">
-                            Selecione um mês para ver os dados de projetos.
-                        </div>
-                    );
+                    const totalAbertos = dadosPeriodo.reduce((s,p) => s+(p.qtd_abertos||0), 0);
+                    const totalFechados = dadosPeriodo.reduce((s,p) => s+(p.qtd_fechados||0), 0);
+                    const totalValor = dadosPeriodo.reduce((s,p) => s+(parseFloat(p.valor_abertos)||0), 0);
+                    const totalValorFechados = dadosPeriodo.reduce((s,p) => s+(parseFloat(p.valor_fechados)||0), 0);
+                    const taxaConversao = totalAbertos > 0 ? ((totalFechados/totalAbertos)*100).toFixed(1) : null;
+                    const BAR_H = Math.max(300, dadosPeriodo.length * 68 + 80);
 
                     return (
-                        <div className="space-y-6">
-                            {/* KPI Cards */}
+                        <div className="space-y-5">
+                            {/* KPI cards */}
                             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
                                 {[
-                                    {lbl:'Proj. Abertos', val: totalAbertos, sub: periodoFiltro, cls:'border-l-4 border-yellow-400', txt:'text-yellow-600'},
-                                    {lbl:'Valor Abertos', val: formatCurrency(totalValor), sub: periodoFiltro, cls:'border-l-4 border-yellow-300', txt:'text-yellow-700'},
-                                    {lbl:'Proj. Fechados', val: totalFechados, sub: periodoFiltro, cls:'border-l-4 border-emerald-400', txt:'text-emerald-600'},
-                                    {lbl:'Valor Fechados', val: formatCurrency(totalValorFechados), sub: periodoFiltro, cls:'border-l-4 border-emerald-300', txt:'text-emerald-700'},
-                                    {lbl:'Taxa Conversão', val: taxaConversao !== '—' ? taxaConversao+'%' : '—', sub:'fechados/abertos', cls:'border-l-4 border-blue-400', txt:'text-blue-600'},
-                                    {lbl:'Ticket Médio', val: totalAbertos > 0 ? formatCurrency(totalValor/totalAbertos) : '—', sub:'por proj. aberto', cls:'border-l-4 border-purple-400', txt:'text-purple-600'},
+                                    {lbl:'Proj. Abertos', val:totalAbertos, cls:'border-l-4 border-yellow-400', vCls:'text-yellow-600'},
+                                    {lbl:'Valor Abertos', val:formatCurrency(totalValor), cls:'border-l-4 border-yellow-300', vCls:'text-yellow-700'},
+                                    {lbl:'Proj. Fechados', val:totalFechados, cls:'border-l-4 border-emerald-400', vCls:'text-emerald-600'},
+                                    {lbl:'Valor Fechados', val:formatCurrency(totalValorFechados), cls:'border-l-4 border-emerald-300', vCls:'text-emerald-700'},
+                                    {lbl:'Taxa Conversão', val:taxaConversao?taxaConversao+'%':'—', cls:'border-l-4 border-blue-400', vCls:'text-blue-600'},
+                                    {lbl:'Ticket Médio', val:totalAbertos>0?formatCurrency(totalValor/totalAbertos):'—', cls:'border-l-4 border-purple-400', vCls:'text-purple-600'},
                                 ].map((k,i) => (
-                                    <div key={i} className={`bg-zinc-50 rounded-xl p-4 ${k.cls}`}>
+                                    <div key={i} className={`bg-white rounded-xl p-4 shadow-sm border border-zinc-200 ${k.cls}`}>
                                         <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">{k.lbl}</p>
-                                        <p className={`text-base font-black ${k.txt}`}>{k.val}</p>
-                                        <p className="text-[11px] text-zinc-400 mt-0.5">{k.sub}</p>
+                                        <p className={`text-base font-black ${k.vCls}`}>{k.val}</p>
+                                        <p className="text-[10px] text-zinc-300 mt-0.5">{periodoFiltro}</p>
                                     </div>
                                 ))}
                             </div>
 
-                            {dadosPeriodo.length > 0 && (
-                                <div className="space-y-4">
-                                    {/* Gráfico 1: Quantidade por vendedor — FULL WIDTH */}
-                                    <div className="bg-white rounded-3xl border border-zinc-200 p-6 shadow-sm">
-                                        <div className="flex justify-between items-center mb-5">
-                                            <div>
-                                                <p className="text-sm font-black text-zinc-800 uppercase tracking-widest">Nº de Projetos por Vendedor</p>
-                                                <p className="text-[10px] text-zinc-400 font-medium mt-0.5">{periodoFiltro} — abertos vs fechados</p>
-                                            </div>
-                                            <div className="flex gap-3">
-                                                {[['#eab308','Abertos'],['#10b981','Fechados']].map(([cor,lbl])=>(
-                                                    <span key={lbl} className="flex items-center gap-1.5 text-[11px] font-bold text-zinc-500">
-                                                        <span className="w-3 h-3 rounded-sm" style={{background:cor}}></span>{lbl}
-                                                    </span>
-                                                ))}
-                                            </div>
-                                        </div>
-                                        <ResponsiveContainer width="100%" height={Math.max(280, dadosPeriodo.length*64+80)}>
-                                            <BarChart data={dadosPeriodo} layout="vertical" margin={{top:0,right:60,left:20,bottom:0}} barGap={6}>
-                                                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f4f4f5" />
-                                                <XAxis type="number" axisLine={false} tickLine={false} tick={{fontSize:11,fill:'#71717a'}} allowDecimals={false} />
-                                                <YAxis type="category" dataKey="vendedor" axisLine={false} tickLine={false} tick={{fontSize:13,fill:'#374151',fontWeight:'700'}} width={170} />
-                                                <Tooltip formatter={(v,n) => [v + ' projetos', n === 'qtd_abertos' ? '📂 Abertos' : '✅ Fechados']} cursor={{fill:'#f9fafb'}} />
-                                                <Bar dataKey="qtd_abertos" name="qtd_abertos" fill="#eab308" maxBarSize={26} radius={[0,6,6,0]}>
-                                                    <LabelList dataKey="qtd_abertos" position="right" style={{fontSize:13,fontWeight:'900',fill:'#374151'}} />
-                                                </Bar>
-                                                <Bar dataKey="qtd_fechados" name="qtd_fechados" fill="#10b981" maxBarSize={26} radius={[0,6,6,0]}>
-                                                    <LabelList dataKey="qtd_fechados" position="right" style={{fontSize:13,fontWeight:'900',fill:'#374151'}} />
-                                                </Bar>
-                                            </BarChart>
-                                        </ResponsiveContainer>
+                            {/* Gráfico 1 — Quantidade */}
+                            <div className="bg-white rounded-3xl border border-zinc-200 p-6 shadow-sm">
+                                <div className="flex justify-between items-center mb-5">
+                                    <div>
+                                        <p className="text-sm font-black text-zinc-800 uppercase tracking-widest">Nº de Projetos por Vendedor</p>
+                                        <p className="text-[10px] text-zinc-400 mt-0.5">{periodoFiltro} — abertos vs fechados</p>
                                     </div>
-
-                                    {/* Gráfico 2: Valor por vendedor — FULL WIDTH */}
-                                    <div className="bg-white rounded-3xl border border-zinc-200 p-6 shadow-sm">
-                                        <div className="flex justify-between items-center mb-5">
-                                            <div>
-                                                <p className="text-sm font-black text-zinc-800 uppercase tracking-widest">Valor de Projetos por Vendedor</p>
-                                                <p className="text-[10px] text-zinc-400 font-medium mt-0.5">{periodoFiltro} — valor abertos vs valor fechados</p>
-                                            </div>
-                                            <div className="flex gap-3">
-                                                {[['#3b82f6','Valor Abertos'],['#10b981','Valor Fechados']].map(([cor,lbl])=>(
-                                                    <span key={lbl} className="flex items-center gap-1.5 text-[11px] font-bold text-zinc-500">
-                                                        <span className="w-3 h-3 rounded-sm" style={{background:cor}}></span>{lbl}
-                                                    </span>
-                                                ))}
-                                            </div>
-                                        </div>
-                                        <ResponsiveContainer width="100%" height={Math.max(280, dadosPeriodo.length*64+80)}>
-                                            <BarChart data={dadosPeriodo} layout="vertical" margin={{top:0,right:100,left:20,bottom:0}} barGap={6}>
-                                                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f4f4f5" />
-                                                <XAxis type="number" axisLine={false} tickLine={false} tickFormatter={v=>formatCurrencyShort(v)} tick={{fontSize:11,fill:'#71717a'}} />
-                                                <YAxis type="category" dataKey="vendedor" axisLine={false} tickLine={false} tick={{fontSize:13,fill:'#374151',fontWeight:'700'}} width={170} />
-                                                <Tooltip formatter={(v,n) => [formatCurrency(v), n === 'valor_abertos' ? '📂 Valor Abertos' : '✅ Valor Fechados']} cursor={{fill:'#f9fafb'}} />
-                                                <Bar dataKey="valor_abertos" name="valor_abertos" fill="#3b82f6" maxBarSize={26} radius={[0,6,6,0]}>
-                                                    <LabelList dataKey="valor_abertos" position="right" formatter={v=>v>0?formatCurrencyShort(v):''} style={{fontSize:12,fontWeight:'900',fill:'#374151'}} />
-                                                </Bar>
-                                                <Bar dataKey="valor_fechados" name="valor_fechados" fill="#10b981" maxBarSize={26} radius={[0,6,6,0]}>
-                                                    <LabelList dataKey="valor_fechados" position="right" formatter={v=>v>0?formatCurrencyShort(v):''} style={{fontSize:12,fontWeight:'900',fill:'#374151'}} />
-                                                </Bar>
-                                            </BarChart>
-                                        </ResponsiveContainer>
+                                    <div className="flex gap-4">
+                                        {[['#eab308','Abertos'],['#10b981','Fechados']].map(([cor,lbl])=>(
+                                            <span key={lbl} className="flex items-center gap-1.5 text-xs font-bold text-zinc-500">
+                                                <span className="w-3 h-3 rounded-sm" style={{background:cor}}></span>{lbl}
+                                            </span>
+                                        ))}
                                     </div>
+                                </div>
+                                <ResponsiveContainer width="100%" height={BAR_H}>
+                                    <BarChart data={dadosPeriodo} layout="vertical" margin={{top:4,right:60,left:16,bottom:4}} barGap={5}>
+                                        <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f4f4f5" />
+                                        <XAxis type="number" axisLine={false} tickLine={false} tick={{fontSize:11,fill:'#9ca3af'}} allowDecimals={false} />
+                                        <YAxis type="category" dataKey="vendedor" axisLine={false} tickLine={false} tick={{fontSize:13,fill:'#374151',fontWeight:'700'}} width={170} />
+                                        <Tooltip formatter={(v,n)=>[v+' projetos', n==='qtd_abertos'?'Abertos':'Fechados']} cursor={{fill:'#fafafa'}} />
+                                        <Bar dataKey="qtd_abertos" fill="#eab308" maxBarSize={28} radius={[0,6,6,0]}>
+                                            <LabelList dataKey="qtd_abertos" position="right" style={{fontSize:13,fontWeight:'900',fill:'#374151'}} />
+                                        </Bar>
+                                        <Bar dataKey="qtd_fechados" fill="#10b981" maxBarSize={28} radius={[0,6,6,0]}>
+                                            <LabelList dataKey="qtd_fechados" position="right" style={{fontSize:13,fontWeight:'900',fill:'#374151'}} />
+                                        </Bar>
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </div>
 
-                                    {/* Gráfico 3: Taxa de conversão — FULL WIDTH */}
-                                    {dadosPeriodo.some(p=>p.qtd_abertos>0) && (
-                                        <div className="bg-white rounded-3xl border border-zinc-200 p-6 shadow-sm">
-                                            <div className="flex justify-between items-center mb-5">
-                                                <div>
-                                                    <p className="text-sm font-black text-zinc-800 uppercase tracking-widest">Taxa de Conversão por Vendedor</p>
-                                                    <p className="text-[10px] text-zinc-400 font-medium mt-0.5">Projetos fechados ÷ projetos abertos × 100</p>
-                                                </div>
-                                                <div className="flex gap-3">
-                                                    {[['#10b981','≥ 50% Ótimo'],['#eab308','25–49% Regular'],['#ef4444','< 25% Atenção']].map(([cor,lbl])=>(
-                                                        <span key={lbl} className="flex items-center gap-1.5 text-[10px] font-bold text-zinc-500">
-                                                            <span className="w-3 h-3 rounded-sm" style={{background:cor}}></span>{lbl}
-                                                        </span>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                            <ResponsiveContainer width="100%" height={Math.max(280, dadosPeriodo.filter(p=>p.qtd_abertos>0).length*64+80)}>
-                                                <BarChart
-                                                    data={dadosPeriodo.filter(p=>p.qtd_abertos>0).map(p=>({
-                                                        ...p,
-                                                        taxa: parseFloat(((p.qtd_fechados/p.qtd_abertos)*100).toFixed(1))
-                                                    }))}
-                                                    layout="vertical" margin={{top:0,right:80,left:20,bottom:0}}>
-                                                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f4f4f5" />
-                                                    <XAxis type="number" axisLine={false} tickLine={false} tickFormatter={v=>v+'%'} tick={{fontSize:11,fill:'#71717a'}} domain={[0,100]} />
-                                                    <YAxis type="category" dataKey="vendedor" axisLine={false} tickLine={false} tick={{fontSize:13,fill:'#374151',fontWeight:'700'}} width={170} />
-                                                    <Tooltip formatter={(v) => [v+'%', 'Taxa de Conversão']} cursor={{fill:'#f9fafb'}} />
-                                                    <Bar dataKey="taxa" maxBarSize={30} radius={[0,6,6,0]}>
-                                                        {dadosPeriodo.filter(p=>p.qtd_abertos>0).map((entry,i)=>{
-                                                            const taxa = (entry.qtd_fechados/entry.qtd_abertos)*100;
-                                                            return <Cell key={i} fill={taxa >= 50 ? '#10b981' : taxa >= 25 ? '#eab308' : '#ef4444'} />;
-                                                        })}
-                                                        <LabelList dataKey="taxa" position="right" formatter={v=>v+'%'} style={{fontSize:13,fontWeight:'900',fill:'#374151'}} />
-                                                    </Bar>
-                                                </BarChart>
-                                            </ResponsiveContainer>
+                            {/* Gráfico 2 — Valor */}
+                            <div className="bg-white rounded-3xl border border-zinc-200 p-6 shadow-sm">
+                                <div className="flex justify-between items-center mb-5">
+                                    <div>
+                                        <p className="text-sm font-black text-zinc-800 uppercase tracking-widest">Valor de Projetos por Vendedor</p>
+                                        <p className="text-[10px] text-zinc-400 mt-0.5">{periodoFiltro} — valor abertos vs valor fechados</p>
+                                    </div>
+                                    <div className="flex gap-4">
+                                        {[['#3b82f6','Valor Abertos'],['#10b981','Valor Fechados']].map(([cor,lbl])=>(
+                                            <span key={lbl} className="flex items-center gap-1.5 text-xs font-bold text-zinc-500">
+                                                <span className="w-3 h-3 rounded-sm" style={{background:cor}}></span>{lbl}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                                <ResponsiveContainer width="100%" height={BAR_H}>
+                                    <BarChart data={dadosPeriodo} layout="vertical" margin={{top:4,right:100,left:16,bottom:4}} barGap={5}>
+                                        <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f4f4f5" />
+                                        <XAxis type="number" axisLine={false} tickLine={false} tickFormatter={v=>formatCurrencyShort(v)} tick={{fontSize:11,fill:'#9ca3af'}} />
+                                        <YAxis type="category" dataKey="vendedor" axisLine={false} tickLine={false} tick={{fontSize:13,fill:'#374151',fontWeight:'700'}} width={170} />
+                                        <Tooltip formatter={(v,n)=>[formatCurrency(v), n==='valor_abertos'?'Valor Abertos':'Valor Fechados']} cursor={{fill:'#fafafa'}} />
+                                        <Bar dataKey="valor_abertos" fill="#3b82f6" maxBarSize={28} radius={[0,6,6,0]}>
+                                            <LabelList dataKey="valor_abertos" position="right" formatter={v=>v>0?formatCurrencyShort(v):''} style={{fontSize:12,fontWeight:'900',fill:'#374151'}} />
+                                        </Bar>
+                                        <Bar dataKey="valor_fechados" fill="#10b981" maxBarSize={28} radius={[0,6,6,0]}>
+                                            <LabelList dataKey="valor_fechados" position="right" formatter={v=>v>0?formatCurrencyShort(v):''} style={{fontSize:12,fontWeight:'900',fill:'#374151'}} />
+                                        </Bar>
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </div>
+
+                            {/* Gráfico 3 — Taxa de Conversão */}
+                            {totalAbertos > 0 && (
+                                <div className="bg-white rounded-3xl border border-zinc-200 p-6 shadow-sm">
+                                    <div className="flex justify-between items-center mb-5">
+                                        <div>
+                                            <p className="text-sm font-black text-zinc-800 uppercase tracking-widest">Taxa de Conversão por Vendedor</p>
+                                            <p className="text-[10px] text-zinc-400 mt-0.5">Fechados ÷ Abertos × 100</p>
                                         </div>
-                                    )}
+                                        <div className="flex gap-4">
+                                            {[['#10b981','≥50% Ótimo'],['#eab308','25–49% Regular'],['#ef4444','<25% Atenção']].map(([cor,lbl])=>(
+                                                <span key={lbl} className="flex items-center gap-1.5 text-[10px] font-bold text-zinc-500">
+                                                    <span className="w-3 h-3 rounded-sm" style={{background:cor}}></span>{lbl}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <ResponsiveContainer width="100%" height={Math.max(260,dadosPeriodo.filter(p=>p.qtd_abertos>0).length*68+80)}>
+                                        <BarChart
+                                            data={dadosPeriodo.filter(p=>p.qtd_abertos>0).map(p=>({
+                                                ...p, taxa:parseFloat(((p.qtd_fechados/p.qtd_abertos)*100).toFixed(1))
+                                            }))}
+                                            layout="vertical" margin={{top:4,right:70,left:16,bottom:4}}>
+                                            <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f4f4f5" />
+                                            <XAxis type="number" axisLine={false} tickLine={false} tickFormatter={v=>v+'%'} tick={{fontSize:11,fill:'#9ca3af'}} domain={[0,100]} />
+                                            <YAxis type="category" dataKey="vendedor" axisLine={false} tickLine={false} tick={{fontSize:13,fill:'#374151',fontWeight:'700'}} width={170} />
+                                            <Tooltip formatter={(v)=>[v+'%','Taxa de Conversão']} cursor={{fill:'#fafafa'}} />
+                                            <Bar dataKey="taxa" maxBarSize={30} radius={[0,6,6,0]}>
+                                                {dadosPeriodo.filter(p=>p.qtd_abertos>0).map((entry,i)=>{
+                                                    const t=(entry.qtd_fechados/entry.qtd_abertos)*100;
+                                                    return <Cell key={i} fill={t>=50?'#10b981':t>=25?'#eab308':'#ef4444'} />;
+                                                })}
+                                                <LabelList dataKey="taxa" position="right" formatter={v=>v+'%'} style={{fontSize:13,fontWeight:'900',fill:'#374151'}} />
+                                            </Bar>
+                                        </BarChart>
+                                    </ResponsiveContainer>
                                 </div>
                             )}
                         </div>
