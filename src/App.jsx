@@ -2396,7 +2396,7 @@ export default function App() {
                     const totalValor = dadosPeriodo.reduce((s,p) => s+(parseFloat(p.valor_abertos)||0), 0);
                     const totalValorFechados = dadosPeriodo.reduce((s,p) => s+(parseFloat(p.valor_fechados)||0), 0);
                     const taxaConversao = totalAbertos > 0 ? ((totalFechados/totalAbertos)*100).toFixed(1) : null;
-                    const BAR_H = Math.max(300, dadosPeriodo.length * 68 + 80);
+                    const BAR_H = Math.max(380, dadosPeriodo.length * 90 + 100);
 
                     return (
                         <div className="space-y-5">
@@ -2419,7 +2419,7 @@ export default function App() {
                             </div>
 
                             {/* Gráfico 1 — Quantidade */}
-                            <div className="bg-white rounded-3xl border border-zinc-200 p-6 shadow-sm">
+                            <div className="bg-white rounded-3xl border border-zinc-200 p-8 shadow-sm" style={{marginLeft:'-1.5rem',marginRight:'-1.5rem'}}>
                                 <div className="flex justify-between items-center mb-5">
                                     <div>
                                         <p className="text-sm font-black text-zinc-800 uppercase tracking-widest">Nº de Projetos por Vendedor</p>
@@ -2434,15 +2434,15 @@ export default function App() {
                                     </div>
                                 </div>
                                 <ResponsiveContainer width="100%" height={BAR_H}>
-                                    <BarChart data={dadosPeriodo} layout="vertical" margin={{top:4,right:60,left:16,bottom:4}} barGap={5}>
+                                    <BarChart data={dadosPeriodo} layout="vertical" margin={{top:4,right:80,left:20,bottom:4}} barGap={8}>
                                         <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f4f4f5" />
                                         <XAxis type="number" axisLine={false} tickLine={false} tick={{fontSize:11,fill:'#9ca3af'}} allowDecimals={false} />
                                         <YAxis type="category" dataKey="vendedor" axisLine={false} tickLine={false} tick={{fontSize:13,fill:'#374151',fontWeight:'700'}} width={170} />
                                         <Tooltip formatter={(v,n)=>[v+' projetos', n==='qtd_abertos'?'Abertos':'Fechados']} cursor={{fill:'#fafafa'}} />
-                                        <Bar dataKey="qtd_abertos" fill="#eab308" maxBarSize={28} radius={[0,6,6,0]}>
-                                            <LabelList dataKey="qtd_abertos" position="right" style={{fontSize:13,fontWeight:'900',fill:'#374151'}} />
+                                        <Bar dataKey="qtd_abertos" fill="#eab308" maxBarSize={36} radius={[0,8,8,0]}>
+                                            <LabelList dataKey="qtd_abertos" position="right" style={{fontSize:14,fontWeight:'900',fill:'#374151'}} />
                                         </Bar>
-                                        <Bar dataKey="qtd_fechados" fill="#10b981" maxBarSize={28} radius={[0,6,6,0]}>
+                                        <Bar dataKey="qtd_fechados" fill="#10b981" maxBarSize={36} radius={[0,8,8,0]}>
                                             <LabelList dataKey="qtd_fechados" position="right" style={{fontSize:13,fontWeight:'900',fill:'#374151'}} />
                                         </Bar>
                                     </BarChart>
@@ -2450,7 +2450,7 @@ export default function App() {
                             </div>
 
                             {/* Gráfico 2 — Valor */}
-                            <div className="bg-white rounded-3xl border border-zinc-200 p-6 shadow-sm">
+                            <div className="bg-white rounded-3xl border border-zinc-200 p-8 shadow-sm" style={{marginLeft:'-1.5rem',marginRight:'-1.5rem'}}>
                                 <div className="flex justify-between items-center mb-5">
                                     <div>
                                         <p className="text-sm font-black text-zinc-800 uppercase tracking-widest">Valor de Projetos por Vendedor</p>
@@ -2465,15 +2465,15 @@ export default function App() {
                                     </div>
                                 </div>
                                 <ResponsiveContainer width="100%" height={BAR_H}>
-                                    <BarChart data={dadosPeriodo} layout="vertical" margin={{top:4,right:100,left:16,bottom:4}} barGap={5}>
+                                    <BarChart data={dadosPeriodo} layout="vertical" margin={{top:4,right:120,left:20,bottom:4}} barGap={8}>
                                         <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f4f4f5" />
                                         <XAxis type="number" axisLine={false} tickLine={false} tickFormatter={v=>formatCurrencyShort(v)} tick={{fontSize:11,fill:'#9ca3af'}} />
                                         <YAxis type="category" dataKey="vendedor" axisLine={false} tickLine={false} tick={{fontSize:13,fill:'#374151',fontWeight:'700'}} width={170} />
                                         <Tooltip formatter={(v,n)=>[formatCurrency(v), n==='valor_abertos'?'Valor Abertos':'Valor Fechados']} cursor={{fill:'#fafafa'}} />
-                                        <Bar dataKey="valor_abertos" fill="#3b82f6" maxBarSize={28} radius={[0,6,6,0]}>
-                                            <LabelList dataKey="valor_abertos" position="right" formatter={v=>v>0?formatCurrencyShort(v):''} style={{fontSize:12,fontWeight:'900',fill:'#374151'}} />
+                                        <Bar dataKey="valor_abertos" fill="#3b82f6" maxBarSize={36} radius={[0,8,8,0]}>
+                                            <LabelList dataKey="valor_abertos" position="right" formatter={v=>v>0?formatCurrencyShort(v):''} style={{fontSize:13,fontWeight:'900',fill:'#374151'}} />
                                         </Bar>
-                                        <Bar dataKey="valor_fechados" fill="#10b981" maxBarSize={28} radius={[0,6,6,0]}>
+                                        <Bar dataKey="valor_fechados" fill="#10b981" maxBarSize={36} radius={[0,8,8,0]}>
                                             <LabelList dataKey="valor_fechados" position="right" formatter={v=>v>0?formatCurrencyShort(v):''} style={{fontSize:12,fontWeight:'900',fill:'#374151'}} />
                                         </Bar>
                                     </BarChart>
@@ -2482,7 +2482,7 @@ export default function App() {
 
                             {/* Gráfico 3 — Taxa de Conversão */}
                             {totalAbertos > 0 && (
-                                <div className="bg-white rounded-3xl border border-zinc-200 p-6 shadow-sm">
+                                <div className="bg-white rounded-3xl border border-zinc-200 p-8 shadow-sm" style={{marginLeft:'-1.5rem',marginRight:'-1.5rem'}}>
                                     <div className="flex justify-between items-center mb-5">
                                         <div>
                                             <p className="text-sm font-black text-zinc-800 uppercase tracking-widest">Taxa de Conversão por Vendedor</p>
@@ -2501,12 +2501,12 @@ export default function App() {
                                             data={dadosPeriodo.filter(p=>p.qtd_abertos>0).map(p=>({
                                                 ...p, taxa:parseFloat(((p.qtd_fechados/p.qtd_abertos)*100).toFixed(1))
                                             }))}
-                                            layout="vertical" margin={{top:4,right:70,left:16,bottom:4}}>
+                                            layout="vertical" margin={{top:4,right:90,left:20,bottom:4}}>
                                             <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f4f4f5" />
                                             <XAxis type="number" axisLine={false} tickLine={false} tickFormatter={v=>v+'%'} tick={{fontSize:11,fill:'#9ca3af'}} domain={[0,100]} />
                                             <YAxis type="category" dataKey="vendedor" axisLine={false} tickLine={false} tick={{fontSize:13,fill:'#374151',fontWeight:'700'}} width={170} />
                                             <Tooltip formatter={(v)=>[v+'%','Taxa de Conversão']} cursor={{fill:'#fafafa'}} />
-                                            <Bar dataKey="taxa" maxBarSize={30} radius={[0,6,6,0]}>
+                                            <Bar dataKey="taxa" maxBarSize={40} radius={[0,8,8,0]}>
                                                 {dadosPeriodo.filter(p=>p.qtd_abertos>0).map((entry,i)=>{
                                                     const t=(entry.qtd_fechados/entry.qtd_abertos)*100;
                                                     return <Cell key={i} fill={t>=50?'#10b981':t>=25?'#eab308':'#ef4444'} />;
