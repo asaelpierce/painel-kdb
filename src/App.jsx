@@ -43,6 +43,12 @@ const formatCurrencyShort = (val) => {
   return num.toFixed(0);
 };
 
+const formatCurrencyRound = (val) => {
+  if (val === undefined || val === null || isNaN(val) || val === '') return '-';
+  const num = Math.round(parseFloat(val));
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(num);
+};
+
 const formatCurrencyShort3 = (val) => {
   if (val === undefined || val === null || isNaN(val) || val === '') return '';
   const num = parseFloat(val);
@@ -2401,19 +2407,19 @@ export default function App() {
                     return (
                         <div className="space-y-5">
                             {/* KPI cards */}
-                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
                                 {[
-                                    {lbl:'Proj. Abertos', val:totalAbertos, cls:'border-l-4 border-yellow-400', vCls:'text-yellow-600'},
-                                    {lbl:'Valor Abertos', val:formatCurrency(totalValor), cls:'border-l-4 border-yellow-300', vCls:'text-yellow-700'},
-                                    {lbl:'Proj. Fechados', val:totalFechados, cls:'border-l-4 border-emerald-400', vCls:'text-emerald-600'},
-                                    {lbl:'Valor Fechados', val:formatCurrency(totalValorFechados), cls:'border-l-4 border-emerald-300', vCls:'text-emerald-700'},
-                                    {lbl:'Taxa Conversão', val:taxaConversao?taxaConversao+'%':'—', cls:'border-l-4 border-blue-400', vCls:'text-blue-600'},
-                                    {lbl:'Ticket Médio', val:totalAbertos>0?formatCurrency(totalValor/totalAbertos):'—', cls:'border-l-4 border-purple-400', vCls:'text-purple-600'},
+                                    {lbl:'Proj. Abertos', val:totalAbertos, full:totalAbertos, cls:'border-l-4 border-yellow-400', vCls:'text-yellow-600'},
+                                    {lbl:'Valor Abertos', val:formatCurrencyRound(totalValor), full:formatCurrency(totalValor), cls:'border-l-4 border-yellow-300', vCls:'text-yellow-700'},
+                                    {lbl:'Proj. Fechados', val:totalFechados, full:totalFechados, cls:'border-l-4 border-emerald-400', vCls:'text-emerald-600'},
+                                    {lbl:'Valor Fechados', val:formatCurrencyRound(totalValorFechados), full:formatCurrency(totalValorFechados), cls:'border-l-4 border-emerald-300', vCls:'text-emerald-700'},
+                                    {lbl:'Taxa Conversão', val:taxaConversao?taxaConversao+'%':'—', full:taxaConversao?taxaConversao+'%':'—', cls:'border-l-4 border-blue-400', vCls:'text-blue-600'},
+                                    {lbl:'Ticket Médio', val:totalAbertos>0?formatCurrencyRound(totalValor/totalAbertos):'—', full:totalAbertos>0?formatCurrency(totalValor/totalAbertos):'—', cls:'border-l-4 border-purple-400', vCls:'text-purple-600'},
                                 ].map((k,i) => (
-                                    <div key={i} className={`bg-white rounded-xl p-4 shadow-sm border border-zinc-200 ${k.cls}`}>
-                                        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">{k.lbl}</p>
-                                        <p className={`text-base font-black ${k.vCls}`}>{k.val}</p>
-                                        <p className="text-[10px] text-zinc-300 mt-0.5">{periodoFiltro}</p>
+                                    <div key={i} title={k.full} className={`bg-white rounded-xl p-4 shadow-sm border border-zinc-200 min-w-0 ${k.cls}`}>
+                                        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-wide mb-1.5 truncate">{k.lbl}</p>
+                                        <p className={`text-lg sm:text-xl font-black leading-tight break-words ${k.vCls}`}>{k.val}</p>
+                                        <p className="text-[10px] text-zinc-300 mt-1">{periodoFiltro}</p>
                                     </div>
                                 ))}
                             </div>
@@ -2453,8 +2459,8 @@ export default function App() {
                             <div className="bg-white rounded-3xl border border-zinc-200 p-8 shadow-sm" style={{marginLeft:'-1.5rem',marginRight:'-1.5rem'}}>
                                 <div className="flex justify-between items-center mb-5">
                                     <div>
-                                        <p className="text-sm font-black text-zinc-800 uppercase tracking-widest">Valor de Projetos por Vendedor</p>
-                                        <p className="text-[10px] text-zinc-400 mt-0.5">{periodoFiltro} — valor abertos vs valor fechados</p>
+                                        <p className="text-sm font-black text-zinc-800 uppercase tracking-widest">Valor de Projetos por Vendedor (Mensal)</p>
+                                        <p className="text-[10px] text-zinc-400 mt-0.5">Somente o mês de {periodoFiltro} — valor em propostas abertas vs valor já vendido (fechado)</p>
                                     </div>
                                     <div className="flex gap-4">
                                         {[['#3b82f6','Valor Abertos'],['#10b981','Valor Fechados']].map(([cor,lbl])=>(
@@ -2517,6 +2523,83 @@ export default function App() {
                                     </ResponsiveContainer>
                                 </div>
                             )}
+        </div>
+                    );
+                })()}
+
+                {/* ── GRÁFICO ACUMULADO (TODOS OS MESES) ── */}
+                {(() => {
+                    if (projetosData.length === 0) return null;
+
+                    const mapa = {};
+                    projetosData.forEach(p => {
+                        if (!mapa[p.vendedor]) {
+                            mapa[p.vendedor] = { vendedor: p.vendedor, valor_abertos: 0, valor_fechados: 0, qtd_abertos: 0, qtd_fechados: 0 };
+                        }
+                        mapa[p.vendedor].valor_abertos += parseFloat(p.valor_abertos) || 0;
+                        mapa[p.vendedor].valor_fechados += parseFloat(p.valor_fechados) || 0;
+                        mapa[p.vendedor].qtd_abertos += p.qtd_abertos || 0;
+                        mapa[p.vendedor].qtd_fechados += p.qtd_fechados || 0;
+                    });
+
+                    const dadosAcumulado = Object.values(mapa)
+                        .filter(v => v.valor_abertos > 0 || v.valor_fechados > 0)
+                        .sort((a, b) => (b.valor_abertos + b.valor_fechados) - (a.valor_abertos + a.valor_fechados));
+
+                    if (dadosAcumulado.length === 0) return null;
+
+                    const totalAbertoGeral = dadosAcumulado.reduce((s, v) => s + v.valor_abertos, 0);
+                    const totalVendidoGeral = dadosAcumulado.reduce((s, v) => s + v.valor_fechados, 0);
+                    const BAR_H_ACUM = Math.max(380, dadosAcumulado.length * 90 + 100);
+
+                    return (
+                        <div className="bg-white rounded-3xl border border-zinc-200 p-8 shadow-sm" style={{marginLeft:'-1.5rem',marginRight:'-1.5rem'}}>
+                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-5">
+                                <div>
+                                    <p className="text-sm font-black text-zinc-800 uppercase tracking-widest">Valor Acumulado por Vendedor (Total Geral)</p>
+                                    <p className="text-[10px] text-zinc-400 mt-0.5">Soma de todos os meses lançados — total em propostas abertas x total vendido (fechado) por vendedor</p>
+                                </div>
+                                <div className="flex gap-4">
+                                    {[['#3b82f6','Total Aberto'],['#10b981','Total Vendido']].map(([cor,lbl])=>(
+                                        <span key={lbl} className="flex items-center gap-1.5 text-xs font-bold text-zinc-500">
+                                            <span className="w-3 h-3 rounded-sm" style={{background:cor}}></span>{lbl}
+                                        </span>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Totais gerais */}
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
+                                <div className="bg-blue-50 rounded-xl p-4 border border-blue-100 min-w-0">
+                                    <p className="text-[10px] font-black text-blue-400 uppercase tracking-wide mb-1.5">Total Aberto (geral)</p>
+                                    <p className="text-lg sm:text-xl font-black text-blue-700 break-words" title={formatCurrency(totalAbertoGeral)}>{formatCurrencyRound(totalAbertoGeral)}</p>
+                                </div>
+                                <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-100 min-w-0">
+                                    <p className="text-[10px] font-black text-emerald-400 uppercase tracking-wide mb-1.5">Total Vendido (geral)</p>
+                                    <p className="text-lg sm:text-xl font-black text-emerald-700 break-words" title={formatCurrency(totalVendidoGeral)}>{formatCurrencyRound(totalVendidoGeral)}</p>
+                                </div>
+                                <div className="bg-purple-50 rounded-xl p-4 border border-purple-100 min-w-0 col-span-2 sm:col-span-1">
+                                    <p className="text-[10px] font-black text-purple-400 uppercase tracking-wide mb-1.5">Conversão Geral</p>
+                                    <p className="text-lg sm:text-xl font-black text-purple-700 break-words">
+                                        {(totalAbertoGeral + totalVendidoGeral) > 0 ? ((totalVendidoGeral/(totalAbertoGeral+totalVendidoGeral))*100).toFixed(1)+'%' : '—'}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <ResponsiveContainer width="100%" height={BAR_H_ACUM}>
+                                <BarChart data={dadosAcumulado} layout="vertical" margin={{top:4,right:120,left:20,bottom:4}} barGap={8}>
+                                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f4f4f5" />
+                                    <XAxis type="number" axisLine={false} tickLine={false} tickFormatter={v=>formatCurrencyShort(v)} tick={{fontSize:11,fill:'#9ca3af'}} />
+                                    <YAxis type="category" dataKey="vendedor" axisLine={false} tickLine={false} tick={{fontSize:13,fill:'#374151',fontWeight:'700'}} width={170} />
+                                    <Tooltip formatter={(v,n)=>[formatCurrency(v), n==='valor_abertos'?'Total Aberto':'Total Vendido']} cursor={{fill:'#fafafa'}} />
+                                    <Bar dataKey="valor_abertos" fill="#3b82f6" maxBarSize={36} radius={[0,8,8,0]}>
+                                        <LabelList dataKey="valor_abertos" position="right" formatter={v=>v>0?formatCurrencyShort(v):''} style={{fontSize:13,fontWeight:'900',fill:'#374151'}} />
+                                    </Bar>
+                                    <Bar dataKey="valor_fechados" fill="#10b981" maxBarSize={36} radius={[0,8,8,0]}>
+                                        <LabelList dataKey="valor_fechados" position="right" formatter={v=>v>0?formatCurrencyShort(v):''} style={{fontSize:12,fontWeight:'900',fill:'#374151'}} />
+                                    </Bar>
+                                </BarChart>
+                            </ResponsiveContainer>
                         </div>
                     );
                 })()}
