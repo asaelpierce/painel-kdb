@@ -2266,6 +2266,7 @@ export default function App() {
                       </div>
                   </div>
 
+              </div>
 
             {/* ===================== SEÇÃO: PROJETOS POR VENDEDOR ===================== */}
             <div className="mt-10 space-y-6">
@@ -2275,20 +2276,368 @@ export default function App() {
                     <div className="p-2.5 bg-zinc-900 text-yellow-500 rounded-xl"><BarChart3 size={20} /></div>
                     <div>
                         <h2 className="text-xl font-black text-zinc-900 tracking-tight">Projetos por Vendedor</h2>
-                        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mt-0.5">Número e valor de projetos abertos e fechados por mês</p>
+                        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mt-0.5">Segue o filtro "Modo de Análise" selecionado no topo da página</p>
                     </div>
                 </div>
 
-                {/* ── FORMULÁRIO DE EDIÇÃO (padrão KPI) ── */}
-                {(user.role === 'admin' || user.role === 'dev' ||
-                  user.username?.toUpperCase().includes('RICARDO') ||
-                  user.username?.toUpperCase().includes('PRISCILA')) && (
-                    <div className="bg-white rounded-3xl shadow-sm border border-zinc-200 overflow-hidden">
-                        {/* Header do formulário */}
+                {/* ── GRÁFICOS DE VISUALIZAÇÃO (seguem o filtro global do topo) ── */}
+                {(() => {
+                    const isYTD = comercialViewMode !== 'MONTHLY';
+                    const dadosFiltrados = projetosData.filter(p => {
+                        if (comercialViewPeriod === 'ALL') return true;
+                        if (comercialViewMode === 'MONTHLY') return p.period === comercialViewPeriod;
+                        return monthOrder[p.period] <= monthOrder[comercialViewPeriod];
+                    });
+                    if (dadosFiltrados.length === 0) return (
+                        <div className="bg-white rounded-3xl border border-zinc-200 p-10 text-center text-zinc-400 text-sm">
+                            Nenhum dado de projetos lançado para o período selecionado no topo da página.
+                        </div>
+                    );
+
+                    const mapaVend = {};
+                    dadosFiltrados.forEach(p => {
+                        const k = p.vendedor;
+                        if (!mapaVend[k]) mapaVend[k] = { vendedor: k, qtd_abertos: 0, qtd_fechados: 0, valor_abertos: 0, valor_fechados: 0 };
+                        mapaVend[k].qtd_abertos += p.qtd_abertos || 0;
+                        mapaVend[k].qtd_fechados += p.qtd_fechados || 0;
+                        mapaVend[k].valor_abertos += parseFloat(p.valor_abertos) || 0;
+                        mapaVend[k].valor_fechados += parseFloat(p.valor_fechados) || 0;
+                    });
+                    const dadosPeriodo = Object.values(mapaVend)
+                        .filter(v => v.qtd_abertos > 0 || v.qtd_fechados > 0 || v.valor_abertos > 0 || v.valor_fechados > 0)
+                        .sort((a, b) => (b.valor_abertos + b.valor_fechados) - (a.valor_abertos + a.valor_fechados));
+
+                    const totalAbertos = dadosPeriodo.reduce((s,p) => s+(p.qtd_abertos||0), 0);
+                    const totalFechados = dadosPeriodo.reduce((s,p) => s+(p.qtd_fechados||0), 0);
+                    const totalValor = dadosPeriodo.reduce((s,p) => s+(parseFloat(p.valor_abertos)||0), 0);
+                    const totalValorFechados = dadosPeriodo.reduce((s,p) => s+(parseFloat(p.valor_fechados)||0), 0);
+                    const taxaConversao = totalAbertos > 0 ? ((totalFechados/totalAbertos)*100).toFixed(1) : null;
+                    const BAR_H = Math.max(360, dadosPeriodo.length * 84 + 90);
+
+                    const labelPeriodo = comercialViewPeriod === 'ALL'
+                        ? 'Todo o período disponível'
+                        : (isYTD ? `Acumulado de Jan até ${comercialViewPeriod}` : `Somente ${comercialViewPeriod}`);
+
+                    return (
+                        <div className="space-y-6">
+                            {/* KPI cards */}
+                            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                                {[
+                                    {lbl:'Proj. Abertos', val:totalAbertos, full:totalAbertos, cls:'border-l-4 border-yellow-400', vCls:'text-yellow-600'},
+                                    {lbl:'Valor Abertos', val:formatCurrencyRound(totalValor), full:formatCurrency(totalValor), cls:'border-l-4 border-yellow-300', vCls:'text-yellow-700'},
+                                    {lbl:'Proj. Fechados', val:totalFechados, full:totalFechados, cls:'border-l-4 border-emerald-400', vCls:'text-emerald-600'},
+                                    {lbl:'Valor Fechados', val:formatCurrencyRound(totalValorFechados), full:formatCurrency(totalValorFechados), cls:'border-l-4 border-emerald-300', vCls:'text-emerald-700'},
+                                    {lbl:'Taxa Conversão', val:taxaConversao?taxaConversao+'%':'—', full:taxaConversao?taxaConversao+'%':'—', cls:'border-l-4 border-blue-400', vCls:'text-blue-600'},
+                                    {lbl:'Ticket Médio', val:totalAbertos>0?formatCurrencyRound(totalValor/totalAbertos):'—', full:totalAbertos>0?formatCurrency(totalValor/totalAbertos):'—', cls:'border-l-4 border-purple-400', vCls:'text-purple-600'},
+                                ].map((k,i) => (
+                                    <div key={i} title={k.full} className={`bg-white rounded-2xl p-5 shadow-sm border border-zinc-200 min-w-0 ${k.cls}`}>
+                                        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-wide mb-1.5 truncate">{k.lbl}</p>
+                                        <p className={`text-xl sm:text-2xl font-black leading-tight break-words ${k.vCls}`}>{k.val}</p>
+                                        <p className="text-[10px] text-zinc-300 mt-1 truncate">{labelPeriodo}</p>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Gráficos 1 e 2 lado a lado para aproveitar melhor o espaço */}
+                            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                                {/* Gráfico 1 — Quantidade */}
+                                <div className="bg-white rounded-3xl border border-zinc-200 p-6 md:p-8 shadow-sm">
+                                    <div className="flex justify-between items-start gap-3 mb-5">
+                                        <div>
+                                            <p className="text-sm font-black text-zinc-800 uppercase tracking-widest">Nº de Projetos por Vendedor</p>
+                                            <p className="text-[10px] text-zinc-400 mt-0.5">{labelPeriodo} — abertos vs fechados</p>
+                                        </div>
+                                        <div className="flex flex-col items-end gap-1 shrink-0">
+                                            {[['#eab308','Abertos'],['#10b981','Fechados']].map(([cor,lbl])=>(
+                                                <span key={lbl} className="flex items-center gap-1.5 text-xs font-bold text-zinc-500">
+                                                    <span className="w-3 h-3 rounded-sm" style={{background:cor}}></span>{lbl}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <ResponsiveContainer width="100%" height={BAR_H}>
+                                        <BarChart data={dadosPeriodo} layout="vertical" margin={{top:4,right:50,left:10,bottom:4}} barGap={8}>
+                                            <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f4f4f5" />
+                                            <XAxis type="number" axisLine={false} tickLine={false} tick={{fontSize:11,fill:'#9ca3af'}} allowDecimals={false} />
+                                            <YAxis type="category" dataKey="vendedor" axisLine={false} tickLine={false} tick={{fontSize:12,fill:'#374151',fontWeight:'700'}} width={140} tickFormatter={(val)=>truncateText(val,16)} />
+                                            <Tooltip formatter={(v,n)=>[v+' projetos', n==='qtd_abertos'?'Abertos':'Fechados']} cursor={{fill:'#fafafa'}} />
+                                            <Bar dataKey="qtd_abertos" fill="#eab308" maxBarSize={28} radius={[0,6,6,0]}>
+                                                <LabelList dataKey="qtd_abertos" position="right" style={{fontSize:12,fontWeight:'900',fill:'#374151'}} />
+                                            </Bar>
+                                            <Bar dataKey="qtd_fechados" fill="#10b981" maxBarSize={28} radius={[0,6,6,0]}>
+                                                <LabelList dataKey="qtd_fechados" position="right" style={{fontSize:12,fontWeight:'900',fill:'#374151'}} />
+                                            </Bar>
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                </div>
+
+                                {/* Gráfico 2 — Valor */}
+                                <div className="bg-white rounded-3xl border border-zinc-200 p-6 md:p-8 shadow-sm">
+                                    <div className="flex justify-between items-start gap-3 mb-5">
+                                        <div>
+                                            <p className="text-sm font-black text-zinc-800 uppercase tracking-widest">Valor de Projetos por Vendedor</p>
+                                            <p className="text-[10px] text-zinc-400 mt-0.5">{labelPeriodo} — valor em aberto vs valor vendido (fechado)</p>
+                                        </div>
+                                        <div className="flex flex-col items-end gap-1 shrink-0">
+                                            {[['#3b82f6','Valor Abertos'],['#10b981','Valor Fechados']].map(([cor,lbl])=>(
+                                                <span key={lbl} className="flex items-center gap-1.5 text-xs font-bold text-zinc-500">
+                                                    <span className="w-3 h-3 rounded-sm" style={{background:cor}}></span>{lbl}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <ResponsiveContainer width="100%" height={BAR_H}>
+                                        <BarChart data={dadosPeriodo} layout="vertical" margin={{top:4,right:60,left:10,bottom:4}} barGap={8}>
+                                            <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f4f4f5" />
+                                            <XAxis type="number" axisLine={false} tickLine={false} tickFormatter={v=>formatCurrencyShort(v)} tick={{fontSize:11,fill:'#9ca3af'}} />
+                                            <YAxis type="category" dataKey="vendedor" axisLine={false} tickLine={false} tick={{fontSize:12,fill:'#374151',fontWeight:'700'}} width={140} tickFormatter={(val)=>truncateText(val,16)} />
+                                            <Tooltip formatter={(v,n)=>[formatCurrency(v), n==='valor_abertos'?'Valor Abertos':'Valor Fechados']} cursor={{fill:'#fafafa'}} />
+                                            <Bar dataKey="valor_abertos" fill="#3b82f6" maxBarSize={28} radius={[0,6,6,0]}>
+                                                <LabelList dataKey="valor_abertos" position="right" formatter={v=>v>0?formatCurrencyShort(v):''} style={{fontSize:12,fontWeight:'900',fill:'#374151'}} />
+                                            </Bar>
+                                            <Bar dataKey="valor_fechados" fill="#10b981" maxBarSize={28} radius={[0,6,6,0]}>
+                                                <LabelList dataKey="valor_fechados" position="right" formatter={v=>v>0?formatCurrencyShort(v):''} style={{fontSize:12,fontWeight:'900',fill:'#374151'}} />
+                                            </Bar>
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </div>
+
+                            {/* Gráfico 3 — Taxa de Conversão */}
+                            {totalAbertos > 0 && (
+                                <div className="bg-white rounded-3xl border border-zinc-200 p-6 md:p-8 shadow-sm">
+                                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-5">
+                                        <div>
+                                            <p className="text-sm font-black text-zinc-800 uppercase tracking-widest">Taxa de Conversão por Vendedor</p>
+                                            <p className="text-[10px] text-zinc-400 mt-0.5">{labelPeriodo} — Fechados ÷ Abertos × 100</p>
+                                        </div>
+                                        <div className="flex gap-4">
+                                            {[['#10b981','≥50% Ótimo'],['#eab308','25–49% Regular'],['#ef4444','<25% Atenção']].map(([cor,lbl])=>(
+                                                <span key={lbl} className="flex items-center gap-1.5 text-[10px] font-bold text-zinc-500">
+                                                    <span className="w-3 h-3 rounded-sm" style={{background:cor}}></span>{lbl}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <ResponsiveContainer width="100%" height={Math.max(260,dadosPeriodo.filter(p=>p.qtd_abertos>0).length*68+80)}>
+                                        <BarChart
+                                            data={dadosPeriodo.filter(p=>p.qtd_abertos>0).map(p=>({
+                                                ...p, taxa:parseFloat(((p.qtd_fechados/p.qtd_abertos)*100).toFixed(1))
+                                            }))}
+                                            layout="vertical" margin={{top:4,right:60,left:10,bottom:4}}>
+                                            <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f4f4f5" />
+                                            <XAxis type="number" axisLine={false} tickLine={false} tickFormatter={v=>v+'%'} tick={{fontSize:11,fill:'#9ca3af'}} domain={[0,100]} />
+                                            <YAxis type="category" dataKey="vendedor" axisLine={false} tickLine={false} tick={{fontSize:12,fill:'#374151',fontWeight:'700'}} width={140} tickFormatter={(val)=>truncateText(val,16)} />
+                                            <Tooltip formatter={(v)=>[v+'%','Taxa de Conversão']} cursor={{fill:'#fafafa'}} />
+                                            <Bar dataKey="taxa" maxBarSize={32} radius={[0,6,6,0]}>
+                                                {dadosPeriodo.filter(p=>p.qtd_abertos>0).map((entry,i)=>{
+                                                    const tperc=(entry.qtd_fechados/entry.qtd_abertos)*100;
+                                                    return <Cell key={i} fill={tperc>=50?'#10b981':tperc>=25?'#eab308':'#ef4444'} />;
+                                                })}
+                                                <LabelList dataKey="taxa" position="right" formatter={v=>v+'%'} style={{fontSize:12,fontWeight:'900',fill:'#374151'}} />
+                                            </Bar>
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            )}
+                        </div>
+                    );
+                })()}
+
+                {/* ── GRÁFICO ACUMULADO (HISTÓRICO COMPLETO, INDEPENDENTE DO FILTRO) ── */}
+                {(() => {
+                    if (projetosData.length === 0) return null;
+
+                    const mapa = {};
+                    projetosData.forEach(p => {
+                        if (!mapa[p.vendedor]) {
+                            mapa[p.vendedor] = { vendedor: p.vendedor, valor_abertos: 0, valor_fechados: 0, qtd_abertos: 0, qtd_fechados: 0 };
+                        }
+                        mapa[p.vendedor].valor_abertos += parseFloat(p.valor_abertos) || 0;
+                        mapa[p.vendedor].valor_fechados += parseFloat(p.valor_fechados) || 0;
+                        mapa[p.vendedor].qtd_abertos += p.qtd_abertos || 0;
+                        mapa[p.vendedor].qtd_fechados += p.qtd_fechados || 0;
+                    });
+
+                    const dadosAcumulado = Object.values(mapa)
+                        .filter(v => v.valor_abertos > 0 || v.valor_fechados > 0)
+                        .sort((a, b) => (b.valor_abertos + b.valor_fechados) - (a.valor_abertos + a.valor_fechados));
+
+                    if (dadosAcumulado.length === 0) return null;
+
+                    const totalAbertoGeral = dadosAcumulado.reduce((s, v) => s + v.valor_abertos, 0);
+                    const totalVendidoGeral = dadosAcumulado.reduce((s, v) => s + v.valor_fechados, 0);
+                    const BAR_H_ACUM = Math.max(360, dadosAcumulado.length * 84 + 90);
+
+                    return (
+                        <div className="bg-zinc-950 rounded-3xl border border-zinc-800 p-6 md:p-8 shadow-xl">
+                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-5">
+                                <div>
+                                    <p className="text-sm font-black text-white uppercase tracking-widest">Valor Acumulado por Vendedor (Total Geral)</p>
+                                    <p className="text-[10px] text-yellow-500 mt-0.5">Histórico completo desde o início — independente do filtro do topo da página</p>
+                                </div>
+                                <div className="flex gap-4">
+                                    {[['#3b82f6','Total Aberto'],['#10b981','Total Vendido']].map(([cor,lbl])=>(
+                                        <span key={lbl} className="flex items-center gap-1.5 text-xs font-bold text-zinc-300">
+                                            <span className="w-3 h-3 rounded-sm" style={{background:cor}}></span>{lbl}
+                                        </span>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Totais gerais */}
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
+                                <div className="bg-zinc-900 rounded-xl p-4 border border-zinc-800 min-w-0">
+                                    <p className="text-[10px] font-black text-blue-400 uppercase tracking-wide mb-1.5">Total Aberto (geral)</p>
+                                    <p className="text-xl sm:text-2xl font-black text-blue-400 break-words" title={formatCurrency(totalAbertoGeral)}>{formatCurrencyRound(totalAbertoGeral)}</p>
+                                </div>
+                                <div className="bg-zinc-900 rounded-xl p-4 border border-zinc-800 min-w-0">
+                                    <p className="text-[10px] font-black text-emerald-400 uppercase tracking-wide mb-1.5">Total Vendido (geral)</p>
+                                    <p className="text-xl sm:text-2xl font-black text-emerald-400 break-words" title={formatCurrency(totalVendidoGeral)}>{formatCurrencyRound(totalVendidoGeral)}</p>
+                                </div>
+                                <div className="bg-zinc-900 rounded-xl p-4 border border-zinc-800 min-w-0 col-span-2 sm:col-span-1">
+                                    <p className="text-[10px] font-black text-purple-400 uppercase tracking-wide mb-1.5">Conversão Geral</p>
+                                    <p className="text-xl sm:text-2xl font-black text-purple-400 break-words">
+                                        {(totalAbertoGeral + totalVendidoGeral) > 0 ? ((totalVendidoGeral/(totalAbertoGeral+totalVendidoGeral))*100).toFixed(1)+'%' : '—'}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <ResponsiveContainer width="100%" height={BAR_H_ACUM}>
+                                <BarChart data={dadosAcumulado} layout="vertical" margin={{top:4,right:70,left:10,bottom:4}} barGap={8}>
+                                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#27272a" />
+                                    <XAxis type="number" axisLine={false} tickLine={false} tickFormatter={v=>formatCurrencyShort(v)} tick={{fontSize:11,fill:'#71717a'}} />
+                                    <YAxis type="category" dataKey="vendedor" axisLine={false} tickLine={false} tick={{fontSize:12,fill:'#e4e4e7',fontWeight:'700'}} width={140} tickFormatter={(val)=>truncateText(val,16)} />
+                                    <Tooltip formatter={(v,n)=>[formatCurrency(v), n==='valor_abertos'?'Total Aberto':'Total Vendido']} cursor={{fill:'rgba(255,255,255,0.05)'}} />
+                                    <Bar dataKey="valor_abertos" fill="#3b82f6" maxBarSize={28} radius={[0,6,6,0]}>
+                                        <LabelList dataKey="valor_abertos" position="right" formatter={v=>v>0?formatCurrencyShort(v):''} style={{fontSize:12,fontWeight:'900',fill:'#e4e4e7'}} />
+                                    </Bar>
+                                    <Bar dataKey="valor_fechados" fill="#10b981" maxBarSize={28} radius={[0,6,6,0]}>
+                                        <LabelList dataKey="valor_fechados" position="right" formatter={v=>v>0?formatCurrencyShort(v):''} style={{fontSize:12,fontWeight:'900',fill:'#e4e4e7'}} />
+                                    </Bar>
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                    );
+                })()}
+            </div>
+
+            {/* ===================== SEÇÃO: VISITAS ===================== */}
+            <div className="mt-10 mb-6 space-y-6">
+                <div className="flex items-center gap-3">
+                    <div className="p-2.5 bg-zinc-900 text-yellow-500 rounded-xl"><MapPin size={20} /></div>
+                    <div>
+                        <h2 className="text-xl font-black text-zinc-900 tracking-tight">Visitas por Vendedor</h2>
+                        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mt-0.5">Segue o filtro "Modo de Análise" selecionado no topo da página</p>
+                    </div>
+                </div>
+
+                {/* DASHBOARD VISITAS */}
+                {visitasData.length > 0 && (() => {
+                    const mesesVisitas = [...new Set(visitasData.map(v=>v.mes))].sort();
+                    const visitasFiltradas = visitasData.filter(v => {
+                        if (comercialViewPeriod === 'ALL') return true;
+                        if (comercialViewMode === 'MONTHLY') return v.mes === comercialViewPeriod;
+                        return monthOrder[v.mes] <= monthOrder[comercialViewPeriod];
+                    });
+                    const mesVisitaAtual = comercialViewPeriod === 'ALL'
+                        ? 'Todo o período'
+                        : (comercialViewMode === 'MONTHLY' ? comercialViewPeriod : `Acumulado até ${comercialViewPeriod}`);
+                    const totalVisitas = visitasFiltradas.reduce((s,v)=>s+(v.quantidade||0),0);
+                    const byVendedor = Object.values(visitasFiltradas.reduce((acc,v)=>{
+                        const k = v.vendedor;
+                        if(!acc[k]) acc[k]={vendedor:k,quantidade:0,locais:[]};
+                        acc[k].quantidade += v.quantidade||0;
+                        if(v.local) acc[k].locais.push(v.local);
+                        return acc;
+                    },{})).sort((a,b)=>b.quantidade-a.quantidade);
+
+                    if (visitasFiltradas.length === 0) return (
+                        <div className="bg-white rounded-3xl border border-zinc-200 p-10 text-center text-zinc-400 text-sm">
+                            Nenhuma visita registrada para o período selecionado no topo da página.
+                        </div>
+                    );
+
+                    return (
+                        <div className="space-y-6">
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                <div className="bg-white rounded-2xl p-5 shadow-sm border border-zinc-200 border-l-4 border-l-yellow-400">
+                                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-wide mb-1.5">Total de visitas</p>
+                                    <p className="text-xl sm:text-2xl font-black text-zinc-900">{totalVisitas}</p>
+                                    <p className="text-[10px] text-zinc-300 mt-1">{mesVisitaAtual}</p>
+                                </div>
+                                <div className="bg-white rounded-2xl p-5 shadow-sm border border-zinc-200 border-l-4 border-l-blue-400">
+                                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-wide mb-1.5">Vendedores ativos</p>
+                                    <p className="text-xl sm:text-2xl font-black text-zinc-900">{byVendedor.length}</p>
+                                    <p className="text-[10px] text-zinc-300 mt-1">com visitas no período</p>
+                                </div>
+                                <div className="bg-white rounded-2xl p-5 shadow-sm border border-zinc-200 border-l-4 border-l-emerald-400 col-span-2 md:col-span-1">
+                                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-wide mb-1.5">Média por vendedor</p>
+                                    <p className="text-xl sm:text-2xl font-black text-zinc-900">{byVendedor.length > 0 ? (totalVisitas/byVendedor.length).toFixed(1) : '—'}</p>
+                                    <p className="text-[10px] text-zinc-300 mt-1">visitas/vendedor</p>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                                <div className="bg-white rounded-3xl border border-zinc-200 p-6 md:p-8 shadow-sm">
+                                    <p className="text-sm font-black text-zinc-800 uppercase tracking-widest mb-1">Visitas por Vendedor</p>
+                                    <p className="text-[10px] text-zinc-400 mb-5">{mesVisitaAtual}</p>
+                                    <ResponsiveContainer width="100%" height={Math.max(260, byVendedor.length*44+60)}>
+                                        <BarChart data={byVendedor} layout="vertical" margin={{top:0,right:50,left:10,bottom:0}}>
+                                            <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f4f4f5" />
+                                            <XAxis type="number" axisLine={false} tickLine={false} tick={{fontSize:11,fill:'#9ca3af'}} allowDecimals={false} />
+                                            <YAxis type="category" dataKey="vendedor" axisLine={false} tickLine={false} tick={{fontSize:12,fill:'#374151',fontWeight:'700'}} width={140} tickFormatter={(val)=>truncateText(val,16)} />
+                                            <Tooltip formatter={(v) => [v, 'Visitas']} cursor={{fill:'#fafafa'}} />
+                                            <Bar dataKey="quantidade" fill="#eab308" maxBarSize={28} radius={[0,6,6,0]}>
+                                                <LabelList dataKey="quantidade" position="right" style={{fontSize:12,fontWeight:'900',fill:'#374151'}} />
+                                            </Bar>
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                </div>
+
+                                {visitasFiltradas.some(v=>v.local) && (
+                                    <div className="bg-white rounded-3xl border border-zinc-200 p-6 md:p-8 shadow-sm">
+                                        <p className="text-sm font-black text-zinc-800 uppercase tracking-widest mb-1">Locais Visitados</p>
+                                        <p className="text-[10px] text-zinc-400 mb-5">{mesVisitaAtual}</p>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                            {byVendedor.filter(v=>v.locais.length>0).map(v=>(
+                                                <div key={v.vendedor} className="bg-zinc-50 rounded-xl p-3 border border-zinc-200">
+                                                    <p className="text-[10px] font-black text-zinc-500 uppercase mb-2">{v.vendedor}</p>
+                                                    <div className="flex flex-wrap gap-1">
+                                                        {v.locais.map((l,i)=>(
+                                                            <span key={i} className="text-[10px] bg-white border border-zinc-200 rounded-full px-2 py-0.5 text-zinc-600 font-medium">{l}</span>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    );
+                })()}
+            </div>
+
+            {/* ===================== ÁREA ADMINISTRATIVA (lançamentos e importações) ===================== */}
+            {(user.role === 'admin' || user.role === 'dev' ||
+              user.username?.toUpperCase().includes('RICARDO') ||
+              user.username?.toUpperCase().includes('PRISCILA')) && (
+                <div className="mt-10 mb-6 space-y-4">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2.5 bg-zinc-200 text-zinc-500 rounded-xl"><Save size={18} /></div>
+                        <div>
+                            <h2 className="text-base font-black text-zinc-500 tracking-tight">Área Administrativa</h2>
+                            <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mt-0.5">Lançamento manual e importação de planilhas — não aparece para outros usuários</p>
+                        </div>
+                    </div>
+
+                    {/* ── FORMULÁRIO DE LANÇAMENTO DE PROJETOS ── */}
+                    <div className="bg-white rounded-2xl shadow-sm border border-zinc-200 overflow-hidden">
                         <div className="p-5 border-b border-zinc-100 bg-zinc-50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                             <div>
-                                <h3 className="text-base font-extrabold text-zinc-900 flex items-center gap-2">
-                                    <Save size={18} className="text-yellow-600" /> Lançamento de Projetos
+                                <h3 className="text-sm font-extrabold text-zinc-700 flex items-center gap-2">
+                                    <Save size={16} className="text-yellow-600" /> Lançamento de Projetos
                                 </h3>
                                 <p className="text-xs text-zinc-400 mt-0.5">Preencha os dados do mês selecionado. Os valores já preenchidos aparecem automaticamente.</p>
                             </div>
@@ -2303,7 +2652,6 @@ export default function App() {
                             </div>
                         </div>
 
-                        {/* Tabela de lançamento */}
                         {projetosPeriodo ? (
                             <div className="p-5">
                                 <div className="overflow-x-auto">
@@ -2387,239 +2735,9 @@ export default function App() {
                             </div>
                         )}
                     </div>
-                )}
 
-                {/* ── GRÁFICOS DE VISUALIZAÇÃO ── */}
-                {(() => {
-                    const periodoFiltro = projetosPeriodo || months.find(m => projetosData.some(p => p.period === m)) || '';
-                    const dadosPeriodo = periodoFiltro
-                        ? projetosData.filter(p => p.period === periodoFiltro)
-                        : [];
-                    if (dadosPeriodo.length === 0) return null;
-
-                    const totalAbertos = dadosPeriodo.reduce((s,p) => s+(p.qtd_abertos||0), 0);
-                    const totalFechados = dadosPeriodo.reduce((s,p) => s+(p.qtd_fechados||0), 0);
-                    const totalValor = dadosPeriodo.reduce((s,p) => s+(parseFloat(p.valor_abertos)||0), 0);
-                    const totalValorFechados = dadosPeriodo.reduce((s,p) => s+(parseFloat(p.valor_fechados)||0), 0);
-                    const taxaConversao = totalAbertos > 0 ? ((totalFechados/totalAbertos)*100).toFixed(1) : null;
-                    const BAR_H = Math.max(380, dadosPeriodo.length * 90 + 100);
-
-                    return (
-                        <div className="space-y-5">
-                            {/* KPI cards */}
-                            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-                                {[
-                                    {lbl:'Proj. Abertos', val:totalAbertos, full:totalAbertos, cls:'border-l-4 border-yellow-400', vCls:'text-yellow-600'},
-                                    {lbl:'Valor Abertos', val:formatCurrencyRound(totalValor), full:formatCurrency(totalValor), cls:'border-l-4 border-yellow-300', vCls:'text-yellow-700'},
-                                    {lbl:'Proj. Fechados', val:totalFechados, full:totalFechados, cls:'border-l-4 border-emerald-400', vCls:'text-emerald-600'},
-                                    {lbl:'Valor Fechados', val:formatCurrencyRound(totalValorFechados), full:formatCurrency(totalValorFechados), cls:'border-l-4 border-emerald-300', vCls:'text-emerald-700'},
-                                    {lbl:'Taxa Conversão', val:taxaConversao?taxaConversao+'%':'—', full:taxaConversao?taxaConversao+'%':'—', cls:'border-l-4 border-blue-400', vCls:'text-blue-600'},
-                                    {lbl:'Ticket Médio', val:totalAbertos>0?formatCurrencyRound(totalValor/totalAbertos):'—', full:totalAbertos>0?formatCurrency(totalValor/totalAbertos):'—', cls:'border-l-4 border-purple-400', vCls:'text-purple-600'},
-                                ].map((k,i) => (
-                                    <div key={i} title={k.full} className={`bg-white rounded-xl p-4 shadow-sm border border-zinc-200 min-w-0 ${k.cls}`}>
-                                        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-wide mb-1.5 truncate">{k.lbl}</p>
-                                        <p className={`text-lg sm:text-xl font-black leading-tight break-words ${k.vCls}`}>{k.val}</p>
-                                        <p className="text-[10px] text-zinc-300 mt-1">{periodoFiltro}</p>
-                                    </div>
-                                ))}
-                            </div>
-
-                            {/* Gráfico 1 — Quantidade */}
-                            <div className="bg-white rounded-3xl border border-zinc-200 p-8 shadow-sm" style={{marginLeft:'-1.5rem',marginRight:'-1.5rem'}}>
-                                <div className="flex justify-between items-center mb-5">
-                                    <div>
-                                        <p className="text-sm font-black text-zinc-800 uppercase tracking-widest">Nº de Projetos por Vendedor</p>
-                                        <p className="text-[10px] text-zinc-400 mt-0.5">{periodoFiltro} — abertos vs fechados</p>
-                                    </div>
-                                    <div className="flex gap-4">
-                                        {[['#eab308','Abertos'],['#10b981','Fechados']].map(([cor,lbl])=>(
-                                            <span key={lbl} className="flex items-center gap-1.5 text-xs font-bold text-zinc-500">
-                                                <span className="w-3 h-3 rounded-sm" style={{background:cor}}></span>{lbl}
-                                            </span>
-                                        ))}
-                                    </div>
-                                </div>
-                                <ResponsiveContainer width="100%" height={BAR_H}>
-                                    <BarChart data={dadosPeriodo} layout="vertical" margin={{top:4,right:80,left:20,bottom:4}} barGap={8}>
-                                        <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f4f4f5" />
-                                        <XAxis type="number" axisLine={false} tickLine={false} tick={{fontSize:11,fill:'#9ca3af'}} allowDecimals={false} />
-                                        <YAxis type="category" dataKey="vendedor" axisLine={false} tickLine={false} tick={{fontSize:13,fill:'#374151',fontWeight:'700'}} width={170} />
-                                        <Tooltip formatter={(v,n)=>[v+' projetos', n==='qtd_abertos'?'Abertos':'Fechados']} cursor={{fill:'#fafafa'}} />
-                                        <Bar dataKey="qtd_abertos" fill="#eab308" maxBarSize={36} radius={[0,8,8,0]}>
-                                            <LabelList dataKey="qtd_abertos" position="right" style={{fontSize:14,fontWeight:'900',fill:'#374151'}} />
-                                        </Bar>
-                                        <Bar dataKey="qtd_fechados" fill="#10b981" maxBarSize={36} radius={[0,8,8,0]}>
-                                            <LabelList dataKey="qtd_fechados" position="right" style={{fontSize:13,fontWeight:'900',fill:'#374151'}} />
-                                        </Bar>
-                                    </BarChart>
-                                </ResponsiveContainer>
-                            </div>
-
-                            {/* Gráfico 2 — Valor */}
-                            <div className="bg-white rounded-3xl border border-zinc-200 p-8 shadow-sm" style={{marginLeft:'-1.5rem',marginRight:'-1.5rem'}}>
-                                <div className="flex justify-between items-center mb-5">
-                                    <div>
-                                        <p className="text-sm font-black text-zinc-800 uppercase tracking-widest">Valor de Projetos por Vendedor (Mensal)</p>
-                                        <p className="text-[10px] text-zinc-400 mt-0.5">Somente o mês de {periodoFiltro} — valor em propostas abertas vs valor já vendido (fechado)</p>
-                                    </div>
-                                    <div className="flex gap-4">
-                                        {[['#3b82f6','Valor Abertos'],['#10b981','Valor Fechados']].map(([cor,lbl])=>(
-                                            <span key={lbl} className="flex items-center gap-1.5 text-xs font-bold text-zinc-500">
-                                                <span className="w-3 h-3 rounded-sm" style={{background:cor}}></span>{lbl}
-                                            </span>
-                                        ))}
-                                    </div>
-                                </div>
-                                <ResponsiveContainer width="100%" height={BAR_H}>
-                                    <BarChart data={dadosPeriodo} layout="vertical" margin={{top:4,right:120,left:20,bottom:4}} barGap={8}>
-                                        <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f4f4f5" />
-                                        <XAxis type="number" axisLine={false} tickLine={false} tickFormatter={v=>formatCurrencyShort(v)} tick={{fontSize:11,fill:'#9ca3af'}} />
-                                        <YAxis type="category" dataKey="vendedor" axisLine={false} tickLine={false} tick={{fontSize:13,fill:'#374151',fontWeight:'700'}} width={170} />
-                                        <Tooltip formatter={(v,n)=>[formatCurrency(v), n==='valor_abertos'?'Valor Abertos':'Valor Fechados']} cursor={{fill:'#fafafa'}} />
-                                        <Bar dataKey="valor_abertos" fill="#3b82f6" maxBarSize={36} radius={[0,8,8,0]}>
-                                            <LabelList dataKey="valor_abertos" position="right" formatter={v=>v>0?formatCurrencyShort(v):''} style={{fontSize:13,fontWeight:'900',fill:'#374151'}} />
-                                        </Bar>
-                                        <Bar dataKey="valor_fechados" fill="#10b981" maxBarSize={36} radius={[0,8,8,0]}>
-                                            <LabelList dataKey="valor_fechados" position="right" formatter={v=>v>0?formatCurrencyShort(v):''} style={{fontSize:12,fontWeight:'900',fill:'#374151'}} />
-                                        </Bar>
-                                    </BarChart>
-                                </ResponsiveContainer>
-                            </div>
-
-                            {/* Gráfico 3 — Taxa de Conversão */}
-                            {totalAbertos > 0 && (
-                                <div className="bg-white rounded-3xl border border-zinc-200 p-8 shadow-sm" style={{marginLeft:'-1.5rem',marginRight:'-1.5rem'}}>
-                                    <div className="flex justify-between items-center mb-5">
-                                        <div>
-                                            <p className="text-sm font-black text-zinc-800 uppercase tracking-widest">Taxa de Conversão por Vendedor</p>
-                                            <p className="text-[10px] text-zinc-400 mt-0.5">Fechados ÷ Abertos × 100</p>
-                                        </div>
-                                        <div className="flex gap-4">
-                                            {[['#10b981','≥50% Ótimo'],['#eab308','25–49% Regular'],['#ef4444','<25% Atenção']].map(([cor,lbl])=>(
-                                                <span key={lbl} className="flex items-center gap-1.5 text-[10px] font-bold text-zinc-500">
-                                                    <span className="w-3 h-3 rounded-sm" style={{background:cor}}></span>{lbl}
-                                                </span>
-                                            ))}
-                                        </div>
-                                    </div>
-                                    <ResponsiveContainer width="100%" height={Math.max(260,dadosPeriodo.filter(p=>p.qtd_abertos>0).length*68+80)}>
-                                        <BarChart
-                                            data={dadosPeriodo.filter(p=>p.qtd_abertos>0).map(p=>({
-                                                ...p, taxa:parseFloat(((p.qtd_fechados/p.qtd_abertos)*100).toFixed(1))
-                                            }))}
-                                            layout="vertical" margin={{top:4,right:90,left:20,bottom:4}}>
-                                            <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f4f4f5" />
-                                            <XAxis type="number" axisLine={false} tickLine={false} tickFormatter={v=>v+'%'} tick={{fontSize:11,fill:'#9ca3af'}} domain={[0,100]} />
-                                            <YAxis type="category" dataKey="vendedor" axisLine={false} tickLine={false} tick={{fontSize:13,fill:'#374151',fontWeight:'700'}} width={170} />
-                                            <Tooltip formatter={(v)=>[v+'%','Taxa de Conversão']} cursor={{fill:'#fafafa'}} />
-                                            <Bar dataKey="taxa" maxBarSize={40} radius={[0,8,8,0]}>
-                                                {dadosPeriodo.filter(p=>p.qtd_abertos>0).map((entry,i)=>{
-                                                    const t=(entry.qtd_fechados/entry.qtd_abertos)*100;
-                                                    return <Cell key={i} fill={t>=50?'#10b981':t>=25?'#eab308':'#ef4444'} />;
-                                                })}
-                                                <LabelList dataKey="taxa" position="right" formatter={v=>v+'%'} style={{fontSize:13,fontWeight:'900',fill:'#374151'}} />
-                                            </Bar>
-                                        </BarChart>
-                                    </ResponsiveContainer>
-                                </div>
-                            )}
-        </div>
-                    );
-                })()}
-
-                {/* ── GRÁFICO ACUMULADO (TODOS OS MESES) ── */}
-                {(() => {
-                    if (projetosData.length === 0) return null;
-
-                    const mapa = {};
-                    projetosData.forEach(p => {
-                        if (!mapa[p.vendedor]) {
-                            mapa[p.vendedor] = { vendedor: p.vendedor, valor_abertos: 0, valor_fechados: 0, qtd_abertos: 0, qtd_fechados: 0 };
-                        }
-                        mapa[p.vendedor].valor_abertos += parseFloat(p.valor_abertos) || 0;
-                        mapa[p.vendedor].valor_fechados += parseFloat(p.valor_fechados) || 0;
-                        mapa[p.vendedor].qtd_abertos += p.qtd_abertos || 0;
-                        mapa[p.vendedor].qtd_fechados += p.qtd_fechados || 0;
-                    });
-
-                    const dadosAcumulado = Object.values(mapa)
-                        .filter(v => v.valor_abertos > 0 || v.valor_fechados > 0)
-                        .sort((a, b) => (b.valor_abertos + b.valor_fechados) - (a.valor_abertos + a.valor_fechados));
-
-                    if (dadosAcumulado.length === 0) return null;
-
-                    const totalAbertoGeral = dadosAcumulado.reduce((s, v) => s + v.valor_abertos, 0);
-                    const totalVendidoGeral = dadosAcumulado.reduce((s, v) => s + v.valor_fechados, 0);
-                    const BAR_H_ACUM = Math.max(380, dadosAcumulado.length * 90 + 100);
-
-                    return (
-                        <div className="bg-white rounded-3xl border border-zinc-200 p-8 shadow-sm" style={{marginLeft:'-1.5rem',marginRight:'-1.5rem'}}>
-                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-5">
-                                <div>
-                                    <p className="text-sm font-black text-zinc-800 uppercase tracking-widest">Valor Acumulado por Vendedor (Total Geral)</p>
-                                    <p className="text-[10px] text-zinc-400 mt-0.5">Soma de todos os meses lançados — total em propostas abertas x total vendido (fechado) por vendedor</p>
-                                </div>
-                                <div className="flex gap-4">
-                                    {[['#3b82f6','Total Aberto'],['#10b981','Total Vendido']].map(([cor,lbl])=>(
-                                        <span key={lbl} className="flex items-center gap-1.5 text-xs font-bold text-zinc-500">
-                                            <span className="w-3 h-3 rounded-sm" style={{background:cor}}></span>{lbl}
-                                        </span>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Totais gerais */}
-                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
-                                <div className="bg-blue-50 rounded-xl p-4 border border-blue-100 min-w-0">
-                                    <p className="text-[10px] font-black text-blue-400 uppercase tracking-wide mb-1.5">Total Aberto (geral)</p>
-                                    <p className="text-lg sm:text-xl font-black text-blue-700 break-words" title={formatCurrency(totalAbertoGeral)}>{formatCurrencyRound(totalAbertoGeral)}</p>
-                                </div>
-                                <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-100 min-w-0">
-                                    <p className="text-[10px] font-black text-emerald-400 uppercase tracking-wide mb-1.5">Total Vendido (geral)</p>
-                                    <p className="text-lg sm:text-xl font-black text-emerald-700 break-words" title={formatCurrency(totalVendidoGeral)}>{formatCurrencyRound(totalVendidoGeral)}</p>
-                                </div>
-                                <div className="bg-purple-50 rounded-xl p-4 border border-purple-100 min-w-0 col-span-2 sm:col-span-1">
-                                    <p className="text-[10px] font-black text-purple-400 uppercase tracking-wide mb-1.5">Conversão Geral</p>
-                                    <p className="text-lg sm:text-xl font-black text-purple-700 break-words">
-                                        {(totalAbertoGeral + totalVendidoGeral) > 0 ? ((totalVendidoGeral/(totalAbertoGeral+totalVendidoGeral))*100).toFixed(1)+'%' : '—'}
-                                    </p>
-                                </div>
-                            </div>
-
-                            <ResponsiveContainer width="100%" height={BAR_H_ACUM}>
-                                <BarChart data={dadosAcumulado} layout="vertical" margin={{top:4,right:120,left:20,bottom:4}} barGap={8}>
-                                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f4f4f5" />
-                                    <XAxis type="number" axisLine={false} tickLine={false} tickFormatter={v=>formatCurrencyShort(v)} tick={{fontSize:11,fill:'#9ca3af'}} />
-                                    <YAxis type="category" dataKey="vendedor" axisLine={false} tickLine={false} tick={{fontSize:13,fill:'#374151',fontWeight:'700'}} width={170} />
-                                    <Tooltip formatter={(v,n)=>[formatCurrency(v), n==='valor_abertos'?'Total Aberto':'Total Vendido']} cursor={{fill:'#fafafa'}} />
-                                    <Bar dataKey="valor_abertos" fill="#3b82f6" maxBarSize={36} radius={[0,8,8,0]}>
-                                        <LabelList dataKey="valor_abertos" position="right" formatter={v=>v>0?formatCurrencyShort(v):''} style={{fontSize:13,fontWeight:'900',fill:'#374151'}} />
-                                    </Bar>
-                                    <Bar dataKey="valor_fechados" fill="#10b981" maxBarSize={36} radius={[0,8,8,0]}>
-                                        <LabelList dataKey="valor_fechados" position="right" formatter={v=>v>0?formatCurrencyShort(v):''} style={{fontSize:12,fontWeight:'900',fill:'#374151'}} />
-                                    </Bar>
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </div>
-                    );
-                })()}
-            </div>
-
-            {/* ===================== SEÇÃO: VISITAS ===================== */}
-            <div className="mt-10 mb-6">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-3">
-                    <div>
-                        <h2 className="text-xl font-black text-zinc-900 flex items-center gap-3">
-                            <div className="p-2 bg-zinc-900 text-yellow-500 rounded-xl"><MapPin size={20} /></div>
-                            Visitas por Vendedor
-                        </h2>
-                        <p className="text-xs text-zinc-400 mt-1 font-medium ml-11">Importe a planilha .xlsx para atualizar os dados de visitas</p>
-                    </div>
-                </div>
-
-                {/* IMPORTAÇÃO DE PLANILHA */}
-                {(user.role === 'admin' || user.role === 'dev' || user.username?.toUpperCase().includes('RICARDO') || user.username?.toUpperCase().includes('PRISCILA')) && (
-                    <div className="bg-zinc-50 border-2 border-dashed border-zinc-300 rounded-2xl p-6 mb-6 hover:border-yellow-400 transition-colors">
+                    {/* ── IMPORTAÇÃO DE PLANILHA DE VISITAS ── */}
+                    <div className="bg-zinc-50 border-2 border-dashed border-zinc-300 rounded-2xl p-6 hover:border-yellow-400 transition-colors">
                         <div className="flex flex-col md:flex-row items-center gap-4">
                             <div className="text-center md:text-left">
                                 <p className="font-black text-zinc-700 text-sm mb-1">📂 Importar planilha de visitas (.xlsx)</p>
@@ -2665,76 +2783,8 @@ export default function App() {
                             </label>
                         </div>
                     </div>
-                )}
-
-                {/* DASHBOARD VISITAS */}
-                {visitasData.length > 0 && (() => {
-                    const mesesVisitas = [...new Set(visitasData.map(v=>v.mes))].sort();
-                    const mesVisitaAtual = projetosPeriodo || mesesVisitas[mesesVisitas.length-1] || '';
-                    const visitasFiltradas = visitasData.filter(v => v.mes === mesVisitaAtual);
-                    const totalVisitas = visitasFiltradas.reduce((s,v)=>s+(v.quantidade||0),0);
-                    const byVendedor = Object.values(visitasFiltradas.reduce((acc,v)=>{
-                        const k = v.vendedor;
-                        if(!acc[k]) acc[k]={vendedor:k,quantidade:0,locais:[]};
-                        acc[k].quantidade += v.quantidade||0;
-                        if(v.local) acc[k].locais.push(v.local);
-                        return acc;
-                    },{})).sort((a,b)=>b.quantidade-a.quantidade);
-
-                    return (
-                        <div className="space-y-4">
-                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                                <div className="bg-zinc-50 rounded-xl p-4 border-l-4 border-yellow-400">
-                                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">Total de visitas</p>
-                                    <p className="text-2xl font-black text-zinc-900">{totalVisitas}</p>
-                                    <p className="text-[11px] text-zinc-400 mt-0.5">{mesVisitaAtual}</p>
-                                </div>
-                                <div className="bg-zinc-50 rounded-xl p-4 border-l-4 border-blue-400">
-                                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">Vendedores ativos</p>
-                                    <p className="text-2xl font-black text-zinc-900">{byVendedor.length}</p>
-                                    <p className="text-[11px] text-zinc-400 mt-0.5">com visitas no período</p>
-                                </div>
-                                <div className="bg-zinc-50 rounded-xl p-4 border-l-4 border-emerald-400">
-                                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">Média por vendedor</p>
-                                    <p className="text-2xl font-black text-zinc-900">{byVendedor.length > 0 ? (totalVisitas/byVendedor.length).toFixed(1) : '—'}</p>
-                                    <p className="text-[11px] text-zinc-400 mt-0.5">visitas/vendedor</p>
-                                </div>
-                            </div>
-                            <div className="bg-white rounded-2xl border border-zinc-200 p-5">
-                                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-4">Visitas por vendedor — {mesVisitaAtual}</p>
-                                <ResponsiveContainer width="100%" height={Math.max(180, byVendedor.length*40+60)}>
-                                    <BarChart data={byVendedor} layout="vertical" margin={{top:0,right:60,left:10,bottom:0}}>
-                                        <XAxis type="number" axisLine={false} tickLine={false} tick={{fontSize:10,fill:'#71717a'}} allowDecimals={false} />
-                                        <YAxis type="category" dataKey="vendedor" axisLine={false} tickLine={false} tick={{fontSize:11,fill:'#374151'}} width={150} />
-                                        <Tooltip formatter={(v) => [v, 'Visitas']} />
-                                        <Bar dataKey="quantidade" fill="#eab308" maxBarSize={22} radius={[0,4,4,0]}>
-                                            <LabelList dataKey="quantidade" position="right" style={{fontSize:12,fontWeight:'bold',fill:'#374151'}} />
-                                        </Bar>
-                                    </BarChart>
-                                </ResponsiveContainer>
-                            </div>
-                            {visitasFiltradas.some(v=>v.local) && (
-                                <div className="bg-white rounded-2xl border border-zinc-200 p-5">
-                                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-4">Locais visitados — {mesVisitaAtual}</p>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                                        {byVendedor.filter(v=>v.locais.length>0).map(v=>(
-                                            <div key={v.vendedor} className="bg-zinc-50 rounded-xl p-3 border border-zinc-200">
-                                                <p className="text-[10px] font-black text-zinc-500 uppercase mb-2">{v.vendedor}</p>
-                                                <div className="flex flex-wrap gap-1">
-                                                    {v.locais.map((l,i)=>(
-                                                        <span key={i} className="text-[10px] bg-white border border-zinc-200 rounded-full px-2 py-0.5 text-zinc-600 font-medium">{l}</span>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    );
-                })()}
-            </div>
-              </div>
+                </div>
+            )}
           </div>
       );
   };
