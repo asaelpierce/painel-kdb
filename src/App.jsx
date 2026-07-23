@@ -2477,7 +2477,7 @@ export default function App() {
                                     <p className="text-[10px] text-yellow-500 mt-0.5">Histórico completo desde o início — independente do filtro do topo da página</p>
                                 </div>
                                 <div className="flex gap-4">
-                                    {[['#3b82f6','Total Aberto'],['#10b981','Total Vendido']].map(([cor,lbl])=>(
+                                    {[['#3b82f6','Orçado'],['#10b981','Vendido']].map(([cor,lbl])=>(
                                         <span key={lbl} className="flex items-center gap-1.5 text-xs font-bold text-zinc-300">
                                             <span className="w-3 h-3 rounded-sm" style={{background:cor}}></span>{lbl}
                                         </span>
@@ -2488,11 +2488,11 @@ export default function App() {
                             {/* Totais gerais */}
                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
                                 <div className="bg-zinc-900 rounded-xl p-4 border border-zinc-800 min-w-0">
-                                    <p className="text-[10px] font-black text-blue-400 uppercase tracking-wide mb-1.5">Total Aberto (geral)</p>
+                                    <p className="text-[10px] font-black text-blue-400 uppercase tracking-wide mb-1.5">Orçado (geral)</p>
                                     <p className="text-xl sm:text-2xl font-black text-blue-400 break-words" title={formatCurrency(totalAbertoGeral)}>{formatCurrencyRound(totalAbertoGeral)}</p>
                                 </div>
                                 <div className="bg-zinc-900 rounded-xl p-4 border border-zinc-800 min-w-0">
-                                    <p className="text-[10px] font-black text-emerald-400 uppercase tracking-wide mb-1.5">Total Vendido (geral)</p>
+                                    <p className="text-[10px] font-black text-emerald-400 uppercase tracking-wide mb-1.5">Vendido (geral)</p>
                                     <p className="text-xl sm:text-2xl font-black text-emerald-400 break-words" title={formatCurrency(totalVendidoGeral)}>{formatCurrencyRound(totalVendidoGeral)}</p>
                                 </div>
                                 <div className="bg-zinc-900 rounded-xl p-4 border border-zinc-800 min-w-0 col-span-2 sm:col-span-1">
@@ -2508,7 +2508,7 @@ export default function App() {
                                     <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#27272a" />
                                     <XAxis type="number" axisLine={false} tickLine={false} tickFormatter={v=>formatCurrencyShort(v)} tick={{fontSize:11,fill:'#71717a'}} />
                                     <YAxis type="category" dataKey="vendedor" axisLine={false} tickLine={false} tick={{fontSize:12,fill:'#e4e4e7',fontWeight:'700'}} width={140} tickFormatter={(val)=>truncateText(val,16)} />
-                                    <Tooltip formatter={(v,n)=>[formatCurrency(v), n==='valor_abertos'?'Total Aberto':'Total Vendido']} cursor={{fill:'rgba(255,255,255,0.05)'}} />
+                                    <Tooltip formatter={(v,n)=>[formatCurrency(v), n==='valor_abertos'?'Orçado':'Vendido']} cursor={{fill:'rgba(255,255,255,0.05)'}} />
                                     <Bar dataKey="valor_abertos" fill="#3b82f6" maxBarSize={28} radius={[0,6,6,0]}>
                                         <LabelList dataKey="valor_abertos" position="right" formatter={v=>v>0?formatCurrencyShort(v):''} style={{fontSize:12,fontWeight:'900',fill:'#e4e4e7'}} />
                                     </Bar>
