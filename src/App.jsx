@@ -2667,7 +2667,7 @@ export default function App() {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {['ALINE DEL PUPPO','CESAR MATOS','GIVALDO NONATO','GIVANILDO SILVA','HYGOR TOMAZ','KALBRAS','WILLIAM SCHRECK'].map((vend,i) => (
+                                            {['ALINE DEL PUPPO','CESAR MATOS','DENER OLIVEIRA','GIVALDO NONATO','GIVANILDO SILVA','HYGOR TOMAZ','KALBRAS','WILLIAM SCHRECK'].map((vend,i) => (
                                                 <tr key={vend} className={`${i%2===0?'bg-zinc-50/50':'bg-white'} border-b border-zinc-100`}>
                                                     <td className="py-2.5 pl-2 pr-4">
                                                         <span className="text-sm font-bold text-zinc-800">{vend}</span>
