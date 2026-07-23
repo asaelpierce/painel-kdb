@@ -2473,7 +2473,7 @@ export default function App() {
                         <div className="bg-zinc-950 rounded-3xl border border-zinc-800 p-6 md:p-8 shadow-xl">
                             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-5">
                                 <div>
-                                    <p className="text-sm font-black text-white uppercase tracking-widest">Valor Acumulado por Vendedor (Total Geral)</p>
+                                    <p className="text-sm font-black text-white uppercase tracking-widest">Valor Acumulado Orçado x Vendido 2026 (Vendedor)</p>
                                     <p className="text-[10px] text-yellow-500 mt-0.5">Histórico completo desde o início — independente do filtro do topo da página</p>
                                 </div>
                                 <div className="flex gap-4">
