@@ -4255,11 +4255,11 @@ export default function App() {
             </div>
 
             <div className="flex flex-wrap items-center gap-3 bg-white p-2 rounded-2xl shadow-sm border border-zinc-200 w-fit">
-                <button onClick={() => setActionViewMode('todas')}
+                <button onClick={() => { setActionViewMode('todas'); setActionFilterArea(user.role === 'admin' || user.role === 'dev' ? 'Todas' : (user.username.toUpperCase() === 'DANIEL' ? 'Produção' : user.area)); }}
                     className={`px-5 py-2.5 rounded-xl text-sm font-black transition-all ${!isApoiando ? 'bg-black text-yellow-500 shadow-md' : 'text-zinc-500 hover:bg-zinc-100'}`}>
                     {t('Minhas Ações', 'My Actions')}
                 </button>
-                <button onClick={() => setActionViewMode('apoiando')}
+                <button onClick={() => { setActionViewMode('apoiando'); setActionFilterArea('Todas'); }}
                     className={`relative px-5 py-2.5 rounded-xl text-sm font-black transition-all flex items-center gap-2 ${isApoiando ? 'bg-black text-yellow-500 shadow-md' : 'text-zinc-500 hover:bg-zinc-100'}`}>
                     <Users size={16} /> {t('Apoiando', 'Supporting')}
                     {myApoioCount > 0 && (
