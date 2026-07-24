@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { createClient } from '@supabase/supabase-js';
 import { 
   LayoutDashboard, ListChecks, LineChart as LineChartIcon, FileSpreadsheet, 
   Crown, TrendingUp, TrendingDown, CheckCircle2, AlertTriangle,
@@ -687,19 +688,12 @@ export default function App() {
   const [currentSectorIndex, setCurrentSectorIndex] = useState(0);
 
   useEffect(() => {
-    if (globalSupabaseClient) return;
-    if (window.supabase) {
-        globalSupabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    if (globalSupabaseClient) {
         setSupabaseClient(globalSupabaseClient);
-    } else {
-        const script = document.createElement('script');
-        script.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";
-        script.onload = () => {
-            globalSupabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-            setSupabaseClient(globalSupabaseClient);
-        };
-        document.head.appendChild(script);
+        return;
     }
+    globalSupabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
+    setSupabaseClient(globalSupabaseClient);
   }, []);
 
   useEffect(() => {
