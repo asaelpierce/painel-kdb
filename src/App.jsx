@@ -1279,13 +1279,14 @@ export default function App() {
 
       if (allValues.some(v => v.owner_id === 1 && v.period === period)) {
         const manualFilled = dbValues.some(v => v.owner_id === 1 && v.period === period);
-        const vVendas = getVal(1, 1);
-        const qAprovados = getVal(4, 1);
-        const qEnviados = getVal(6, 1);
-        const vEnviados = getVal(7, 1);
-        const vVendidosMes = getVal(8, 1);
 
         if (manualFilled) {
+            const vVendas = getVal(1, 1);
+            const qAprovados = getVal(4, 1);
+            const qEnviados = getVal(6, 1);
+            const vEnviados = getVal(7, 1);
+            const vVendidosMes = getVal(8, 1);
+
             let sumVendas = vVendas, sumAprovados = qAprovados, sumEnviados = qEnviados, sumVEnviados = vEnviados;
             const currentMonthNum = monthOrder[period];
             
@@ -1300,14 +1301,13 @@ export default function App() {
 
             setRes(74, sumEnviados > 0 ? (sumAprovados / sumEnviados) * 100 : 0, 1);
             setRes(75, sumVEnviados > 0 ? (sumVendas / sumVEnviados) * 100 : 0, 1); 
-        } else {
-            setRes(74, 0, 1);
-            setRes(75, 0, 1);
+            setRes(76, qEnviados > 0 ? (qAprovados / qEnviados) * 100 : 0, 1); 
+            setRes(77, vEnviados > 0 ? (vVendas / vEnviados) * 100 : 0, 1); 
+            setRes(78, vEnviados > 0 ? (vVendidosMes / vEnviados) * 100 : 0, 1); 
         }
-        
-        setRes(76, qEnviados > 0 ? (qAprovados / qEnviados) * 100 : 0, 1); 
-        setRes(77, vEnviados > 0 ? (vVendas / vEnviados) * 100 : 0, 1); 
-        setRes(78, vEnviados > 0 ? (vVendidosMes / vEnviados) * 100 : 0, 1); 
+        // Se não houve lançamento manual do Comercial neste período (só pedido
+        // automático importado), NÃO gravamos 74-78 -- evita criar um "mês
+        // fantasma" com 0% que contamina o cálculo de Nível de Excelência.
       }
 
       if (allValues.some(v => v.owner_id === 2 && v.period === period)) {
