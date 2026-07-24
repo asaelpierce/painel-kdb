@@ -3,7 +3,7 @@ import {
   LayoutDashboard, ListChecks, LineChart as LineChartIcon, FileSpreadsheet, 
   Crown, TrendingUp, TrendingDown, CheckCircle2, AlertTriangle,
   LogOut, Save, Filter, X, MessageSquareText, HelpCircle, ArrowRightCircle, Target,
-  PieChart as PieChartIcon, BarChart3, Edit2, Trash2, GitBranch, Calendar, User, PlusCircle, History, Info, ChevronRight, ChevronLeft, Download, DollarSign, Image as ImageIcon, Briefcase, Globe, Menu, Upload, MapPin
+  PieChart as PieChartIcon, BarChart3, Edit2, Trash2, GitBranch, Calendar, User, Users, PlusCircle, History, Info, ChevronRight, ChevronLeft, Download, DollarSign, Image as ImageIcon, Briefcase, Globe, Menu, Upload, MapPin
 } from 'lucide-react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, 
@@ -669,7 +669,9 @@ export default function App() {
   const [actionFilterStatus, setActionFilterStatus] = useState('Todos');
   const [isAddActionModalOpen, setIsAddActionModalOpen] = useState(false);
   const [editingActionId, setEditingActionId] = useState(null);
-  const [actionForm, setActionForm] = useState({ what: '', why: '', area: 'Comercial', who: '', when: '' });
+  const [actionForm, setActionForm] = useState({ what: '', why: '', area: 'Comercial', who: '', when: '', apoio: [] });
+  const [actionViewMode, setActionViewMode] = useState('todas');
+  const [allUsers, setAllUsers] = useState([]);
   
   const [selectedReportAction, setSelectedReportAction] = useState(null);
   const [updateType, setUpdateType] = useState('realizado');
@@ -1004,6 +1006,10 @@ export default function App() {
       try {
           const { data: obsRes } = await supabaseClient.from('obsoletos').select('*').order('grupo');
           if (obsRes) setObsoletosData(obsRes);
+      } catch (e) {}
+      try {
+          const { data: usersRes } = await supabaseClient.from('users').select('username, area').order('username');
+          if (usersRes) setAllUsers(usersRes);
       } catch (e) {}
 
       setActions(actRes.data || []);
@@ -4175,8 +4181,15 @@ export default function App() {
   }
 
   const render5W2H = () => {
+    const myUsernameUpper = (user.username || '').toUpperCase();
+    const isApoiando = actionViewMode === 'apoiando';
+    const matchesApoio = (a) => (a.apoio || []).some(ap => ap && ap.toUpperCase() === myUsernameUpper);
+    const myApoioCount = actions.filter(matchesApoio).length;
+
     let filteredActions = actions;
-    if (user.role !== 'admin' && user.role !== 'dev') {
+    if (isApoiando) {
+        filteredActions = actions.filter(matchesApoio);
+    } else if (user.role !== 'admin' && user.role !== 'dev') {
         if (user.username.toUpperCase() === 'DANIEL') {
             filteredActions = filteredActions.filter(a => a.area === 'Produção' || a.area === 'PCP');
         } else {
@@ -4185,7 +4198,7 @@ export default function App() {
     }
     
     const availableAreas = ['Todas'];
-    if (user.role === 'admin' || user.role === 'dev') {
+    if (isApoiando || user.role === 'admin' || user.role === 'dev') {
         availableAreas.push('Comercial', 'Produção', 'Estoque', 'Engenharia', 'Supply', 'DP', 'PCP', 'Qualidade');
     } else if (user.username.toUpperCase() === 'DANIEL') {
         availableAreas.push('Produção', 'PCP');
@@ -4236,13 +4249,28 @@ export default function App() {
                             area: availableAreas.length > 1 ? availableAreas[1] : 'Comercial', 
                             who: '', 
                             when: '',
-                            status: 'A Fazer'
+                            status: 'A Fazer',
+                            apoio: []
                         });
                         setIsAddActionModalOpen(true);
                     }}
                     className="flex items-center gap-2 px-6 py-3 bg-black text-yellow-500 font-bold rounded-2xl hover:bg-zinc-800 shadow-lg shadow-zinc-200 transition-all active:scale-95"
                 >
                     <PlusCircle size={20} /> {t('Registrar Nova Ação', 'Create New Action')}
+                </button>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3 bg-white p-2 rounded-2xl shadow-sm border border-zinc-200 w-fit">
+                <button onClick={() => setActionViewMode('todas')}
+                    className={`px-5 py-2.5 rounded-xl text-sm font-black transition-all ${!isApoiando ? 'bg-black text-yellow-500 shadow-md' : 'text-zinc-500 hover:bg-zinc-100'}`}>
+                    {t('Minhas Ações', 'My Actions')}
+                </button>
+                <button onClick={() => setActionViewMode('apoiando')}
+                    className={`relative px-5 py-2.5 rounded-xl text-sm font-black transition-all flex items-center gap-2 ${isApoiando ? 'bg-black text-yellow-500 shadow-md' : 'text-zinc-500 hover:bg-zinc-100'}`}>
+                    <Users size={16} /> {t('Apoiando', 'Supporting')}
+                    {myApoioCount > 0 && (
+                        <span className={`text-[10px] font-black rounded-full px-2 py-0.5 ${isApoiando ? 'bg-yellow-500 text-black' : 'bg-red-500 text-white'}`}>{myApoioCount}</span>
+                    )}
                 </button>
             </div>
 
@@ -4349,6 +4377,7 @@ export default function App() {
                             <tr>
                                 <th className="p-6">{t('Ref', 'Ref')}</th>
                                 <th>{t('Área / Dono', 'Department / Owner')}</th>
+                                <th>{t('Apoio', 'Support')}</th>
                                 <th>{t('Ação Estratégica', 'Action Item (What)')}</th>
                                 <th>{t('Causa Raiz', 'Root Cause (Why)')}</th>
                                 <th>{t('Prazo', 'Due Date (When)')}</th>
@@ -4357,7 +4386,7 @@ export default function App() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-zinc-100 font-medium text-zinc-800">
-                            {filteredActions.length === 0 && <tr><td colSpan="7" className="p-10 text-center text-zinc-400 italic">{t('Nenhuma ação encontrada.', 'No actions found.')}</td></tr>}
+                            {filteredActions.length === 0 && <tr><td colSpan="8" className="p-10 text-center text-zinc-400 italic">{isApoiando ? t('Você não está apoiando nenhuma ação no momento.', 'You are not supporting any action right now.') : t('Nenhuma ação encontrada.', 'No actions found.')}</td></tr>}
                             {filteredActions.map(a => {
                                 const isOverdue = checkOverdue(a.when, a.status);
                                 const mySubs = subActions.filter(s => s.action_id === a.id);
@@ -4367,6 +4396,18 @@ export default function App() {
                                         <td className="py-6">
                                             <div className="font-bold text-zinc-900">{translateArea(a.area)}</div>
                                             <div className="text-[9px] uppercase font-black text-zinc-500">{a.who}</div>
+                                        </td>
+                                        <td className="py-6 pr-4">
+                                            {(a.apoio||[]).length > 0 ? (
+                                                <div className="flex flex-wrap gap-1 max-w-[140px]">
+                                                    {a.apoio.map((ap,i) => {
+                                                        const isMe = ap.toUpperCase() === myUsernameUpper;
+                                                        return (
+                                                            <span key={i} className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase border ${isMe ? 'bg-yellow-100 text-yellow-800 border-yellow-300' : 'bg-zinc-100 text-zinc-600 border-zinc-200'}`}>{ap}</span>
+                                                        );
+                                                    })}
+                                                </div>
+                                            ) : <span className="text-zinc-300 text-xs">—</span>}
                                         </td>
                                         <td className="py-6 max-w-sm pr-4">
                                             <div className="font-bold text-zinc-800 leading-tight">{a.what}</div>
@@ -4442,6 +4483,37 @@ export default function App() {
                                 <label className="block text-[11px] font-black text-zinc-500 uppercase tracking-widest mb-2">{t('Quando? (Prazo Limite)', 'When? (Due Date)')}</label>
                                 <input type="text" required placeholder={t("Ex: 30/05/2026 ou Imediato", "e.g., 05/30/2026 or Immediate")} value={actionForm.when} onChange={e=>setActionForm({...actionForm, when: e.target.value})} className="w-full border-2 border-zinc-200 p-4 rounded-2xl outline-none focus:border-yellow-500 bg-zinc-50 transition-all font-medium text-zinc-900" />
                             </div>
+                            <div>
+                                <label className="block text-[11px] font-black text-zinc-500 uppercase tracking-widest mb-2 flex items-center gap-2">
+                                    <Users size={14} className="text-yellow-600" /> {t('Apoio (quem vai ajudar?)', 'Support (who will help?)')}
+                                </label>
+                                {allUsers.length > 0 ? (
+                                    <div className="flex flex-wrap gap-2 p-4 border-2 border-zinc-200 rounded-2xl bg-zinc-50 max-h-40 overflow-y-auto">
+                                        {allUsers.filter(u => u.username?.toUpperCase() !== (actionForm.who||'').toUpperCase()).map(u => {
+                                            const selected = (actionForm.apoio||[]).some(a => a.toUpperCase() === u.username.toUpperCase());
+                                            return (
+                                                <button type="button" key={u.username}
+                                                    onClick={() => {
+                                                        const current = actionForm.apoio || [];
+                                                        const next = selected
+                                                            ? current.filter(a => a.toUpperCase() !== u.username.toUpperCase())
+                                                            : [...current, u.username];
+                                                        setActionForm({...actionForm, apoio: next});
+                                                    }}
+                                                    className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${selected ? 'bg-black text-yellow-500 border-black' : 'bg-white text-zinc-600 border-zinc-300 hover:border-zinc-400'}`}>
+                                                    {u.username}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                ) : (
+                                    <input type="text" placeholder={t("Nomes separados por vírgula. Ex: Daniel, Daniela", "Names separated by comma. E.g. Daniel, Daniela")}
+                                        value={(actionForm.apoio||[]).join(', ')}
+                                        onChange={e => setActionForm({...actionForm, apoio: e.target.value.split(/[,/]/).map(s=>s.trim()).filter(Boolean)})}
+                                        className="w-full border-2 border-zinc-200 p-4 rounded-2xl outline-none focus:border-yellow-500 bg-zinc-50 transition-all font-medium text-zinc-900" />
+                                )}
+                                <p className="text-[10px] text-zinc-400 mt-1.5">{t('A pessoa selecionada verá esta ação na aba "Apoiando" quando entrar no sistema.', 'The selected person will see this action under the "Supporting" tab when they log in.')}</p>
+                            </div>
                             <div className="flex gap-4">
                                 <button type="button" onClick={() => setIsAddActionModalOpen(false)} className="flex-1 bg-zinc-100 text-zinc-600 font-bold py-5 rounded-2xl hover:bg-zinc-200 transition-all">{t('Cancelar', 'Cancel')}</button>
                                 <button type="submit" disabled={loading} className="flex-[2] bg-black text-yellow-500 font-bold py-5 rounded-2xl hover:bg-zinc-900 transition-all shadow-xl active:scale-95">{t('Registrar no Banco', 'Save to Database')}</button>
@@ -4466,7 +4538,7 @@ export default function App() {
                                         <div className="flex gap-2 ml-4 border-l border-zinc-300 pl-4">
                                             <button onClick={() => {
                                                 setEditingActionId(selectedReportAction.id);
-                                                setActionForm({ what: selectedReportAction.what, why: selectedReportAction.why, area: selectedReportAction.area, who: selectedReportAction.who, when: selectedReportAction.when });
+                                                setActionForm({ what: selectedReportAction.what, why: selectedReportAction.why, area: selectedReportAction.area, who: selectedReportAction.who, when: selectedReportAction.when, apoio: selectedReportAction.apoio || [] });
                                                 setSelectedReportAction(null);
                                                 setIsAddActionModalOpen(true);
                                             }} className="text-blue-600 hover:text-blue-800 transition-colors flex items-center gap-1 text-xs font-bold"><Edit2 size={14} /> {t('Editar', 'Edit')}</button>
@@ -4475,6 +4547,14 @@ export default function App() {
                                     )}
                                 </div>
                                 <h2 className="font-extrabold text-2xl md:text-3xl text-zinc-900 leading-tight">{selectedReportAction.what}</h2>
+                                {(selectedReportAction.apoio||[]).length > 0 && (
+                                    <div className="flex items-center gap-2 mt-3 flex-wrap">
+                                        <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">{t('Apoio:', 'Support:')}</span>
+                                        {selectedReportAction.apoio.map((ap,i) => (
+                                            <span key={i} className="text-[10px] font-black px-2.5 py-1 rounded-full uppercase bg-yellow-100 text-yellow-800 border border-yellow-300">{ap}</span>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                             <button onClick={() => setSelectedReportAction(null)} className="p-2 text-zinc-400 hover:text-zinc-700 hover:bg-zinc-200 rounded-full transition-colors shrink-0"><X size={24} /></button>
                         </div>
