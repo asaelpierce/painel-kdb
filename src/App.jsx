@@ -75,6 +75,15 @@ const checkOverdue = (dateStr, status) => {
     return taskDate < today;
 };
 
+const getActionQuarter = (dateStr) => {
+    if (!dateStr) return null;
+    const parts = dateStr.split('/');
+    if (parts.length !== 3) return null;
+    const month = parseInt(parts[1], 10);
+    if (!month || month < 1 || month > 12) return null;
+    return Math.ceil(month / 3);
+};
+
 const truncateText = (text, maxLength) => {
     if (!text) return '';
     if (text.length <= maxLength) return text;
@@ -668,6 +677,7 @@ export default function App() {
 
   const [actionFilterArea, setActionFilterArea] = useState('Todas');
   const [actionFilterStatus, setActionFilterStatus] = useState('Todos');
+  const [actionFilterQuarter, setActionFilterQuarter] = useState('Todos');
   const [isAddActionModalOpen, setIsAddActionModalOpen] = useState(false);
   const [editingActionId, setEditingActionId] = useState(null);
   const [actionForm, setActionForm] = useState({ what: '', why: '', area: 'Comercial', who: '', when: '', apoio: [] });
@@ -4202,6 +4212,7 @@ export default function App() {
 
     if (actionFilterArea !== 'Todas') filteredActions = filteredActions.filter(a => a.area === actionFilterArea);
     if (actionFilterStatus !== 'Todos') filteredActions = filteredActions.filter(a => a.status === actionFilterStatus);
+    if (actionFilterQuarter !== 'Todos') filteredActions = filteredActions.filter(a => getActionQuarter(a.when) === parseInt(actionFilterQuarter, 10));
 
     const total = filteredActions.length || 1;
     const overdue = filteredActions.filter(a => checkOverdue(a.when, a.status)).length;
@@ -4353,6 +4364,16 @@ export default function App() {
                                 {availableAreas.map(a => <option key={a} value={a}>{a === 'Todas' ? t('Todas Áreas', 'All Departments') : translateArea(a)}</option>)}
                             </select>
                         )}
+                        <select 
+                            className="border border-zinc-300 bg-white px-4 py-2 rounded-xl text-sm font-bold text-zinc-700 outline-none focus:border-zinc-500"
+                            value={actionFilterQuarter} onChange={(e) => setActionFilterQuarter(e.target.value)}
+                        >
+                            <option value="Todos">{t('Todos os Trimestres', 'All Quarters')}</option>
+                            <option value="1">{t('1º Trimestre (Jan-Mar)', 'Q1 (Jan-Mar)')}</option>
+                            <option value="2">{t('2º Trimestre (Abr-Jun)', 'Q2 (Apr-Jun)')}</option>
+                            <option value="3">{t('3º Trimestre (Jul-Set)', 'Q3 (Jul-Sep)')}</option>
+                            <option value="4">{t('4º Trimestre (Out-Dez)', 'Q4 (Oct-Dec)')}</option>
+                        </select>
                         <select 
                             className="border border-zinc-300 bg-white px-4 py-2 rounded-xl text-sm font-bold text-zinc-700 outline-none focus:border-zinc-500"
                             value={actionFilterStatus} onChange={(e) => setActionFilterStatus(e.target.value)}
