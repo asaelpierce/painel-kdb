@@ -75,13 +75,11 @@ const checkOverdue = (dateStr, status) => {
     return taskDate < today;
 };
 
-const getActionQuarter = (dateStr) => {
-    if (!dateStr) return null;
-    const parts = dateStr.split('/');
-    if (parts.length !== 3) return null;
-    const month = parseInt(parts[1], 10);
-    if (!month || month < 1 || month > 12) return null;
-    return Math.ceil(month / 3);
+const getActionQuarter = (createdAt) => {
+    if (!createdAt) return null;
+    const d = new Date(createdAt);
+    if (isNaN(d.getTime())) return null;
+    return Math.ceil((d.getMonth() + 1) / 3);
 };
 
 const truncateText = (text, maxLength) => {
@@ -4212,7 +4210,7 @@ export default function App() {
 
     if (actionFilterArea !== 'Todas') filteredActions = filteredActions.filter(a => a.area === actionFilterArea);
     if (actionFilterStatus !== 'Todos') filteredActions = filteredActions.filter(a => a.status === actionFilterStatus);
-    if (actionFilterQuarter !== 'Todos') filteredActions = filteredActions.filter(a => getActionQuarter(a.when) === parseInt(actionFilterQuarter, 10));
+    if (actionFilterQuarter !== 'Todos') filteredActions = filteredActions.filter(a => getActionQuarter(a.created_at) === parseInt(actionFilterQuarter, 10));
 
     const total = filteredActions.length || 1;
     const overdue = filteredActions.filter(a => checkOverdue(a.when, a.status)).length;
