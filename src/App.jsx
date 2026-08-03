@@ -1357,9 +1357,15 @@ export default function App() {
       }
 
       if (allValues.some(v => v.owner_id === 6 && v.period === period)) {
-        const projEmAberto = getVal(26, 3); 
-        const reclamacoes = getVal(61, 6);
-        setRes(82, projEmAberto > 0 ? (reclamacoes / projEmAberto) * 100 : 0, 6);
+        const projEmAbertoRec = allValues.find(v => v.indicator_id === 26 && v.owner_id === 3 && v.period === period);
+        if (projEmAbertoRec) {
+            const projEmAberto = parseFloat(projEmAbertoRec.value) || 0;
+            const reclamacoes = getVal(61, 6);
+            setRes(82, projEmAberto > 0 ? (reclamacoes / projEmAberto) * 100 : 0, 6);
+        }
+        // Se o outro setor ainda não lançou "Projetos em Aberto" (id 26) nesse
+        // mês, não calculamos a taxa -- evita mostrar 0% falso por falta do
+        // denominador (mesmo bug de "mês fantasma" que corrigimos no Comercial).
       }
 
       if (allValues.some(v => v.owner_id === 7 && v.period === period)) {
