@@ -627,7 +627,7 @@ export default function App() {
   };
 
   const translateArea = (ar) => {
-      const map = { 'Comercial': 'Commercial', 'Engenharia': 'Engineering', 'Produção': 'Production', 'Qualidade': 'Quality', 'DP': 'HR', 'Estoque': 'Inventory', 'Supply': 'Procurement', 'PCP': 'PCP' };
+      const map = { 'Comercial': 'Commercial', 'Engenharia': 'Engineering', 'Produção': 'Production', 'Qualidade': 'Quality', 'DP': 'HR', 'Estoque': 'Inventory', 'Supply': 'Procurement', 'PCP': 'PCP', 'Financeiro': 'Finance' };
       return lang === 'EN' ? (map[ar] || ar) : ar;
   };
 
@@ -1645,6 +1645,21 @@ export default function App() {
         ? [...monthlyData, ytdPoint]
         : monthlyData;
 
+    // Mostra o valor apenas no último ponto (Acumulado/YTD) das linhas de Orçado,
+    // pra não poluir o gráfico mês a mês -- mas exibindo o total acumulado no final.
+    const renderBudgetYTDLabel = (color) => (props) => {
+        const { x, y, value, index } = props;
+        if (value === undefined || value === null) return null;
+        if (index !== financeiroCorpData.length - 1) return null;
+        const valStr = formatCurrencyShort(value);
+        return (
+            <g>
+                <text x={x} y={y - 12} stroke="white" strokeWidth={5} strokeLinejoin="round" fill="white" fontSize={11} fontWeight="900" textAnchor="middle">{valStr}</text>
+                <text x={x} y={y - 12} fill={color} fontSize={11} fontWeight="900" textAnchor="middle">{valStr}</text>
+            </g>
+        );
+    };
+
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-4 rounded-3xl shadow-sm border border-zinc-200">
@@ -1700,7 +1715,9 @@ export default function App() {
                             <YAxis yAxisId="right" width={50} orientation="right" axisLine={false} tickLine={false} tickFormatter={(val) => val.toFixed(0)+'%'} tick={{fontSize: 10, fill: '#71717a', fontWeight: 'bold'}} dx={10} domain={[0, 100]} />
                             <Tooltip content={<CustomTooltipFinanceiro2 />} cursor={{fill: '#f4f4f5'}} />
                             <Legend wrapperStyle={{fontSize: '11px', fontWeight: 'bold', paddingTop: '20px'}} />
-                            <Line yAxisId="left" type="monotone" dataKey="Receita Budget" stroke="#94a3b8" strokeWidth={2} strokeDasharray="5 5" dot={{r: 3}} name="Receita Budget" />
+                            <Line yAxisId="left" type="monotone" dataKey="Receita Budget" stroke="#94a3b8" strokeWidth={2} strokeDasharray="5 5" dot={{r: 3}} name="Receita Budget">
+                                <LabelList dataKey="Receita Budget" content={renderBudgetYTDLabel('#64748b')} />
+                            </Line>
                             <Bar yAxisId="left" dataKey="Receita Liquida" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={45}>
                                 <LabelList dataKey="Receita Liquida" position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={(val) => val !== 0 ? formatCurrencyShort3(val) : ''} />
                             </Bar>
@@ -1733,7 +1750,9 @@ export default function App() {
                             <YAxis axisLine={false} tickLine={false} tickFormatter={(val) => formatCurrencyShort(val)} tick={{fontSize: 10, fill: '#71717a', fontWeight: 'bold'}} dx={-10} />
                             <Tooltip content={<CustomTooltipFinanceiro2 />} cursor={{fill: '#f4f4f5'}} />
                             <Legend wrapperStyle={{fontSize: '11px', fontWeight: 'bold', paddingTop: '20px'}} />
-                            <Line type="monotone" dataKey="SG&A Budget" stroke="#fca5a5" strokeWidth={2} strokeDasharray="5 5" dot={{r: 3}} name="SG&A Budget" />
+                            <Line type="monotone" dataKey="SG&A Budget" stroke="#fca5a5" strokeWidth={2} strokeDasharray="5 5" dot={{r: 3}} name="SG&A Budget">
+                                <LabelList dataKey="SG&A Budget" content={renderBudgetYTDLabel('#ef4444')} />
+                            </Line>
                             <Bar dataKey="SG&A" fill="#ef4444" radius={[4, 4, 0, 0]} maxBarSize={60}>
                                 <LabelList dataKey="SG&A" position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={(val) => val !== 0 ? formatCurrencyShort(val) : ''} />
                             </Bar>
@@ -1758,7 +1777,9 @@ export default function App() {
                             <YAxis axisLine={false} tickLine={false} tickFormatter={(val) => formatCurrencyShort(val)} tick={{fontSize: 10, fill: '#71717a', fontWeight: 'bold'}} dx={-10} />
                             <Tooltip content={<CustomTooltipFinanceiro2 />} cursor={{fill: '#f4f4f5'}} />
                             <Legend wrapperStyle={{fontSize: '11px', fontWeight: 'bold', paddingTop: '20px'}} />
-                            <Line type="monotone" dataKey="EBIT Budget" stroke="#fde047" strokeWidth={2} strokeDasharray="5 5" dot={{r: 3}} name="EBIT Budget" />
+                            <Line type="monotone" dataKey="EBIT Budget" stroke="#fde047" strokeWidth={2} strokeDasharray="5 5" dot={{r: 3}} name="EBIT Budget">
+                                <LabelList dataKey="EBIT Budget" content={renderBudgetYTDLabel('#ca8a04')} />
+                            </Line>
                             <Bar dataKey="EBIT" radius={[4, 4, 0, 0]} maxBarSize={45}>
                                 {financeiroCorpData.map((entry, index) => (
                                     <Cell key={index} fill={entry['EBIT'] < 0 ? '#ef4444' : '#f59e0b'} />
@@ -1786,7 +1807,9 @@ export default function App() {
                             <YAxis axisLine={false} tickLine={false} tickFormatter={(val) => formatCurrencyShort(val)} tick={{fontSize: 10, fill: '#71717a', fontWeight: 'bold'}} dx={-10} />
                             <Tooltip content={<CustomTooltipFinanceiro2 />} cursor={{fill: '#f4f4f5'}} />
                             <Legend wrapperStyle={{fontSize: '11px', fontWeight: 'bold', paddingTop: '20px'}} />
-                            <Line type="monotone" dataKey="EBT Budget" stroke="#a1a1aa" strokeWidth={2} strokeDasharray="5 5" dot={{r: 3}} name="EBT Budget" />
+                            <Line type="monotone" dataKey="EBT Budget" stroke="#a1a1aa" strokeWidth={2} strokeDasharray="5 5" dot={{r: 3}} name="EBT Budget">
+                                <LabelList dataKey="EBT Budget" content={renderBudgetYTDLabel('#71717a')} />
+                            </Line>
                             <Bar dataKey="EBT" radius={[4, 4, 0, 0]} maxBarSize={45}>
                                 {financeiroCorpData.map((entry, index) => (
                                     <Cell key={index} fill={entry['EBT'] < 0 ? '#ef4444' : '#6366f1'} />
@@ -4207,7 +4230,7 @@ export default function App() {
     
     const availableAreas = ['Todas'];
     if (isApoiando || user.role === 'admin' || user.role === 'dev') {
-        availableAreas.push('Comercial', 'Produção', 'Estoque', 'Engenharia', 'Supply', 'DP', 'PCP', 'Qualidade');
+        availableAreas.push('Comercial', 'Produção', 'Estoque', 'Engenharia', 'Supply', 'DP', 'PCP', 'Qualidade', 'Financeiro');
     } else if (user.username.toUpperCase() === 'DANIEL') {
         availableAreas.push('Produção', 'PCP');
     } else {
