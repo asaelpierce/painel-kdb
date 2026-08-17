@@ -3669,7 +3669,15 @@ export default function App() {
     ].filter(Boolean);
 
     const isAutoCalculatedEsforco = [2, 25, 27, 29, 43, ...autoOrdersIds];
-    const visibleEsforcoList = esforcoList.filter(ind => !autoOrdersIds.includes(ind.id));
+    let visibleEsforcoList = esforcoList.filter(ind => !autoOrdersIds.includes(ind.id));
+    // Coloca "Estoque MP R$" (id 56) e "Estoque Processamento" (id 124) juntos,
+    // logo no início, garantindo que caem na mesma linha do grid (lado a lado).
+    const estoqueMp = visibleEsforcoList.find(i => i.id === 56);
+    const estoqueProc = visibleEsforcoList.find(i => i.id === 124);
+    if (estoqueMp && estoqueProc) {
+        const resto = visibleEsforcoList.filter(i => i.id !== 56 && i.id !== 124);
+        visibleEsforcoList = [estoqueMp, estoqueProc, ...resto];
+    }
 
     const handleSaveKPIs = async (e) => {
         e.preventDefault();
