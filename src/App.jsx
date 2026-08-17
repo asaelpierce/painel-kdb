@@ -3640,10 +3640,10 @@ export default function App() {
         if (i.id === 56 || i.name.toLowerCase().includes('estoque')) {
             return kpiOwnerId === 8;
         }
-        // Daniela: ids 121 e 122 sempre visíveis
-        if (kpiOwnerId === 8 && (i.id === 121 || i.id === 122)) return true;
+        // Daniela: ids 121, 122 e 124 sempre visíveis
+        if (kpiOwnerId === 8 && (i.id === 121 || i.id === 122 || i.id === 124)) return true;
         if (i.category === 'ESFORCO' && kpiOwnerId === 8) {
-            return ownerIndicatorIds.includes(i.id) || i.id === 121 || i.id === 122;
+            return ownerIndicatorIds.includes(i.id) || i.id === 121 || i.id === 122 || i.id === 124;
         }
         if (i.category === 'ESFORCO') return ownerIndicatorIds.includes(i.id);
         if (kpiOwnerId === 1 && i.id >= 74 && i.id <= 78) return true;
