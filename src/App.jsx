@@ -342,75 +342,7 @@ const ObsoletosChart = ({ data }) => {
                 </div>
             </div>
 
-            <div className="bg-white rounded-2xl border border-zinc-200 p-5">
-                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-4">Ranking por grupo — Jun/2026 (passe o mouse para detalhes)</p>
-                <ResponsiveContainer width="100%" height={Math.max(240,grupos26.length*34+60)}>
-                    <BarChart data={grupos26} layout="vertical" margin={{top:0,right:90,left:10,bottom:0}}>
-                        <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e4e4e7" />
-                        <XAxis type="number" axisLine={false} tickLine={false} tickFormatter={fmt} tick={{fontSize:10,fill:'#71717a'}} />
-                        <YAxis type="category" dataKey="label" axisLine={false} tickLine={false} tick={{fontSize:11,fill:'#52525b'}} width={130} />
-                        <Tooltip formatter={(v)=>[fmt(v)+' ('+((v/tot26)*100).toFixed(1)+'% do total)','Custo']} />
-                        <Bar dataKey="val" maxBarSize={22} radius={[0,4,4,0]} name="Custo Jun/2026">
-                            {grupos26.map((entry,i)=>(
-                                <Cell key={i} fill={getCor(entry.label)} />
-                            ))}
-                            <LabelList dataKey="val" position="right" formatter={fmt} style={{fontSize:10,fontWeight:'bold',fill:'#52525b'}} />
-                        </Bar>
-                    </BarChart>
-                </ResponsiveContainer>
-            </div>
 
-            <div className="bg-white rounded-2xl border border-zinc-200 p-5" style={{marginLeft:'-1.5rem',marginRight:'-1.5rem',borderRadius:'0',borderLeft:'none',borderRight:'none',paddingLeft:'1.5rem',paddingRight:'1.5rem'}}>
-                <div className="flex justify-between items-center mb-5">
-                    <p className="text-[11px] font-black text-zinc-500 uppercase tracking-widest">Top 6 grupos — evolução histórica</p>
-                    <span className="text-[9px] font-black text-zinc-400 bg-zinc-100 px-2.5 py-1 rounded-full uppercase tracking-widest">PLACA KLC e METALLIC WEAR → eixo direito</span>
-                </div>
-                <ResponsiveContainer width="100%" height={500}>
-                    <LineChart data={chartDataLinha} margin={{top:30,right:100,left:20,bottom:50}}>
-                        <CartesianGrid strokeDasharray="4 4" vertical={true} verticalFill={['#fafafa','#ffffff']} stroke="#e4e4e7" />
-                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize:14,fill:'#374151',fontWeight:'bold'}} dy={12} />
-                        <YAxis yAxisId="esq" axisLine={false} tickLine={false} tickFormatter={fmt} tick={{fontSize:12,fill:'#52525b',fontWeight:'600'}} dx={-10} width={95} />
-                        <YAxis yAxisId="dir" orientation="right" axisLine={false} tickLine={false} tickFormatter={fmt} tick={{fontSize:12,fill:'#dc2626',fontWeight:'700'}} dx={10} width={95} />
-                        <Tooltip
-                            content={({active,payload,label})=>{
-                                if(!active||!payload||!payload.length) return null;
-                                const fmtV = v => {
-                                    if(v===null||v===undefined||v===0) return '-';
-                                    if(v>=1000000) return 'R$ '+(v/1000000).toFixed(3).replace('.',',')+'M';
-                                    if(v>=1000) return 'R$ '+(v/1000).toFixed(1).replace('.',',')+'K';
-                                    return 'R$ '+v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
-                                };
-                                return (
-                                    <div style={{background:'#18181b',border:'1px solid #3f3f46',borderRadius:'10px',padding:'10px 14px',minWidth:'200px'}}>
-                                        <p style={{color:'#eab308',fontWeight:'900',fontSize:'12px',marginBottom:'8px',textTransform:'uppercase',letterSpacing:'0.05em'}}>{label}</p>
-                                        {payload.filter(p=>p.value>0).sort((a,b)=>b.value-a.value).map((p,i)=>(
-                                            <div key={i} style={{display:'flex',justifyContent:'space-between',gap:'20px',marginBottom:'5px'}}>
-                                                <span style={{color:'#a1a1aa',fontSize:'11px',display:'flex',alignItems:'center',gap:'5px'}}>
-                                                    <span style={{width:'8px',height:'8px',borderRadius:'2px',background:p.color,flexShrink:0,display:'inline-block'}}></span>
-                                                    {p.name}
-                                                </span>
-                                                <span style={{color:'#ffffff',fontSize:'12px',fontWeight:'700'}}>{fmtV(p.value)}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                );
-                            }}
-                            cursor={{strokeDasharray:'4 4',stroke:'#e4e4e7'}}
-                        />
-                        <Legend verticalAlign="bottom" height={52} iconSize={14} formatter={v=>{
-                            const dirAxis = ['PLACA KLC','METALLIC WEAR'];
-                            const isDirAxis = dirAxis.includes(v);
-                            const colors = {'PLACA KLC':'#dc2626','METALLIC WEAR':'#4a3aa7'};
-                            return <span style={{fontSize:'13px',color:isDirAxis?(colors[v]||'#374151'):'#374151',fontWeight:isDirAxis?'800':'600',letterSpacing:'0.01em'}}>{v}{isDirAxis?' (eixo →)':''}</span>;
-                        }} />
-                        <Line yAxisId="dir" type="monotone" dataKey="PLACA KLC" stroke="#e34948" strokeWidth={4} dot={{r:8,fill:'#e34948',strokeWidth:2.5,stroke:'#fff'}} activeDot={{r:12}} connectNulls />
-                        <Line yAxisId="dir" type="monotone" dataKey="METALLIC WEAR" stroke="#4a3aa7" strokeWidth={3} strokeDasharray="4 4" dot={{r:7,fill:'#4a3aa7',strokeWidth:2,stroke:'#fff'}} activeDot={{r:10}} connectNulls={false} />
-                        {[['KALOCER','#2a78d6',[6,3]],['ELEM. FIXAÇÃO','#1baf7a',[8,3]],['ABRESIST','#eda100',[2,2]],['PASTILHA KLC','#eb6834',[6,2]]].map(([name,color,dash])=>(
-                            <Line key={name} yAxisId="esq" type="monotone" dataKey={name} stroke={color} strokeWidth={3} strokeDasharray={dash.join(' ')} dot={{r:7,fill:color,strokeWidth:2,stroke:'#fff'}} activeDot={{r:10}} connectNulls={false} />
-                        ))}
-                    </LineChart>
-                </ResponsiveContainer>
-            </div>
 
             {tot26 > 0 && (
                 <div className="bg-zinc-50 border border-zinc-200 rounded-2xl p-5 text-sm text-zinc-600 leading-relaxed">
