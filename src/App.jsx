@@ -65,6 +65,19 @@ const formatNumber = (val, unit) => {
     return Number.isInteger(parseFloat(val)) ? val : parseFloat(val).toFixed(2).replace('.', ',');
 };
 
+const getOwnerIdForUsername = (username) => {
+    const upper = (username || '').toUpperCase();
+    if (upper.includes('RICARDO') || upper.includes('PRISCILA')) return 1;
+    if (upper.includes('EDSON')) return 2;
+    if (upper.includes('PCP')) return 3;
+    if ((upper.includes('DANIEL') && !upper.includes('DANIELA')) || upper.includes('JOSE')) return 4;
+    if (upper.includes('DANILO') || upper.includes('SUPPLY') || upper.includes('LEONARDO')) return 5;
+    if (upper.includes('LUCIENE')) return 6;
+    if (upper.includes('MARIELE')) return 7;
+    if (upper.includes('DANIELA')) return 8;
+    return 1;
+};
+
 const checkOverdue = (dateStr, status) => {
     if (status === 'Concluído') return false;
     if (dateStr.toLowerCase().trim() === 'imediato') return true;
@@ -996,16 +1009,7 @@ export default function App() {
           if (data.role === 'admin' || data.role === 'dev') setActiveTab('diretoria');
           else setActiveTab('kpi');
 
-          const upper = data.username.toUpperCase();
-          if(upper.includes('RICARDO') || upper.includes('PRISCILA')) setKpiOwnerId(1);
-          else if(upper.includes('EDSON')) setKpiOwnerId(2);
-          else if(upper.includes('PCP')) setKpiOwnerId(3);
-          else if((upper.includes('DANIEL') && !upper.includes('DANIELA')) || upper.includes('JOSE')) setKpiOwnerId(4);
-          else if(upper.includes('DANILO') || upper.includes('SUPPLY') || upper.includes('LEONARDO')) setKpiOwnerId(5);
-          else if(upper.includes('LUCIENE')) setKpiOwnerId(6);
-          else if(upper.includes('MARIELE')) setKpiOwnerId(7);
-          else if(upper.includes('DANIELA')) setKpiOwnerId(8);
-          else setKpiOwnerId(1);
+          setKpiOwnerId(getOwnerIdForUsername(data.username));
 
           if (data.role !== 'admin' && data.role !== 'dev' && upper !== 'DANIEL') {
               setActionForm(prev => ({ ...prev, area: data.area }));
@@ -3635,6 +3639,10 @@ export default function App() {
   };
 
   const renderKPI = () => {
+    const myOwnerId = getOwnerIdForUsername(user.username);
+    const isPrivileged = user.role === 'admin' || user.role === 'dev';
+    // Coordenadores podem VISUALIZAR qualquer setor, mas só EDITAR o próprio.
+    const canEditKpi = isPrivileged || kpiOwnerId === myOwnerId;
     const ownerIndicatorIds = [...new Set(dbValues.filter(v => v.owner_id === kpiOwnerId).map(v => v.indicator_id))];
     const finalIndicators = dbIndicators.filter(i => {
         if (i.id === 56 || i.name.toLowerCase().includes('estoque')) {
@@ -3681,6 +3689,10 @@ export default function App() {
 
     const handleSaveKPIs = async (e) => {
         e.preventDefault();
+        if (!canEditKpi) {
+            showToast(t('Você não tem permissão para editar dados de outro setor.', 'You do not have permission to edit another department\'s data.'), 'error');
+            return;
+        }
         setLoading(true);
         const payload = [];
         const commentsPayload = [];
@@ -3752,8 +3764,18 @@ export default function App() {
                         </select>
                     ) : (
                         <div>
-                            <h2 className="text-2xl font-black text-zinc-900 tracking-tight">{translateArea(user.area)}</h2>
-                            <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest mt-0.5">{t('Visão do Setor', 'Department View')}</p>
+                            <select 
+                                className="bg-transparent text-zinc-900 text-2xl font-black focus:ring-0 outline-none cursor-pointer"
+                                value={kpiOwnerId}
+                                onChange={(e) => setKpiOwnerId(parseInt(e.target.value))}
+                            >
+                                {dbOwners.map(o => <option key={o.id} value={o.id} className="text-base font-bold">{t('Visão:', 'View:')} {translateArea(o.name)}</option>)}
+                            </select>
+                            {!canEditKpi && (
+                                <p className="text-[10px] font-black text-yellow-600 uppercase tracking-widest mt-0.5 flex items-center gap-1">
+                                    <Info size={12} /> {t('Somente visualização — você só pode editar o seu próprio setor', 'View only — you can only edit your own department')}
+                                </p>
+                            )}
                         </div>
                     )}
                 </div>
@@ -3954,10 +3976,10 @@ export default function App() {
                                                     step="any" 
                                                     value={currentVal} 
                                                     onChange={(e) => handleValueChange(ind.id, e.target.value)}
-                                                    readOnly={isAuto}
+                                                    readOnly={isAuto || !canEditKpi}
                                                     placeholder="0" 
-                                                    className={`w-28 text-right border-2 rounded-xl p-2.5 font-bold text-sm outline-none transition-all shadow-sm ${isAuto ? 'bg-zinc-100 border-zinc-200 text-zinc-500 cursor-not-allowed' : 'bg-white border-zinc-300 focus:border-yellow-500 text-zinc-900'}`} 
-                                                    title={isAuto ? t("Valor calculado por fórmula", "Calculated by formula") : t("Digite o valor", "Enter value")}
+                                                    className={`w-28 text-right border-2 rounded-xl p-2.5 font-bold text-sm outline-none transition-all shadow-sm ${(isAuto || !canEditKpi) ? 'bg-zinc-100 border-zinc-200 text-zinc-500 cursor-not-allowed' : 'bg-white border-zinc-300 focus:border-yellow-500 text-zinc-900'}`} 
+                                                    title={isAuto ? t("Valor calculado por fórmula", "Calculated by formula") : (!canEditKpi ? t("Somente visualização — não é o seu setor", "View only — not your department") : t("Digite o valor", "Enter value"))}
                                                 />
                                                 <span className="text-[10px] font-black text-zinc-400 w-6 text-left uppercase">{ind.name === "Não conformidade (%)" ? t('QTE', 'QTY') : ind.unit}</span>
                                             </div>
@@ -3978,10 +4000,16 @@ export default function App() {
                         </div>
                         
                         <div className="mt-10 pt-6 border-t border-zinc-100 flex justify-end">
-                            <button type="submit" disabled={loading} className="bg-black text-yellow-500 px-10 py-4 rounded-2xl font-black hover:bg-zinc-900 shadow-xl shadow-zinc-200 transition-all flex items-center gap-3 active:scale-95 uppercase tracking-wider text-sm">
-                                {loading ? <ArrowRightCircle className="animate-spin" size={20} /> : <Save size={20} />}
-                                {t('Gravar no Banco', 'Submit Data')}
-                            </button>
+                            {canEditKpi ? (
+                                <button type="submit" disabled={loading} className="bg-black text-yellow-500 px-10 py-4 rounded-2xl font-black hover:bg-zinc-900 shadow-xl shadow-zinc-200 transition-all flex items-center gap-3 active:scale-95 uppercase tracking-wider text-sm">
+                                    {loading ? <ArrowRightCircle className="animate-spin" size={20} /> : <Save size={20} />}
+                                    {t('Gravar no Banco', 'Submit Data')}
+                                </button>
+                            ) : (
+                                <p className="text-xs font-bold text-zinc-400 flex items-center gap-2">
+                                    <Info size={14} /> {t('Você está visualizando outro setor. Só é possível editar o seu próprio.', 'You are viewing another department. You can only edit your own.')}
+                                </p>
+                            )}
                         </div>
                     </div>
                 </div>
