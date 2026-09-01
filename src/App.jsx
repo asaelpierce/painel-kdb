@@ -1011,6 +1011,7 @@ export default function App() {
 
           setKpiOwnerId(getOwnerIdForUsername(data.username));
 
+          const upper = data.username.toUpperCase();
           if (data.role !== 'admin' && data.role !== 'dev' && upper !== 'DANIEL') {
               setActionForm(prev => ({ ...prev, area: data.area }));
               setActionFilterArea(data.area);
