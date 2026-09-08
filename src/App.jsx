@@ -3642,8 +3642,13 @@ export default function App() {
   const renderKPI = () => {
     const myOwnerId = getOwnerIdForUsername(user.username);
     const isPrivileged = user.role === 'admin' || user.role === 'dev';
-    // Coordenadores podem VISUALIZAR qualquer setor, mas só EDITAR o próprio.
-    const canEditKpi = isPrivileged || kpiOwnerId === myOwnerId;
+    const myUpper = (user.username || '').toUpperCase();
+    // Daniel e Jose Martins acumulam Produção (4) e PCP (3) -- os demais só têm o próprio setor.
+    const myEditableOwnerIds = (myUpper === 'DANIEL' || myUpper.includes('JOSE'))
+        ? [3, 4]
+        : [myOwnerId];
+    // Coordenadores podem VISUALIZAR qualquer setor, mas só EDITAR o(s) próprio(s).
+    const canEditKpi = isPrivileged || myEditableOwnerIds.includes(kpiOwnerId);
     const ownerIndicatorIds = [...new Set(dbValues.filter(v => v.owner_id === kpiOwnerId).map(v => v.indicator_id))];
     const finalIndicators = dbIndicators.filter(i => {
         if (i.id === 56 || i.name.toLowerCase().includes('estoque')) {
