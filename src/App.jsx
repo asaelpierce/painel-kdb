@@ -4550,7 +4550,7 @@ export default function App() {
                                     <span className="text-[10px] font-black px-3 py-1 bg-black rounded-full text-yellow-500 uppercase tracking-widest">Ref #{selectedReportAction.id}</span>
                                     <span className="text-[10px] font-black px-3 py-1 bg-zinc-200 rounded-full text-zinc-700 uppercase tracking-widest">{translateArea(selectedReportAction.area)}</span>
                                     
-                                    {(user.role === 'admin' || user.role === 'dev' || user.username.toUpperCase() === 'DANIEL') && (
+                                    {(user.role === 'admin' || user.role === 'dev' || user.username.toUpperCase() === 'DANIEL' || selectedReportAction.area === user.area) && (
                                         <div className="flex gap-2 ml-4 border-l border-zinc-300 pl-4">
                                             <button onClick={() => {
                                                 setEditingActionId(selectedReportAction.id);
