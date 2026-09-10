@@ -4,7 +4,7 @@ import {
   LayoutDashboard, ListChecks, LineChart as LineChartIcon, FileSpreadsheet, 
   Crown, TrendingUp, TrendingDown, CheckCircle2, AlertTriangle,
   LogOut, Save, Filter, X, MessageSquareText, HelpCircle, ArrowRightCircle, Target,
-  PieChart as PieChartIcon, BarChart3, Edit2, Trash2, GitBranch, Calendar, User, Users, PlusCircle, History, Info, ChevronRight, ChevronLeft, Download, DollarSign, Image as ImageIcon, Briefcase, Globe, Menu, Upload, MapPin
+  PieChart as PieChartIcon, BarChart3, Edit2, Trash2, GitBranch, Calendar, User, Users, PlusCircle, History, Info, ChevronRight, ChevronLeft, Download, DollarSign, Image as ImageIcon, Briefcase, Globe, Menu, Upload, MapPin, Paperclip, FileText, XCircle
 } from 'lucide-react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, 
@@ -1074,6 +1074,65 @@ export default function App() {
           showToast(t("Erro ao excluir", "Error deleting"), "error");
       }
       setLoading(false);
+  };
+
+  const [uploadingAnexo, setUploadingAnexo] = useState(false);
+
+  const handleUploadAnexo = async (actionId, file) => {
+      if (!file) return;
+      setUploadingAnexo(true);
+      try {
+          const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+          const path = `${actionId}/${Date.now()}_${safeName}`;
+          const { error: upErr } = await supabaseClient.storage.from('action-anexos').upload(path, file);
+          if (upErr) throw upErr;
+          const { data: pubData } = supabaseClient.storage.from('action-anexos').getPublicUrl(path);
+
+          const current = actions.find(a => a.id === actionId);
+          const novosAnexos = [...(current?.anexos || []), {
+              nome: file.name,
+              url: pubData.publicUrl,
+              tipo: file.type,
+              tamanho: file.size,
+              enviado_por: user.username,
+              enviado_em: new Date().toISOString(),
+          }];
+
+          const { error: updErr } = await supabaseClient.from('actions').update({ anexos: novosAnexos }).eq('id', actionId);
+          if (updErr) throw updErr;
+
+          setSelectedReportAction(prev => prev ? { ...prev, anexos: novosAnexos } : prev);
+          setActions(prev => prev.map(a => a.id === actionId ? { ...a, anexos: novosAnexos } : a));
+          showToast(t('Arquivo anexado!', 'File attached!'));
+      } catch (e) {
+          console.error(e);
+          showToast(t('Erro ao enviar arquivo: ', 'Error uploading file: ') + (e.message || ''), 'error');
+      }
+      setUploadingAnexo(false);
+  };
+
+  const handleRemoveAnexo = async (actionId, anexo) => {
+      setUploadingAnexo(true);
+      try {
+          const url = new URL(anexo.url);
+          const idx = url.pathname.indexOf('/action-anexos/');
+          if (idx !== -1) {
+              const storagePath = decodeURIComponent(url.pathname.slice(idx + '/action-anexos/'.length));
+              await supabaseClient.storage.from('action-anexos').remove([storagePath]);
+          }
+          const current = actions.find(a => a.id === actionId);
+          const novosAnexos = (current?.anexos || []).filter(a => a.url !== anexo.url);
+          const { error: updErr } = await supabaseClient.from('actions').update({ anexos: novosAnexos }).eq('id', actionId);
+          if (updErr) throw updErr;
+
+          setSelectedReportAction(prev => prev ? { ...prev, anexos: novosAnexos } : prev);
+          setActions(prev => prev.map(a => a.id === actionId ? { ...a, anexos: novosAnexos } : a));
+          showToast(t('Anexo removido.', 'Attachment removed.'));
+      } catch (e) {
+          console.error(e);
+          showToast(t('Erro ao remover anexo: ', 'Error removing attachment: ') + (e.message || ''), 'error');
+      }
+      setUploadingAnexo(false);
   };
 
   const handleStatusChangeAction = async (id, newStatus, area) => {
@@ -4600,7 +4659,45 @@ export default function App() {
                                         </select>
                                     </div>
                                 </div>
-                                
+
+                                <div className="px-6 py-5 border-b border-zinc-200 bg-white">
+                                    <div className="flex items-center justify-between mb-3">
+                                        <h3 className="text-sm font-bold text-zinc-800 uppercase tracking-wider flex items-center gap-2">
+                                            <Paperclip className="text-zinc-500" size={16} /> {t('Anexos', 'Attachments')}
+                                            {(selectedReportAction.anexos||[]).length > 0 && <span className="text-[10px] font-black bg-zinc-100 text-zinc-500 rounded-full px-2 py-0.5">{selectedReportAction.anexos.length}</span>}
+                                        </h3>
+                                        <label className={`flex items-center gap-2 text-xs font-black uppercase px-3 py-2 rounded-xl cursor-pointer transition-all shadow-sm ${uploadingAnexo ? 'bg-zinc-100 text-zinc-400 cursor-not-allowed' : 'bg-black text-yellow-500 hover:bg-zinc-800'}`}>
+                                            <Upload size={14} /> {uploadingAnexo ? t('Enviando...', 'Uploading...') : t('Anexar arquivo', 'Attach file')}
+                                            <input type="file" className="hidden" disabled={uploadingAnexo}
+                                                onChange={(e) => { handleUploadAnexo(selectedReportAction.id, e.target.files[0]); e.target.value = ''; }} />
+                                        </label>
+                                    </div>
+                                    {(selectedReportAction.anexos||[]).length === 0 ? (
+                                        <p className="text-xs text-zinc-400 italic">{t('Nenhum arquivo anexado ainda. Fotos, imagens, PDFs — qualquer tipo.', 'No files attached yet. Photos, images, PDFs — any type.')}</p>
+                                    ) : (
+                                        <div className="flex flex-wrap gap-2">
+                                            {selectedReportAction.anexos.map((anexo, i) => {
+                                                const isImage = anexo.tipo && anexo.tipo.startsWith('image/');
+                                                return (
+                                                    <div key={i} className="relative group flex items-center gap-2 bg-zinc-50 border border-zinc-200 rounded-xl pl-2 pr-8 py-2 max-w-[220px]">
+                                                        {isImage ? (
+                                                            <a href={anexo.url} target="_blank" rel="noopener noreferrer" className="shrink-0">
+                                                                <img src={anexo.url} alt={anexo.nome} className="w-9 h-9 object-cover rounded-lg border border-zinc-200" />
+                                                            </a>
+                                                        ) : (
+                                                            <a href={anexo.url} target="_blank" rel="noopener noreferrer" className="shrink-0 w-9 h-9 flex items-center justify-center bg-zinc-200 rounded-lg text-zinc-500">
+                                                                <FileText size={18} />
+                                                            </a>
+                                                        )}
+                                                        <a href={anexo.url} target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-zinc-700 hover:text-blue-600 truncate" title={anexo.nome}>{anexo.nome}</a>
+                                                        <button onClick={() => handleRemoveAnexo(selectedReportAction.id, anexo)} disabled={uploadingAnexo} className="absolute top-1 right-1 text-zinc-300 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"><XCircle size={16} /></button>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+
                                 <div className="flex-1 p-6 overflow-y-auto bg-zinc-50/30">
                                     <h3 className="text-sm font-bold text-zinc-800 uppercase tracking-wider mb-6 flex items-center gap-2">
                                         <History className="text-zinc-500" size={18} /> {t('Diário de Bordo (Histórico)', 'Progress Log (History)')}
