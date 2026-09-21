@@ -2653,10 +2653,9 @@ export default function App() {
             </div>
 
             {/* ===================== ÁREA ADMINISTRATIVA (lançamentos e importações) ===================== */}
-            {/* Somente o titular do setor (nível 1) acessa; assistentes (nível 2, ex: Priscila)
-                conseguem ver/editar KPI e 5W2H normalmente, mas não esta área administrativa. */}
             {(user.role === 'admin' || user.role === 'dev' ||
-              user.username?.toUpperCase().includes('RICARDO')) && (
+              user.username?.toUpperCase().includes('RICARDO') ||
+              user.username?.toUpperCase().includes('PRISCILA')) && (
                 <div className="mt-10 mb-6 space-y-4">
                     <div className="flex items-center gap-3">
                         <div className="p-2.5 bg-zinc-200 text-zinc-500 rounded-xl"><Save size={18} /></div>
