@@ -3702,11 +3702,14 @@ export default function App() {
     const myOwnerId = getOwnerIdForUsername(user.username);
     const isPrivileged = user.role === 'admin' || user.role === 'dev';
     const myUpper = (user.username || '').toUpperCase();
+    // Assistentes (nível 2): só enxergam e editam o próprio setor, sem navegar pelos outros.
+    const isAssistant = myUpper.includes('PRISCILA') || myUpper.includes('JOSE') || myUpper.includes('LEONARDO');
     // Daniel e Jose Martins acumulam Produção (4) e PCP (3) -- os demais só têm o próprio setor.
     const myEditableOwnerIds = (myUpper === 'DANIEL' || myUpper.includes('JOSE'))
         ? [3, 4]
         : [myOwnerId];
-    // Coordenadores podem VISUALIZAR qualquer setor, mas só EDITAR o(s) próprio(s).
+    // Coordenadores (titulares) podem VISUALIZAR qualquer setor, mas só EDITAR o(s) próprio(s).
+    // Assistentes ficam travados no próprio setor, sem navegar pelos demais.
     const canEditKpi = isPrivileged || myEditableOwnerIds.includes(kpiOwnerId);
     const ownerIndicatorIds = [...new Set(dbValues.filter(v => v.owner_id === kpiOwnerId).map(v => v.indicator_id))];
     const finalIndicators = dbIndicators.filter(i => {
@@ -3827,6 +3830,19 @@ export default function App() {
                                 return true;
                             }).map(o => <option key={o.id} value={o.id} className="text-base font-bold">{t('Visão:', 'View:')} {translateArea(o.name)}</option>)}
                         </select>
+                    ) : isAssistant ? (
+                        // Assistentes (Priscila, Jose Martins, Leonardo): travados no(s) próprio(s) setor(es),
+                        // sem navegar/visualizar os demais.
+                        <div>
+                            <select 
+                                className="bg-transparent text-zinc-900 text-2xl font-black focus:ring-0 outline-none cursor-pointer"
+                                value={kpiOwnerId}
+                                onChange={(e) => setKpiOwnerId(parseInt(e.target.value))}
+                            >
+                                {dbOwners.filter(o => myEditableOwnerIds.includes(o.id)).map(o => <option key={o.id} value={o.id} className="text-base font-bold">{t('Visão:', 'View:')} {translateArea(o.name)}</option>)}
+                            </select>
+                            <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mt-0.5">{t('Acesso restrito ao próprio setor', 'Restricted to your own department')}</p>
+                        </div>
                     ) : (
                         <div>
                             <select 
