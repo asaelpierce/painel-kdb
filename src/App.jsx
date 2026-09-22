@@ -3592,6 +3592,24 @@ export default function App() {
                     if(item.unit === '%') return v.toFixed(1) + '%';
                     return v;
                 }} />
+                {metaVal !== undefined && (
+                    <LabelList dataKey="value" content={(props) => {
+                        const { x, y, width, value, index } = props;
+                        if (!value) return null;
+                        const targetVal = kpiViewMode === 'ANNUAL' && (item.unit === 'R$' || item.unit === 'QTE') ? metaVal * (index + 1) : metaVal;
+                        if (!targetVal) return null;
+                        const gap = value - targetVal;
+                        const gapPerc = targetVal !== 0 ? (gap / Math.abs(targetVal)) * 100 : 0;
+                        const isGood = item.inverse_goal ? gap <= 0 : gap >= 0;
+                        const arrow = gap >= 0 ? '▲' : '▼';
+                        const label = `${arrow} ${Math.abs(gapPerc).toFixed(0)}% ${t('vs meta', 'vs target')}`;
+                        return (
+                            <text x={x + width / 2} y={y + 14} textAnchor="middle" fontSize={8.5} fontWeight="900" fill={isGood ? '#10b981' : '#ef4444'}>
+                                {label}
+                            </text>
+                        );
+                    }} />
+                )}
             </Bar>
         );
     }
@@ -3659,14 +3677,26 @@ export default function App() {
             {modifiedGraphData.length > 0 && (
                 <div className="flex-1 w-[100%] relative opacity-80 group-hover:opacity-100 transition-opacity mt-4">
                     <ResponsiveContainer width="100%" height="100%">
-                        <ComposedChart data={modifiedGraphData} margin={{top: 20, right: 0, left: 0, bottom: 0}}>
+                        <ComposedChart data={modifiedGraphData} margin={{top: 30, right: 0, left: 0, bottom: 0}}>
                             <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 9, fontWeight: 'bold', fill: '#a1a1aa'}} dy={5} height={20} />
                             <Tooltip content={<CustomTooltipSparkline unit={item.unit} lang={lang} />} cursor={{ fill: 'rgba(0,0,0,0.03)' }} />
                             
                             {CustomBars}
 
                             {metaVal !== undefined && kpiViewMode === 'MONTHLY' && (
-                                <Line type="step" dataKey={() => metaVal} name={t("Meta", "Target")} stroke="#a1a1aa" strokeWidth={2} strokeDasharray="4 4" dot={false} isAnimationActive={false} />
+                                <Line type="step" dataKey={() => metaVal} name={t("Meta", "Target")} stroke="#3b82f6" strokeWidth={2.5} strokeDasharray="6 3" dot={false} isAnimationActive={false}>
+                                    <LabelList dataKey={() => metaVal} content={(props) => {
+                                        const { x, y, index } = props;
+                                        if (index !== modifiedGraphData.length - 1) return null;
+                                        const label = `${t('Meta', 'Target')}: ${formatNumber(metaVal, item.unit)}`;
+                                        return (
+                                            <g>
+                                                <rect x={x - 4} y={y - 16} width={label.length * 5.6 + 8} height={14} rx={4} fill="#3b82f6" />
+                                                <text x={x} y={y - 5} fontSize={9} fontWeight="900" fill="#fff">{label}</text>
+                                            </g>
+                                        );
+                                    }} />
+                                </Line>
                             )}
                         </ComposedChart>
                     </ResponsiveContainer>
