@@ -70,10 +70,10 @@ const getOwnerIdForUsername = (username) => {
     if (upper.includes('RICARDO') || upper.includes('PRISCILA')) return 1;
     if (upper.includes('EDSON')) return 2;
     if (upper.includes('PCP')) return 3;
-    if ((upper.includes('DANIEL') && !upper.includes('DANIELA')) || upper.includes('JOSE')) return 4;
+    if ((upper.includes('DANIEL') && !upper.includes('DANIELA')) || upper.includes('ARTHUR')) return 4;
     if (upper.includes('DANILO') || upper.includes('SUPPLY') || upper.includes('LEONARDO')) return 5;
     if (upper.includes('LUCIENE')) return 6;
-    if (upper.includes('MARIELE')) return 7;
+    if (upper.includes('MARIELE') || upper.includes('MELINA')) return 7;
     if (upper.includes('DANIELA')) return 8;
     return 1;
 };
@@ -3703,9 +3703,9 @@ export default function App() {
     const isPrivileged = user.role === 'admin' || user.role === 'dev';
     const myUpper = (user.username || '').toUpperCase();
     // Assistentes (nível 2): só enxergam e editam o próprio setor, sem navegar pelos outros.
-    const isAssistant = myUpper.includes('PRISCILA') || myUpper.includes('JOSE') || myUpper.includes('LEONARDO');
-    // Daniel e Jose Martins acumulam Produção (4) e PCP (3) -- os demais só têm o próprio setor.
-    const myEditableOwnerIds = (myUpper === 'DANIEL' || myUpper.includes('JOSE'))
+    const isAssistant = myUpper.includes('PRISCILA') || myUpper.includes('ARTHUR') || myUpper.includes('LEONARDO') || myUpper.includes('MELINA');
+    // Daniel e Arthur Silva acumulam Produção (4) e PCP (3) -- os demais só têm o próprio setor.
+    const myEditableOwnerIds = (myUpper === 'DANIEL' || myUpper.includes('ARTHUR'))
         ? [3, 4]
         : [myOwnerId];
     // Coordenadores (titulares) podem VISUALIZAR qualquer setor, mas só EDITAR o(s) próprio(s).
@@ -3831,7 +3831,7 @@ export default function App() {
                             }).map(o => <option key={o.id} value={o.id} className="text-base font-bold">{t('Visão:', 'View:')} {translateArea(o.name)}</option>)}
                         </select>
                     ) : isAssistant ? (
-                        // Assistentes (Priscila, Jose Martins, Leonardo): travados no(s) próprio(s) setor(es),
+                        // Assistentes (Priscila, Arthur Silva, Leonardo, Melina): travados no(s) próprio(s) setor(es),
                         // sem navegar/visualizar os demais.
                         <div>
                             <select 
