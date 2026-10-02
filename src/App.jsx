@@ -78,6 +78,66 @@ const getOwnerIdForUsername = (username) => {
     return 1;
 };
 
+/* Campo de digitação de valores.
+   - Sem setinhas de incremento (ver index.css) e sem alterar valor ao rolar o mouse.
+   - Quando isCurrency=true, mostra o número em formato contábil (2.625.094,25)
+     enquanto o campo está fora de foco; ao clicar para editar, mostra o valor
+     "cru" para facilitar a digitação. O que é salvo continua sendo número puro. */
+const ValorInput = ({ value, onChange, isCurrency, readOnly, className, title, placeholder }) => {
+    const [focused, setFocused] = React.useState(false);
+    const [draft, setDraft] = React.useState('');
+
+    const formatarContabil = (v) => {
+        if (v === '' || v === undefined || v === null) return '';
+        const n = parseFloat(v);
+        if (isNaN(n)) return '';
+        return n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    };
+
+    const semRolagem = (e) => e.currentTarget.blur();
+
+    if (!isCurrency) {
+        return (
+            <input
+                type="number"
+                step="any"
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+                onWheel={semRolagem}
+                readOnly={readOnly}
+                placeholder={placeholder}
+                className={className}
+                title={title}
+            />
+        );
+    }
+
+    return (
+        <input
+            type="text"
+            inputMode="decimal"
+            value={focused ? draft : formatarContabil(value)}
+            onFocus={() => {
+                setFocused(true);
+                setDraft(value === '' || value === undefined || value === null ? '' : String(value).replace('.', ','));
+            }}
+            onBlur={() => setFocused(false)}
+            onChange={(e) => {
+                const digitado = e.target.value;
+                setDraft(digitado);
+                // pt-BR: ponto é separador de milhar, vírgula é decimal
+                const normalizado = digitado.replace(/\./g, '').replace(',', '.').replace(/[^0-9.-]/g, '');
+                onChange(normalizado);
+            }}
+            onWheel={semRolagem}
+            readOnly={readOnly}
+            placeholder={placeholder}
+            className={className}
+            title={title}
+        />
+    );
+};
+
 const checkOverdue = (dateStr, status) => {
     if (status === 'Concluído') return false;
     if (dateStr.toLowerCase().trim() === 'imediato') return true;
@@ -2013,13 +2073,13 @@ export default function App() {
                                <span className="font-bold text-xs">{t('Margem de Lucro PCP (%)', 'PCP Profit Margin (%)')}</span>
                                <span className="text-[10px] text-zinc-500 font-medium mt-0.5">{t('Faturamento Atual:', 'Current Revenue:')} <strong className="text-zinc-700">{formatCurrency(pcpYtd)}</strong></span>
                            </div>
-                           <input type="number" step="any" className="w-20 p-2 text-right rounded-lg border border-zinc-300 font-black text-sm outline-none focus:border-yellow-500" value={pcpMargin} onChange={e=>setPcpMargin(e.target.value)} />
+                           <input type="number" step="any" onWheel={e=>e.currentTarget.blur()} className="w-20 p-2 text-right rounded-lg border border-zinc-300 font-black text-sm outline-none focus:border-yellow-500" value={pcpMargin} onChange={e=>setPcpMargin(e.target.value)} />
                        </div>
                        <hr className="my-3 border-zinc-200" />
                        {financeCategories.map(cat => (
                            <div key={cat} className="bg-zinc-50 p-3 rounded-xl flex justify-between items-center border border-zinc-200">
                                <span className="font-bold text-xs truncate mr-2" title={cat}>{cat}</span>
-                               <input type="number" step="any" className="w-20 p-2 text-right rounded-lg border font-black text-sm outline-none focus:border-yellow-500" value={financeMargins[cat] || ''} onChange={e=>setFinanceMargins({...financeMargins, [cat]: e.target.value})} placeholder="0" />
+                               <input type="number" step="any" onWheel={e=>e.currentTarget.blur()} className="w-20 p-2 text-right rounded-lg border font-black text-sm outline-none focus:border-yellow-500" value={financeMargins[cat] || ''} onChange={e=>setFinanceMargins({...financeMargins, [cat]: e.target.value})} placeholder="0" />
                            </div>
                        ))}
                    </div>
@@ -2079,7 +2139,7 @@ export default function App() {
                            <div key={ind.id} className="bg-zinc-50 p-3 rounded-xl border border-zinc-200 flex flex-col justify-between gap-2">
                                <label className="text-[10px] font-bold text-zinc-700 leading-tight h-8 line-clamp-2" title={tInd(ind.name)}>{tInd(ind.name).replace(/^\d+\.\s*/, '')}</label>
                                <div className="flex items-center gap-2">
-                                   <input type="number" step="any" value={formValues[ind.id] !== undefined ? formValues[ind.id] : ''} onChange={(e) => handleValueChange(ind.id, e.target.value)} className="w-full text-right bg-white border border-zinc-300 focus:border-yellow-500 rounded-lg p-2 font-black text-sm outline-none transition-colors" placeholder="0" />
+                                   <input type="number" step="any" onWheel={e=>e.currentTarget.blur()} value={formValues[ind.id] !== undefined ? formValues[ind.id] : ''} onChange={(e) => handleValueChange(ind.id, e.target.value)} className="w-full text-right bg-white border border-zinc-300 focus:border-yellow-500 rounded-lg p-2 font-black text-sm outline-none transition-colors" placeholder="0" />
                                    <span className="text-[9px] font-black text-zinc-400 w-5">{ind.unit}</span>
                                </div>
                            </div>
@@ -2710,7 +2770,7 @@ export default function App() {
                                                         {campo:'valor_abertos', step:'0.01', color:'yellow'},
                                                     ].map(({campo,step,color}) => (
                                                         <td key={campo} className="py-2 px-2">
-                                                            <input type="number" step={step} min="0" placeholder="0"
+                                                            <input type="number" step={step} min="0" placeholder="0" onWheel={e=>e.currentTarget.blur()}
                                                                 value={projetosForm[vend]?.[campo] ?? ''}
                                                                 onChange={e => setProjetosForm(prev => ({...prev, [vend]: {...(prev[vend]||{}), [campo]: e.target.value}}))}
                                                                 className="w-full text-right bg-white border border-yellow-200 focus:border-yellow-500 rounded-lg p-2 font-black text-sm outline-none transition-colors" />
@@ -2722,7 +2782,7 @@ export default function App() {
                                                         {campo:'valor_fechados', step:'0.01', color:'emerald'},
                                                     ].map(({campo,step,color}) => (
                                                         <td key={campo} className="py-2 px-2">
-                                                            <input type="number" step={step} min="0" placeholder="0"
+                                                            <input type="number" step={step} min="0" placeholder="0" onWheel={e=>e.currentTarget.blur()}
                                                                 value={projetosForm[vend]?.[campo] ?? ''}
                                                                 onChange={e => setProjetosForm(prev => ({...prev, [vend]: {...(prev[vend]||{}), [campo]: e.target.value}}))}
                                                                 className="w-full text-right bg-white border border-emerald-200 focus:border-emerald-500 rounded-lg p-2 font-black text-sm outline-none transition-colors" />
@@ -3936,7 +3996,7 @@ export default function App() {
                                 {['ABRESIST','PLACA ABT','FLANGES','CHAPA','BORRACHA','ELEM. FIXAÇÃO','COLA','KALCRET','KALCOR','KALEN','KALFIX','KALOCER','PLACA KLC','PASTILHA KLC','TUBO','METALLIC WEAR','TINTAS E DILUENTES','KALPOXY','ALMOXARIFADO','PLACA KALSICA','KALDETECT'].map(grupo => (
                                     <div key={grupo} className="flex flex-col gap-1">
                                         <label className="text-[9px] font-black text-zinc-400 uppercase truncate">{grupo}</label>
-                                        <input type="number" step="0.01" min="0" placeholder="0,00"
+                                        <input type="number" step="0.01" min="0" placeholder="0,00" onWheel={e=>e.currentTarget.blur()}
                                             value={obsoletosForm[grupo] !== undefined ? obsoletosForm[grupo] : ''}
                                             onChange={e => setObsoletosForm(prev => ({...prev, [grupo]: e.target.value}))}
                                             className="bg-zinc-800 text-white text-sm px-3 py-2 rounded-lg border border-zinc-700 focus:border-yellow-500 outline-none" />
@@ -4052,14 +4112,13 @@ export default function App() {
                                                 >
                                                     <MessageSquareText size={18} />
                                                 </button>
-                                                <input 
-                                                    type="number" 
-                                                    step="any" 
-                                                    value={currentVal} 
-                                                    onChange={(e) => handleValueChange(ind.id, e.target.value)}
+                                                <ValorInput
+                                                    value={currentVal}
+                                                    onChange={(v) => handleValueChange(ind.id, v)}
+                                                    isCurrency={ind.unit === 'R$'}
                                                     readOnly={isAuto || !canEditKpi}
-                                                    placeholder="0" 
-                                                    className={`w-28 text-right border-2 rounded-xl p-2.5 font-bold text-sm outline-none transition-all shadow-sm ${(isAuto || !canEditKpi) ? 'bg-zinc-100 border-zinc-200 text-zinc-500 cursor-not-allowed' : 'bg-white border-zinc-300 focus:border-yellow-500 text-zinc-900'}`} 
+                                                    placeholder={ind.unit === 'R$' ? "0,00" : "0"}
+                                                    className={`${ind.unit === 'R$' ? 'w-36' : 'w-28'} text-right border-2 rounded-xl p-2.5 font-bold text-sm outline-none transition-all shadow-sm ${(isAuto || !canEditKpi) ? 'bg-zinc-100 border-zinc-200 text-zinc-500 cursor-not-allowed' : 'bg-white border-zinc-300 focus:border-yellow-500 text-zinc-900'}`}
                                                     title={isAuto ? t("Valor calculado por fórmula", "Calculated by formula") : (!canEditKpi ? t("Somente visualização — não é o seu setor", "View only — not your department") : t("Digite o valor", "Enter value"))}
                                                 />
                                                 <span className="text-[10px] font-black text-zinc-400 w-6 text-left uppercase">{ind.name === "Não conformidade (%)" ? t('QTE', 'QTY') : ind.unit}</span>
