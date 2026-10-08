@@ -3879,16 +3879,13 @@ export default function App() {
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-4 rounded-3xl shadow-sm border border-zinc-200">
                 <div className="flex items-center gap-4">
                     <div className="bg-zinc-900 p-3 rounded-2xl text-yellow-500 shadow-md"><LineChartIcon size={24} /></div>
-                    {(user.role === 'admin' || user.role === 'dev' || user.username.toUpperCase() === 'DANIEL') ? (
+                    {(user.role === 'admin' || user.role === 'dev') ? (
                         <select 
                             className="bg-transparent text-zinc-900 text-2xl font-black focus:ring-0 outline-none cursor-pointer"
                             value={kpiOwnerId}
                             onChange={(e) => setKpiOwnerId(parseInt(e.target.value))}
                         >
-                            {dbOwners.filter(o => {
-                                 if(user.username.toUpperCase() === 'DANIEL') return o.id === 3 || o.id === 4;
-                                return true;
-                            }).map(o => <option key={o.id} value={o.id} className="text-base font-bold">{t('Visão:', 'View:')} {translateArea(o.name)}</option>)}
+                            {dbOwners.map(o => <option key={o.id} value={o.id} className="text-base font-bold">{t('Visão:', 'View:')} {translateArea(o.name)}</option>)}
                         </select>
                     ) : isAssistant ? (
                         // Assistentes (Priscila, Arthur Silva, Leonardo, Melina): travados no(s) próprio(s) setor(es),
