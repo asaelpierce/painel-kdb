@@ -1369,7 +1369,11 @@ export default function App() {
             });
 
             setRes(74, sumEnviados > 0 ? (sumAprovados / sumEnviados) * 100 : 0, 1);
-            setRes(75, sumVEnviados > 0 ? (sumVendas / sumVEnviados) * 100 : 0, 1); 
+            /* Eficiência Comercial R$: medida contra a META de orçamentos enviados
+               (R$ 143,2 mi/ano = R$ 11,93 mi/mês), não contra o valor enviado real.
+               Assim a meta de 25% equivale à meta anual de vendas (143,2 × 25% = 35,8 mi). */
+            const metaEnvioAcum = (META_ANUAL_VENDAS_COMERCIAL / 12) * (monthOrder[period] || 0);
+            setRes(75, metaEnvioAcum > 0 ? (sumVendas / metaEnvioAcum) * 100 : 0, 1); 
             setRes(76, qEnviados > 0 ? (qAprovados / qEnviados) * 100 : 0, 1); 
             setRes(77, vEnviados > 0 ? (vVendas / vEnviados) * 100 : 0, 1); 
             setRes(78, vEnviados > 0 ? (vVendidosMes / vEnviados) * 100 : 0, 1); 
@@ -3640,15 +3644,12 @@ export default function App() {
            onde a empresa deveria estar para cumprir a meta anual de vendas.
            O valor em R$ fica oculto: converte-se a meta acumulada do mês em
            qual % do valor enviado precisaria ter sido vendido. */
-        const metaMensalVendas = META_ANUAL_VENDAS_COMERCIAL / 12;
-        let enviadoAcum = 0;
-        modifiedGraphData = baseGraphData.map(g => {
-            const envReg = dbValues.find(v => v.indicator_id === 7 && v.owner_id === 1 && v.period === g.name);
-            enviadoAcum += envReg ? (parseFloat(envReg.value) || 0) : 0;
-            const metaAcum = metaMensalVendas * (monthOrder[g.name] || 0);
-            const metaPerc = enviadoAcum > 0 ? (metaAcum / enviadoAcum) * 100 : 0;
-            return { ...g, 'Realizado': g.value, 'Onde deveríamos estar': parseFloat(metaPerc.toFixed(1)) };
-        });
+        const metaEficiencia = metaVal !== undefined ? metaVal : 25;
+        modifiedGraphData = baseGraphData.map(g => ({
+            ...g,
+            'Realizado': g.value,
+            'Onde deveríamos estar': metaEficiencia,
+        }));
         CustomBars = [
             <Bar key="bar1" dataKey="Realizado" name={t('Realizado', 'Actual')} radius={[4, 4, 0, 0]} maxBarSize={30}>
                 {modifiedGraphData.map((entry, index) => (
