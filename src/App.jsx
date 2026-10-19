@@ -3713,7 +3713,7 @@ export default function App() {
     }
 
     return (
-        <div key={item.id} className={`bg-white p-6 rounded-[24px] shadow-sm border ${isResultado ? 'border-zinc-300' : 'border-zinc-200'} flex flex-col justify-between hover:shadow-xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden group h-[350px]`}>
+        <div key={item.id} className={`bg-white p-6 rounded-[24px] shadow-sm border ${isResultado ? 'border-zinc-300 h-[440px]' : 'border-zinc-200 h-[350px]'} flex flex-col justify-between hover:shadow-xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden group`}>
             <div className="relative z-10 flex-shrink-0">
                 <div className="flex justify-between items-start mb-3 gap-2">
                     <h4 className={`text-xs font-black ${headerColorClass} uppercase tracking-widest leading-relaxed w-full`} title={displayName}>{displayName}</h4>
@@ -3754,7 +3754,7 @@ export default function App() {
                 <div className="flex-1 w-[100%] relative opacity-80 group-hover:opacity-100 transition-opacity mt-4">
                     <ResponsiveContainer width="100%" height="100%">
                         <ComposedChart data={modifiedGraphData} margin={{top: 20, right: 0, left: 0, bottom: 0}}>
-                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 9, fontWeight: 'bold', fill: '#a1a1aa'}} dy={5} height={20} />
+                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: isResultado ? 11 : 9, fontWeight: 'bold', fill: '#a1a1aa'}} dy={5} height={isResultado ? 24 : 20} />
                             <Tooltip content={<CustomTooltipSparkline unit={item.unit} lang={lang} />} cursor={{ fill: 'rgba(0,0,0,0.03)' }} />
                             
                             {CustomBars}
@@ -3981,7 +3981,7 @@ export default function App() {
             {/* MUDANÇA AQUI: Alterado de lg:grid-cols-3 para lg:grid-cols-2 */}
             <div>
                 <h3 className="text-xs font-black text-zinc-400 uppercase tracking-widest mb-4 ml-2">{t('Indicadores de Resultado (Performance)', 'Key Performance Indicators (Results)')}</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 mb-8">
+                <div className="grid grid-cols-1 gap-6 mb-8">
                     {resultadoList.length === 0 && <p className="text-sm text-zinc-400 italic col-span-full ml-2">{t('Nenhum resultado de performance encontrado.', 'No performance metrics found.')}</p>}
                     {resultadoList.map(ind => renderSparklineCard(ind, true))}
                 </div>
