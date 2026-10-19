@@ -1369,11 +1369,7 @@ export default function App() {
             });
 
             setRes(74, sumEnviados > 0 ? (sumAprovados / sumEnviados) * 100 : 0, 1);
-            /* Eficiência Comercial R$: medida contra a META de orçamentos enviados
-               (R$ 143,2 mi/ano = R$ 11,93 mi/mês), não contra o valor enviado real.
-               Assim a meta de 25% equivale à meta anual de vendas (143,2 × 25% = 35,8 mi). */
-            const metaEnvioAcum = (META_ANUAL_VENDAS_COMERCIAL / 12) * (monthOrder[period] || 0);
-            setRes(75, metaEnvioAcum > 0 ? (sumVendas / metaEnvioAcum) * 100 : 0, 1); 
+            setRes(75, sumVEnviados > 0 ? (sumVendas / sumVEnviados) * 100 : 0, 1); 
             setRes(76, qEnviados > 0 ? (qAprovados / qEnviados) * 100 : 0, 1); 
             setRes(77, vEnviados > 0 ? (vVendas / vEnviados) * 100 : 0, 1); 
             setRes(78, vEnviados > 0 ? (vVendidosMes / vEnviados) * 100 : 0, 1); 
@@ -3644,21 +3640,28 @@ export default function App() {
            onde a empresa deveria estar para cumprir a meta anual de vendas.
            O valor em R$ fica oculto: converte-se a meta acumulada do mês em
            qual % do valor enviado precisaria ter sido vendido. */
-        const metaEficiencia = metaVal !== undefined ? metaVal : 25;
-        modifiedGraphData = baseGraphData.map(g => ({
-            ...g,
-            'Realizado': g.value,
-            'Onde deveríamos estar': metaEficiencia,
-        }));
+        /* Duas medições lado a lado:
+           - Eficiência  = vendas realizadas ÷ valor de propostas enviadas (cálculo original)
+           - Atingimento = vendas realizadas ÷ meta (R$ 11,93 mi/mês, acumulada)
+           Ambas acumuladas, pois o indicador é "MÉDIA AC". */
+        const metaMensalVendas = META_ANUAL_VENDAS_COMERCIAL / 12;
+        let vendasAcum = 0;
+        modifiedGraphData = baseGraphData.map(g => {
+            const vReg = dbValues.find(v => v.indicator_id === 1 && v.owner_id === 1 && v.period === g.name);
+            vendasAcum += vReg ? (parseFloat(vReg.value) || 0) : 0;
+            const metaAcum = metaMensalVendas * (monthOrder[g.name] || 0);
+            const atingimento = metaAcum > 0 ? (vendasAcum / metaAcum) * 100 : 0;
+            return { ...g, 'Eficiência': g.value, 'Atingimento da Meta': parseFloat(atingimento.toFixed(1)) };
+        });
         CustomBars = [
-            <Bar key="bar1" dataKey="Realizado" name={t('Realizado', 'Actual')} radius={[4, 4, 0, 0]} maxBarSize={30}>
+            <Bar key="bar1" dataKey="Eficiência" name={t('Eficiência (vendido ÷ enviado)', 'Efficiency (sold ÷ sent)')} radius={[4, 4, 0, 0]} maxBarSize={28}>
                 {modifiedGraphData.map((entry, index) => (
-                    <Cell key={`cell-ef-${index}`} fill={entry.value >= entry['Onde deveríamos estar'] ? '#10b981' : '#ef4444'} />
+                    <Cell key={`cell-ef-${index}`} fill={metaVal !== undefined && entry.value < metaVal ? '#ef4444' : '#10b981'} />
                 ))}
-                <LabelList dataKey="Realizado" position="top" fill="#18181b" fontSize={10} fontWeight="900" formatter={v => v ? v.toFixed(1) + '%' : ''} />
+                <LabelList dataKey="Eficiência" position="top" fill="#18181b" fontSize={10} fontWeight="900" formatter={v => v ? v.toFixed(1) + '%' : ''} />
             </Bar>,
-            <Bar key="bar2" dataKey="Onde deveríamos estar" name={t('Onde deveríamos estar', 'Target')} fill="#94a3b8" radius={[4, 4, 0, 0]} maxBarSize={30}>
-                <LabelList dataKey="Onde deveríamos estar" position="top" fill="#64748b" fontSize={10} fontWeight="900" formatter={v => v ? v.toFixed(1) + '%' : ''} />
+            <Bar key="bar2" dataKey="Atingimento da Meta" name={t('Atingimento da meta (vendido ÷ R$ 11,93 mi/mês)', 'Target achievement')} fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={28}>
+                <LabelList dataKey="Atingimento da Meta" position="top" fill="#1d4ed8" fontSize={10} fontWeight="900" formatter={v => v ? v.toFixed(1) + '%' : ''} />
             </Bar>
         ];
     } else {
