@@ -18,10 +18,6 @@ const SUPABASE_URL = "https://purxkfbijiigwnujqace.supabase.co";
 const SUPABASE_KEY = "sb_publishable_5w36tC01sFKqRQj7_fAQrA_IRxCZKCZ"; 
 
 const monthOrder = { 'JAN':1, 'FEV':2, 'MAR':3, 'ABR':4, 'MAI':5, 'JUN':6, 'JUL':7, 'AGO':8, 'SET':9, 'OUT':10, 'NOV':11, 'DEZ':12 };
-
-/* Meta anual de vendas do Comercial (R$). Dividida por 12 vira a meta mensal
-   usada no gráfico "Vendido x Meta". Para mudar o valor, altere só esta linha. */
-const META_ANUAL_VENDAS_COMERCIAL = 143200000;
 const months = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
 const CHART_COLORS = ['#eab308', '#10b981', '#3b82f6', '#f97316', '#8b5cf6', '#ef4444', '#14b8a6', '#f43f5e', '#06b6d4', '#84cc16'];
 
@@ -3955,97 +3951,6 @@ export default function App() {
                     {resultadoList.length === 0 && <p className="text-sm text-zinc-400 italic col-span-full ml-2">{t('Nenhum resultado de performance encontrado.', 'No performance metrics found.')}</p>}
                     {resultadoList.map(ind => renderSparklineCard(ind, true))}
                 </div>
-
-                {/* ── VENDIDO x META (R$) — só para o Comercial ── */}
-                {kpiOwnerId === 1 && (() => {
-                    const metaMensal = META_ANUAL_VENDAS_COMERCIAL / 12;
-                    const isAcum = kpiViewMode === 'ANNUAL';
-                    let acumulado = 0;
-                    const dados = [];
-
-                    months.forEach((m, idx) => {
-                        if (kpiViewPeriod !== 'ALL' && monthOrder[m] > monthOrder[kpiViewPeriod]) return;
-                        const preenchido = dbValues.some(v => v.owner_id === 1 && v.period === m);
-                        const reg = dbValues.find(v => v.indicator_id === 1 && v.owner_id === 1 && v.period === m);
-                        const vendidoMes = reg ? (parseFloat(reg.value) || 0) : 0;
-                        if (preenchido) acumulado += vendidoMes;
-                        dados.push({
-                            period: m,
-                            Vendido: preenchido ? (isAcum ? acumulado : vendidoMes) : null,
-                            Meta: isAcum ? metaMensal * (idx + 1) : metaMensal,
-                        });
-                    });
-
-                    const ultimo = [...dados].reverse().find(d => d.Vendido !== null);
-                    const realizado = ultimo ? ultimo.Vendido : 0;
-                    const metaRef = ultimo ? ultimo.Meta : metaMensal;
-                    const atingido = metaRef > 0 ? (realizado / metaRef) * 100 : 0;
-                    const noAlvo = atingido >= 100;
-
-                    return (
-                        <div className="bg-white rounded-3xl border border-zinc-200 p-6 md:p-8 shadow-sm mb-8">
-                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-5">
-                                <div>
-                                    <p className="text-sm font-black text-zinc-800 uppercase tracking-widest">
-                                        {t('Vendido x Meta (R$)', 'Sold vs Target (BRL)')}
-                                    </p>
-                                    <p className="text-[10px] text-zinc-400 mt-0.5">
-                                        {isAcum
-                                            ? t(`Acumulado — meta de ${formatCurrencyShort(metaMensal)}/mês (anual ${formatCurrencyShort(META_ANUAL_VENDAS_COMERCIAL)})`, 'Accumulated vs target')
-                                            : t(`Mês a mês — meta de ${formatCurrencyShort(metaMensal)}/mês (anual ${formatCurrencyShort(META_ANUAL_VENDAS_COMERCIAL)})`, 'Monthly vs target')}
-                                    </p>
-                                </div>
-                                <div className="flex items-center gap-4">
-                                    {[['#10b981', t('Vendido','Sold')], ['#94a3b8', t('Meta','Target')]].map(([cor, lbl]) => (
-                                        <span key={lbl} className="flex items-center gap-1.5 text-xs font-bold text-zinc-500">
-                                            <span className="w-3 h-3 rounded-sm" style={{background: cor}}></span>{lbl}
-                                        </span>
-                                    ))}
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
-                                <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-100 min-w-0">
-                                    <p className="text-[10px] font-black text-emerald-500 uppercase tracking-wide mb-1.5">{t('Vendido','Sold')}</p>
-                                    <p className="text-lg sm:text-xl font-black text-emerald-700 break-words" title={formatCurrency(realizado)}>{formatCurrencyRound(realizado)}</p>
-                                </div>
-                                <div className="bg-zinc-50 rounded-xl p-4 border border-zinc-200 min-w-0">
-                                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-wide mb-1.5">{t('Onde deveríamos estar','Target')}</p>
-                                    <p className="text-lg sm:text-xl font-black text-zinc-700 break-words" title={formatCurrency(metaRef)}>{formatCurrencyRound(metaRef)}</p>
-                                </div>
-                                <div className={`rounded-xl p-4 border min-w-0 col-span-2 sm:col-span-1 ${noAlvo ? 'bg-emerald-50 border-emerald-100' : 'bg-red-50 border-red-100'}`}>
-                                    <p className={`text-[10px] font-black uppercase tracking-wide mb-1.5 ${noAlvo ? 'text-emerald-500' : 'text-red-400'}`}>{t('Atingimento','Achievement')}</p>
-                                    <p className={`text-lg sm:text-xl font-black break-words ${noAlvo ? 'text-emerald-700' : 'text-red-600'}`}>
-                                        {atingido.toFixed(1)}%
-                                        <span className="block text-[10px] font-bold mt-0.5">
-                                            {realizado >= metaRef
-                                                ? `+${formatCurrencyShort(realizado - metaRef)}`
-                                                : `-${formatCurrencyShort(metaRef - realizado)}`}
-                                        </span>
-                                    </p>
-                                </div>
-                            </div>
-
-                            <ResponsiveContainer width="100%" height={320}>
-                                <BarChart data={dados} margin={{top: 24, right: 10, left: 10, bottom: 4}} barGap={4}>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f4f4f5" />
-                                    <XAxis dataKey="period" axisLine={false} tickLine={false} tick={{fontSize: 11, fill: '#9ca3af', fontWeight: 'bold'}} />
-                                    <YAxis axisLine={false} tickLine={false} tickFormatter={v => formatCurrencyShort(v)} tick={{fontSize: 11, fill: '#9ca3af'}} />
-                                    <Tooltip
-                                        formatter={(v, n) => [v === null ? '—' : formatCurrency(v), n]}
-                                        cursor={{fill: '#fafafa'}}
-                                    />
-                                    <Bar dataKey="Vendido" fill="#10b981" maxBarSize={26} radius={[6,6,0,0]}>
-                                        <LabelList dataKey="Vendido" position="top" formatter={v => v ? formatCurrencyShort(v) : ''} style={{fontSize: 10, fontWeight: '900', fill: '#047857'}} />
-                                    </Bar>
-                                    <Bar dataKey="Meta" fill="#cbd5e1" maxBarSize={26} radius={[6,6,0,0]}>
-                                        <LabelList dataKey="Meta" position="top" formatter={v => v ? formatCurrencyShort(v) : ''} style={{fontSize: 10, fontWeight: '900', fill: '#64748b'}} />
-                                    </Bar>
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </div>
-                    );
-                })()}
             </div>
 
             {/* MUDANÇA AQUI: Alterado de lg:grid-cols-3 para lg:grid-cols-2 */}
