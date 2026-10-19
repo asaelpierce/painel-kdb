@@ -18,6 +18,11 @@ const SUPABASE_URL = "https://purxkfbijiigwnujqace.supabase.co";
 const SUPABASE_KEY = "sb_publishable_5w36tC01sFKqRQj7_fAQrA_IRxCZKCZ"; 
 
 const monthOrder = { 'JAN':1, 'FEV':2, 'MAR':3, 'ABR':4, 'MAI':5, 'JUN':6, 'JUL':7, 'AGO':8, 'SET':9, 'OUT':10, 'NOV':11, 'DEZ':12 };
+
+/* Meta anual de vendas do Comercial (R$). Dividida por 12 vira a meta mensal
+   usada na barra "Onde deveríamos estar" do gráfico de Eficiência Comercial R$.
+   Para alterar o valor, mude só esta linha. */
+const META_ANUAL_VENDAS_COMERCIAL = 143200000;
 const months = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
 const CHART_COLORS = ['#eab308', '#10b981', '#3b82f6', '#f97316', '#8b5cf6', '#ef4444', '#14b8a6', '#f43f5e', '#06b6d4', '#84cc16'];
 
