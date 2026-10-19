@@ -3630,6 +3630,31 @@ export default function App() {
                 <LabelList dataKey="Acumulado" position="top" fill="#18181b" fontSize={11} fontWeight="900" formatter={v => formatCurrencyShort(v)} />
             </Bar>
         ];
+    } else if (kpiOwnerId === 1 && item.id === 75) {
+        /* EFICIÊNCIA COMERCIAL (MÉDIA AC) R$ — além do realizado, mostra em %
+           onde a empresa deveria estar para cumprir a meta anual de vendas.
+           O valor em R$ fica oculto: converte-se a meta acumulada do mês em
+           qual % do valor enviado precisaria ter sido vendido. */
+        const metaMensalVendas = META_ANUAL_VENDAS_COMERCIAL / 12;
+        let enviadoAcum = 0;
+        modifiedGraphData = baseGraphData.map(g => {
+            const envReg = dbValues.find(v => v.indicator_id === 7 && v.owner_id === 1 && v.period === g.name);
+            enviadoAcum += envReg ? (parseFloat(envReg.value) || 0) : 0;
+            const metaAcum = metaMensalVendas * (monthOrder[g.name] || 0);
+            const metaPerc = enviadoAcum > 0 ? (metaAcum / enviadoAcum) * 100 : 0;
+            return { ...g, 'Realizado': g.value, 'Onde deveríamos estar': parseFloat(metaPerc.toFixed(1)) };
+        });
+        CustomBars = [
+            <Bar key="bar1" dataKey="Realizado" name={t('Realizado', 'Actual')} radius={[4, 4, 0, 0]} maxBarSize={30}>
+                {modifiedGraphData.map((entry, index) => (
+                    <Cell key={`cell-ef-${index}`} fill={entry.value >= entry['Onde deveríamos estar'] ? '#10b981' : '#ef4444'} />
+                ))}
+                <LabelList dataKey="Realizado" position="top" fill="#18181b" fontSize={10} fontWeight="900" formatter={v => v ? v.toFixed(1) + '%' : ''} />
+            </Bar>,
+            <Bar key="bar2" dataKey="Onde deveríamos estar" name={t('Onde deveríamos estar', 'Target')} fill="#94a3b8" radius={[4, 4, 0, 0]} maxBarSize={30}>
+                <LabelList dataKey="Onde deveríamos estar" position="top" fill="#64748b" fontSize={10} fontWeight="900" formatter={v => v ? v.toFixed(1) + '%' : ''} />
+            </Bar>
+        ];
     } else {
         CustomBars = (
             <Bar dataKey="value" name={t('Resultado', 'Actual')} radius={[4, 4, 0, 0]} maxBarSize={45}>
